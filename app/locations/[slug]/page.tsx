@@ -609,7 +609,7 @@ function LocationDetail({ location }: { location: Location }) {
                                 ? (() => {
                                     const cat = ROOM_NAME_TO_CATEGORY[room.name];
                                     const price = cat ? availability[cat]?.pricePerNight : null;
-                                    return price ? <>&euro;{price}/night</> : <>&euro;{room.priceMonthly}/mo</>;
+                                    return price ? <>&euro;{price}/night</> : <>Select dates</>;
                                   })()
                                 : <>&euro;{room.priceMonthly}/mo</>}
                             </span>

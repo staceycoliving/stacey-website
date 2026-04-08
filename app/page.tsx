@@ -330,7 +330,7 @@ export default function HomePage() {
                 )}
                 {persons === null && stayType === "SHORT" && (
                   <p className="mt-4 text-xs text-white/40 sm:text-sm">
-                    Almost everything included from &euro;45/night
+                    Almost everything included from &euro;{Math.min(...locations.filter(l => l.stayType === "SHORT").map(l => l.priceFrom))}/night
                   </p>
                 )}
                 <button onClick={() => setStep(0)} className="mt-4 text-sm text-white/40 hover:text-white/70">
@@ -351,7 +351,10 @@ export default function HomePage() {
                     <div>
                       <p className="text-sm font-bold">Short Stay · Hamburg</p>
                       <p className="text-[11px] text-gray">
-                        {persons === 2 ? "2 persons · couple-friendly rooms" : "1 person"} · from &euro;45/night
+                        {persons === 2 ? "2 persons · couple-friendly rooms" : "1 person"} · from &euro;{(() => {
+                          const prices = Object.values(shortAvailability).flatMap(loc => Object.values(loc)).map(c => c.pricePerNight).filter((p): p is number => p != null && p > 0);
+                          return prices.length > 0 ? Math.min(...prices) : Math.min(...locations.filter(l => l.stayType === "SHORT").map(l => l.priceFrom));
+                        })()}/night
                       </p>
                     </div>
                     <button onClick={handleReset} className="text-xs text-gray hover:text-black">
@@ -588,7 +591,9 @@ export default function HomePage() {
                               {loc.stayType === "SHORT" ? (() => {
                                 const cat = ROOM_NAME_TO_CATEGORY[room.name];
                                 const price = cat ? shortAvailability[loc.slug]?.[cat]?.pricePerNight : null;
-                                return <>&euro;{price || room.priceMonthly}<span className="text-xs font-normal text-gray">{price ? "/night" : "/mo"}</span></>;
+                                return price
+                                  ? <>&euro;{price}<span className="text-xs font-normal text-gray">/night</span></>
+                                  : <><span className="text-xs font-normal text-gray">Select dates for pricing</span></>;
                               })() : (
                                 <>&euro;{room.priceMonthly}<span className="text-xs font-normal text-gray">/mo</span></>
                               )}
