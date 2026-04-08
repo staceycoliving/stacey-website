@@ -1093,7 +1093,6 @@ function MoveInFlow() {
                               <p className="mt-0.5 text-[11px] text-gray">All-inclusive · fully furnished</p>
                             </div>
                             {/* Details + Book — visible on hover (desktop) / always visible (mobile) */}
-                            {!soldOut && (
                             <div className="border-t border-[#E8E6E0] p-4 max-lg:block lg:max-h-0 lg:overflow-hidden lg:border-t-0 lg:p-0 lg:opacity-0 lg:transition-all lg:duration-300 lg:group-hover:max-h-60 lg:group-hover:border-t lg:group-hover:p-4 lg:group-hover:opacity-100">
                               <p className="text-sm leading-relaxed text-gray">{room.description}</p>
                               <p className="mt-2 text-xs text-gray">
@@ -1106,7 +1105,6 @@ function MoveInFlow() {
                                 Book this room <ArrowRight size={14} />
                               </button>
                             </div>
-                            )}
                           </div>
                         ))}
                       </div>
