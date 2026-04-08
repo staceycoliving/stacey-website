@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
 import { RoomCategory } from "@/lib/generated/prisma/client";
+import { isApaleoProperty, getShortStayAvailability as getApaleoAvailability } from "@/lib/apaleo";
 
 // Categories that allow 2 persons (from Zimmerübersicht photos)
 const COUPLE_CATEGORIES: RoomCategory[] = [
@@ -192,6 +193,26 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Use apaleo for SHORT stay availability
+    if (isApaleoProperty(slug)) {
+      try {
+        const categories = await getApaleoAvailability(slug, checkInStr, checkOutStr, persons);
+        return Response.json({
+          location: slug,
+          stayType: "SHORT",
+          checkIn: checkInStr,
+          checkOut: checkOutStr,
+          persons,
+          nights,
+          categories,
+        });
+      } catch (err) {
+        console.error("apaleo availability error:", err);
+        return Response.json({ error: "Failed to fetch availability" }, { status: 502 });
+      }
+    }
+
+    // Fallback: DB-based availability (legacy)
     const categories = await getShortStayAvailability(
       location.id,
       checkIn,

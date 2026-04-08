@@ -6,6 +6,7 @@ import {
   sendLongStayConfirmation,
   sendTeamNotification,
 } from "@/lib/email";
+import { isApaleoProperty, createShortStayBooking } from "@/lib/apaleo";
 
 const COUPLE_CATEGORIES: RoomCategory[] = [
   "JUMBO",
@@ -92,9 +93,78 @@ export async function POST(request: NextRequest) {
         return Response.json({ error: "Minimum stay is 5 nights" }, { status: 400 });
       }
 
-      // Transaction: check availability + create booking atomically
+      // Use apaleo for SHORT stay bookings
+      if (isApaleoProperty(slug)) {
+        try {
+          const apaleoBooking = await createShortStayBooking({
+            slug,
+            category,
+            persons,
+            checkIn,
+            checkOut,
+            firstName,
+            lastName,
+            email,
+            phone: phone || "",
+            message,
+          });
+
+          // Send confirmation emails (fire & forget)
+          sendShortStayConfirmation({
+            firstName,
+            lastName,
+            email,
+            locationName: location.name,
+            category,
+            persons,
+            checkIn,
+            checkOut,
+            nights,
+            bookingId: apaleoBooking.id,
+          }).catch((err) => console.error("Email error (guest):", err));
+
+          sendTeamNotification({
+            stayType: "SHORT",
+            firstName,
+            lastName,
+            email,
+            phone,
+            locationName: location.name,
+            category,
+            persons,
+            checkIn,
+            checkOut,
+            nights,
+            bookingId: apaleoBooking.id,
+          }).catch((err) => console.error("Email error (team):", err));
+
+          return Response.json({
+            id: apaleoBooking.id,
+            stayType: "SHORT",
+            location: slug,
+            category,
+            checkIn,
+            checkOut,
+            nights,
+            status: "PENDING",
+          });
+        } catch (err: any) {
+          if (err.message === "NOT_AVAILABLE") {
+            return Response.json(
+              { error: "No availability for the selected category and dates" },
+              { status: 409 }
+            );
+          }
+          console.error("apaleo booking error:", err);
+          return Response.json(
+            { error: "Failed to create booking" },
+            { status: 502 }
+          );
+        }
+      }
+
+      // Fallback: DB-based booking (legacy)
       const booking = await prisma.$transaction(async (tx) => {
-        // Count overlapping bookings for this category
         const booked = await tx.booking.count({
           where: {
             locationId: location.id,
@@ -106,7 +176,6 @@ export async function POST(request: NextRequest) {
           },
         });
 
-        // Get capacity
         const capacity = await tx.roomCapacity.findFirst({
           where: {
             locationId: location.id,
@@ -136,7 +205,7 @@ export async function POST(request: NextRequest) {
         });
       });
 
-      // Send emails (fire & forget — don't block the response)
+      // Send emails (fire & forget)
       sendShortStayConfirmation({
         firstName,
         lastName,
