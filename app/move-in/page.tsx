@@ -1031,7 +1031,7 @@ function MoveInFlow() {
         )}
 
         {/* ── EMPTY STATE: filter incomplete ── */}
-        {showResults && !showLease && !filterCalendarOpen && (
+        {showResults && !showLease && !filterCalendarOpen && !roomCollapsed && (
           (stayType === "SHORT" && (!checkIn || !checkOut || tooShort)) ||
           (stayType === "LONG" && (!city || !moveInDate))
         ) && (
