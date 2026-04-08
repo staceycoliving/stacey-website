@@ -152,7 +152,10 @@ export async function getShortStayAvailability(
   const timeSlices = availData.timeSlices;
   if (!timeSlices?.length || !timeSlices[0]?.unitGroups) return [];
 
-  const nights = timeSlices.length;
+  // Calculate actual nights from dates (timeSlices.length counts days, not nights)
+  const nights = Math.round(
+    (new Date(checkOut).getTime() - new Date(checkIn).getTime()) / 86400000
+  );
   const ratePlanCodes = RATE_PLAN_CODES[propertyId] || {};
 
   // Build price map from offers: category → per-night price (using our rate plan codes)
