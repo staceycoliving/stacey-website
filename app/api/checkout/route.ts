@@ -1,0 +1,66 @@
+import { NextRequest } from "next/server";
+import Stripe from "stripe";
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+  apiVersion: "2025-03-31.basil",
+});
+
+const BOOKING_FEE = 19500; // €195.00 in cents
+
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+
+    const {
+      locationName,
+      roomName,
+      monthlyRent,
+      moveInDate,
+      firstName,
+      lastName,
+      email,
+    } = body;
+
+    if (!locationName || !roomName || !email) {
+      return Response.json({ error: "Missing required fields" }, { status: 400 });
+    }
+
+    const origin = request.nextUrl.origin;
+
+    const session = await stripe.checkout.sessions.create({
+      mode: "payment",
+      customer_email: email,
+      line_items: [
+        {
+          price_data: {
+            currency: "eur",
+            product_data: {
+              name: "Booking fee",
+              description: `STACEY ${locationName} · ${roomName} · Move-in ${moveInDate}`,
+            },
+            unit_amount: BOOKING_FEE,
+          },
+          quantity: 1,
+        },
+      ],
+      metadata: {
+        locationName,
+        roomName,
+        monthlyRent: String(monthlyRent),
+        moveInDate,
+        tenantName: `${firstName} ${lastName}`,
+        tenantEmail: email,
+      },
+      success_url: `${origin}/move-in?payment=success`,
+      cancel_url: `${origin}/move-in?payment=cancelled`,
+    });
+
+    return Response.json({ url: session.url });
+  } catch (err) {
+    console.error("Stripe checkout error:", err);
+    return Response.json(
+      { error: "Failed to create checkout session", details: String(err) },
+      { status: 500 }
+    );
+  }
+}

@@ -39,3 +39,14 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+/lib/generated/prisma
+
+# data files (not in git)
+*.xlsx
+.next 2/
+
+# large video files (deploy separately)
+public/images/*.mp4
+public/images/**/*.mp4
+public/images/locations/**/*.mp4

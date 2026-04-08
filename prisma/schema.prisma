@@ -1,0 +1,184 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── LOCATIONS ───────────────────────────────────────────
+
+model Location {
+  id        String   @id @default(cuid())
+  slug      String   @unique // z.B. "muehlenkamp", "alster"
+  name      String   // z.B. "Mühlenkamp", "Alster"
+  city      String   // z.B. "Hamburg", "Berlin"
+  address   String
+  stayType  StayType // SHORT oder LONG
+
+  apartments Apartment[] // nur LONG Stay
+  capacities RoomCapacity[] // nur SHORT Stay
+  bookings   Booking[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum StayType {
+  SHORT
+  LONG
+}
+
+// ─── LONG STAY: Apartments & Zimmer ─────────────────────
+
+model Apartment {
+  id          String   @id @default(cuid())
+  locationId  String
+  location    Location @relation(fields: [locationId], references: [id])
+
+  houseNumber String   // Hausnummer
+  floor       String   // Stockwerk (z.B. "EG", "1.OG", "2.OG")
+  label       String?  // Optionaler Name (z.B. "Vorderhaus")
+
+  rooms Room[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([locationId])
+}
+
+model Room {
+  id          String       @id @default(cuid())
+  apartmentId String
+  apartment   Apartment    @relation(fields: [apartmentId], references: [id])
+
+  roomNumber  String       // Zimmernummer (z.B. "201")
+  category    RoomCategory // Cozy, Comfy, Jumbo, etc.
+
+  tenant   Tenant? // Aktueller Mieter (oder null = frei)
+  bookings Booking[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([apartmentId])
+}
+
+enum RoomCategory {
+  BASIC_PLUS        // Basic+
+  MIGHTY            // Mighty
+  PREMIUM           // Premium
+  PREMIUM_PLUS      // Premium+
+  PREMIUM_BALCONY   // Premium Balcony
+  PREMIUM_PLUS_BALCONY // Premium+ Balcony
+  JUMBO             // Jumbo
+  JUMBO_BALCONY     // Jumbo Balcony
+  STUDIO            // Studio
+  DUPLEX            // Duplex
+}
+
+// ─── LONG STAY: Aktuelle Mieter ─────────────────────────
+
+model Tenant {
+  id        String   @id @default(cuid())
+  roomId    String   @unique
+  room      Room     @relation(fields: [roomId], references: [id])
+
+  firstName String
+  lastName  String
+  email     String
+  phone     String?
+
+  moveIn    DateTime // Einzugsdatum
+  moveOut   DateTime? // Geplantes Auszugsdatum (null = keine Kündigung)
+  notice    DateTime? // Kündigungsdatum (wann wurde gekündigt)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ─── SHORT STAY: Kapazitäten pro Kategorie ──────────────
+
+model RoomCapacity {
+  id         String       @id @default(cuid())
+  locationId String
+  location   Location     @relation(fields: [locationId], references: [id])
+
+  category   RoomCategory
+  totalUnits Int          // Wie viele Zimmer dieser Kategorie
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([locationId, category])
+}
+
+// ─── BUCHUNGEN (SHORT + LONG) ───────────────────────────
+
+model Booking {
+  id         String        @id @default(cuid())
+  locationId String
+  location   Location      @relation(fields: [locationId], references: [id])
+
+  stayType   StayType
+  category   RoomCategory
+  persons    Int           @default(1)
+
+  // SHORT Stay: Check-in/Check-out Zeitraum
+  checkIn    DateTime?
+  checkOut   DateTime?
+
+  // LONG Stay: Move-in Datum + zugewiesenes Zimmer (optional, wird intern zugewiesen)
+  moveInDate DateTime?
+  roomId     String?
+  room       Room?         @relation(fields: [roomId], references: [id])
+
+  // Persönliche Daten
+  firstName  String
+  lastName   String
+  email      String
+  phone      String
+  dateOfBirth DateTime?    // nur LONG
+  street      String?      // nur LONG
+  zipCode     String?      // nur LONG
+  addressCity String?      // nur LONG
+  country     String?      // nur LONG
+
+  // Buchungsdetails
+  monthlyRent    Int?      // Monatliche Miete in Cent
+  moveInReason   String?
+  message        String?
+
+  // Zahlung & Vertrag
+  stripeSessionId      String?   @unique
+  signatureRequestId   String?   @unique
+  depositAmount        Int?      // Kaution in Cent
+  depositStatus        DepositStatus @default(PENDING)
+
+  // Status
+  status     BookingStatus @default(PENDING)
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([locationId])
+  @@index([status])
+  @@index([checkIn, checkOut])
+}
+
+enum BookingStatus {
+  PENDING      // Buchung angelegt
+  SIGNED       // Vertrag unterschrieben (LONG)
+  PAID         // Zahlung eingegangen
+  CONFIRMED    // Buchung bestätigt
+  CANCELLED    // Storniert
+}
+
+enum DepositStatus {
+  PENDING      // Noch nicht bezahlt
+  RECEIVED     // Eingegangen
+  RETURNED     // Zurückgezahlt
+  RETAINED     // Einbehalten
+}

@@ -1,0 +1,235 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import Image from "next/image";
+import Link from "next/link";
+import { ChevronDown } from "lucide-react";
+import { clsx } from "clsx";
+import { locations } from "@/lib/data";
+
+const navCities = [
+  { name: "Hamburg", slug: "hamburg", locs: [...locations.filter((l) => l.city === "hamburg" && l.stayType === "SHORT"), ...locations.filter((l) => l.city === "hamburg" && l.stayType === "LONG")] },
+  { name: "Berlin", slug: "berlin", locs: locations.filter((l) => l.city === "berlin") },
+  { name: "Vallendar", slug: "vallendar", locs: locations.filter((l) => l.city === "vallendar") },
+];
+
+export default function Navbar({
+  transparent = false,
+  locationName,
+  stayType,
+}: {
+  transparent?: boolean;
+  locationName?: string;
+  stayType?: "SHORT" | "LONG";
+}) {
+  const [scrolled, setScrolled] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [logoHover, setLogoHover] = useState(false);
+  const [megaOpen, setMegaOpen] = useState<string | null>(null);
+
+  const isDark = !transparent || scrolled;
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 20);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  useEffect(() => {
+    document.body.style.overflow = mobileOpen ? "hidden" : "";
+    return () => { document.body.style.overflow = ""; };
+  }, [mobileOpen]);
+
+  const logoSrc = logoHover
+    ? "/images/stacey-logo-new-pink-001.webp"
+    : isDark || mobileOpen
+      ? "/images/stacey-logo-new-black-001.webp"
+      : "/images/stacey-logo-new-white-001.webp";
+
+  const ctaLabel = locationName
+    ? stayType === "SHORT" ? "Check in" : "Move in"
+    : "Move in";
+
+  return (
+    <nav
+      className={clsx(
+        "fixed top-0 left-0 right-0 z-50 transition-all duration-300",
+        isDark
+          ? "bg-white/80 shadow-sm backdrop-blur-lg"
+          : "bg-transparent"
+      )}
+    >
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div
+          className={clsx(
+            "relative flex items-center justify-between transition-all duration-300",
+            scrolled ? "h-16 md:h-18" : "h-14 md:h-16"
+          )}
+        >
+          {/* Logo */}
+          <Link
+            href="/"
+            className={clsx(
+              "relative transition-all duration-200 hover:opacity-80",
+              scrolled ? "h-12 w-36 sm:h-14 sm:w-44" : "h-10 w-32 sm:h-12 sm:w-36"
+            )}
+            onMouseEnter={() => setLogoHover(true)}
+            onMouseLeave={() => setLogoHover(false)}
+          >
+            <Image
+              src={logoSrc}
+              alt="STACEY"
+              fill
+              className="object-contain"
+              priority
+            />
+          </Link>
+
+          {/* Desktop nav — centered with mega menus */}
+          <div className="hidden lg:block absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+            <div className="flex items-center gap-1">
+              {navCities.map((city) => (
+                <div
+                  key={city.slug}
+                  className="relative"
+                  onMouseEnter={() => setMegaOpen(city.slug)}
+                  onMouseLeave={() => setMegaOpen(null)}
+                >
+                  <button
+                    className={clsx(
+                      "flex items-center gap-1 rounded-[5px] px-3 py-2 text-sm font-medium transition-all duration-200",
+                      isDark ? "text-black hover:bg-[#FAFAFA]" : "text-white/90 hover:bg-white/10"
+                    )}
+                  >
+                    {city.name}
+                    <ChevronDown
+                      size={12}
+                      className={clsx("transition-transform duration-200", megaOpen === city.slug && "rotate-180")}
+                    />
+                  </button>
+
+                  {/* Mega dropdown — pt-2 creates invisible hover bridge */}
+                  {megaOpen === city.slug && (
+                    <div className="absolute left-1/2 top-full z-50 -translate-x-1/2 pt-2" style={{ width: "360px" }}>
+                    <div className="rounded-[5px] bg-white p-4 shadow-xl ring-1 ring-[#E5E5E5]">
+                      <p className="mb-3 text-[10px] font-bold uppercase tracking-widest text-gray">
+                        {city.name} · {city.locs.length} {city.locs.length === 1 ? "location" : "locations"}
+                      </p>
+                      <div className="space-y-1">
+                        {city.locs.map((loc) => (
+                          <Link
+                            key={loc.slug}
+                            href={`/locations/${loc.slug}`}
+                            className="flex items-center gap-3 rounded-[5px] p-2 transition-all hover:bg-[#F0F0F0] hover:pl-3"
+                          >
+                            <div className="relative h-10 w-14 flex-shrink-0 overflow-hidden rounded-[3px]">
+                              <Image src={loc.images[0]} alt={loc.name} fill className="object-cover" sizes="56px" />
+                            </div>
+                            <div className="flex-1">
+                              <p className="text-sm font-semibold">{loc.name}</p>
+                              <p className="text-[11px] text-gray">from €{loc.priceFrom}/mo</p>
+                            </div>
+                            <span className={`rounded-[5px] px-2 py-0.5 text-[9px] font-bold ${
+                              loc.stayType === "SHORT" ? "bg-black text-white" : "bg-pink text-white"
+                            }`}>
+                              {loc.stayType === "SHORT" ? "SHORT" : "LONG"}
+                            </span>
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* CTA — contextual */}
+          <div className="hidden lg:block">
+            {locationName ? (
+              <button
+                onClick={() => document.getElementById("rooms")?.scrollIntoView({ behavior: "smooth" })}
+                className={clsx(
+                  "rounded-[5px] px-6 py-2.5 text-sm font-semibold transition-all duration-200 hover:opacity-80",
+                  isDark ? "bg-black text-white hover:opacity-80" : "border-2 border-white text-white hover:bg-white hover:text-black"
+                )}
+              >
+                {ctaLabel}
+              </button>
+            ) : (
+              <Link
+                href="/move-in"
+                className={clsx(
+                  "rounded-[5px] px-6 py-2.5 text-sm font-semibold transition-all duration-200",
+                  isDark ? "bg-black text-white hover:opacity-80" : "border-2 border-white text-white hover:bg-white hover:text-black"
+                )}
+              >
+                {ctaLabel}
+              </Link>
+            )}
+          </div>
+
+          {/* Mobile — animated hamburger */}
+          <button
+            onClick={() => setMobileOpen(!mobileOpen)}
+            className="relative h-6 w-6 lg:hidden"
+            aria-label="Toggle menu"
+          >
+            <span
+              className={clsx(
+                "absolute left-0 block h-0.5 w-6 transition-all duration-300",
+                isDark || mobileOpen ? "bg-black" : "bg-white",
+                mobileOpen ? "top-[11px] rotate-45" : "top-1"
+              )}
+            />
+            <span
+              className={clsx(
+                "absolute left-0 top-[11px] block h-0.5 w-6 transition-all duration-300",
+                isDark || mobileOpen ? "bg-black" : "bg-white",
+                mobileOpen ? "opacity-0" : "opacity-100"
+              )}
+            />
+            <span
+              className={clsx(
+                "absolute left-0 block h-0.5 w-6 transition-all duration-300",
+                isDark || mobileOpen ? "bg-black" : "bg-white",
+                mobileOpen ? "top-[11px] -rotate-45" : "top-[21px]"
+              )}
+            />
+          </button>
+        </div>
+      </div>
+
+      {/* Mobile menu */}
+      <div
+        className={clsx(
+          "fixed inset-0 top-14 z-40 bg-white/95 backdrop-blur-lg transition-transform duration-300 lg:hidden",
+          mobileOpen ? "translate-x-0" : "translate-x-full"
+        )}
+      >
+        <div className="flex flex-col items-center gap-6 pt-12">
+          {navCities.map((city) => (
+            <div key={city.slug} className="text-center">
+              <Link
+                href={`/${city.slug}`}
+                onClick={() => setMobileOpen(false)}
+                className="text-lg font-semibold text-black"
+              >
+                {city.name}
+              </Link>
+              <p className="text-xs text-gray">{city.locs.length} {city.locs.length === 1 ? "location" : "locations"}</p>
+            </div>
+          ))}
+          <Link
+            href="/move-in"
+            onClick={() => setMobileOpen(false)}
+            className="mt-4 rounded-[5px] bg-black px-8 py-3 text-base font-semibold text-white transition-all duration-200 hover:opacity-80"
+          >
+            {ctaLabel}
+          </Link>
+        </div>
+      </div>
+    </nav>
+  );
+}
