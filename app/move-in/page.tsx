@@ -1052,7 +1052,7 @@ function MoveInFlow() {
         )}
 
         {/* ── RESULTS (like homepage search results) ── */}
-        {showResults && !showLease && !filterCalendarOpen && !(stayType === "SHORT" && (!checkIn || !checkOut || tooShort)) && !(stayType === "LONG" && (!city || !moveInDate)) && (
+        {showResults && !showLease && !filterCalendarOpen && !roomCollapsed && !(stayType === "SHORT" && (!checkIn || !checkOut || tooShort)) && !(stayType === "LONG" && (!city || !moveInDate)) && (
           <section ref={resultsRef} id="search-results" className="bg-white py-16">
             <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
               {/* Header */}
