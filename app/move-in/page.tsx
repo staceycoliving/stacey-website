@@ -666,8 +666,6 @@ function MoveInFlow() {
 
         setShowResults(true);
         setRoomCollapsed(true);
-
-        setTimeout(() => aboutRef.current?.scrollIntoView({ behavior: "smooth" }), 300);
       }
     }
   }, [searchParams]);
