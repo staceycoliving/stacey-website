@@ -292,3 +292,48 @@ export async function createShortStayBooking(params: {
     reservationIds: booking.reservationIds,
   };
 }
+
+/**
+ * Get base per-night prices for all SHORT stay properties.
+ * Uses a default 5-night window ~14 days from now.
+ * Returns: { alster: { PREMIUM: 63, JUMBO: 69, ... }, downtown: { ... } }
+ */
+export async function getBaseNightlyPrices(): Promise<Record<string, Record<string, number>>> {
+  const from = new Date();
+  from.setDate(from.getDate() + 14);
+  const to = new Date(from);
+  to.setDate(to.getDate() + 5);
+
+  const checkIn = from.toISOString().slice(0, 10);
+  const checkOut = to.toISOString().slice(0, 10);
+  const nights = 5;
+
+  const result: Record<string, Record<string, number>> = {};
+
+  const slugs = Object.keys(PROPERTY_MAP);
+  const fetches = slugs.map(async (slug) => {
+    const propertyId = PROPERTY_MAP[slug];
+    const ratePlanCodes = RATE_PLAN_CODES[propertyId] || {};
+
+    try {
+      const offersData = await apiFetch(`/booking/v1/offers?${new URLSearchParams({
+        propertyId, arrival: checkIn, departure: checkOut, adults: "1",
+      })}`);
+
+      const prices: Record<string, number> = {};
+      for (const offer of offersData.offers || []) {
+        const category = APALEO_NAME_TO_CATEGORY[offer.unitGroup?.name];
+        if (!category) continue;
+        const expectedCode = ratePlanCodes[category];
+        if (!expectedCode || offer.ratePlan?.code !== expectedCode) continue;
+        prices[category] = Math.round((offer.totalGrossAmount.amount / nights) * 100) / 100;
+      }
+      result[slug] = prices;
+    } catch {
+      result[slug] = {};
+    }
+  });
+
+  await Promise.all(fetches);
+  return result;
+}

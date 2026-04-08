@@ -293,6 +293,15 @@ function LocationDetail({ location }: { location: Location }) {
   const [availability, setAvailability] = useState<Record<string, CatAvail>>({});
   const [loadingAvail, setLoadingAvail] = useState(false);
 
+  // Base nightly prices from apaleo (fetched once, before date selection)
+  const [basePrices, setBasePrices] = useState<Record<string, number>>({});
+  useEffect(() => {
+    if (!isShort) return;
+    fetch("/api/prices").then(r => r.ok ? r.json() : {}).then((data: Record<string, Record<string, number>>) => {
+      setBasePrices(data[location.slug] || {});
+    }).catch(() => {});
+  }, [location.slug, isShort]);
+
   const localDate = (d: Date) =>
     `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
@@ -389,12 +398,17 @@ function LocationDetail({ location }: { location: Location }) {
   const cityLabel = location.city === "hamburg" ? "Hamburg" : location.city === "berlin" ? "Berlin" : "Vallendar";
 
   // Shared booking card props
-  // For SHORT stay: compute lowest per-night price from API
+  // For SHORT stay: compute lowest per-night price (live > base > data.ts)
   const lowestNightlyPrice = isShort
-    ? Object.values(availability).reduce((min, cat) => {
-        if (cat.pricePerNight && (min === null || cat.pricePerNight < min)) return cat.pricePerNight;
-        return min;
-      }, null as number | null)
+    ? (() => {
+        // Live prices from availability (after date selection)
+        const livePrices = Object.values(availability).map(c => c.pricePerNight).filter((p): p is number => p != null && p > 0);
+        if (livePrices.length > 0) return Math.min(...livePrices);
+        // Base prices from apaleo (before date selection)
+        const base = Object.values(basePrices);
+        if (base.length > 0) return Math.min(...base);
+        return null;
+      })()
     : null;
 
   const bookingProps = {
@@ -609,7 +623,8 @@ function LocationDetail({ location }: { location: Location }) {
                                 ? (() => {
                                     const cat = ROOM_NAME_TO_CATEGORY[room.name];
                                     const price = cat ? availability[cat]?.pricePerNight : null;
-                                    return price ? <>&euro;{price}/night</> : <>Select dates</>;
+                                    const basePrice = cat ? basePrices[cat] : null;
+                                    return price ? <>&euro;{price}/night</> : basePrice ? <>&euro;{basePrice}/night</> : <>Select dates</>;
                                   })()
                                 : <>&euro;{room.priceMonthly}/mo</>}
                             </span>
