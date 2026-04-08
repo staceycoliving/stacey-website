@@ -631,7 +631,9 @@ export default function HomePage() {
                               <span className="font-semibold text-black">Includes:</span> {room.interior}
                             </p>
                             <Link
-                              href={`/move-in?room=${room.id}&date=${stayType === "SHORT" ? checkIn : longMoveIn}&type=${stayType?.toLowerCase()}`}
+                              href={stayType === "SHORT"
+                                ? `/move-in?room=${room.id}&checkin=${checkIn}&checkout=${checkOut}&type=short`
+                                : `/move-in?room=${room.id}&date=${longMoveIn}&type=long`}
                               className="mt-4 flex items-center justify-center gap-2 rounded-[5px] bg-black px-6 py-3 text-sm font-semibold text-white transition-all duration-200 hover:opacity-80"
                             >
                               Book this room <ArrowRight size={14} />
