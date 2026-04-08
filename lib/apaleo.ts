@@ -295,43 +295,51 @@ export async function createShortStayBooking(params: {
 
 /**
  * Get base per-night prices for all SHORT stay properties.
- * Uses a default 5-night window ~14 days from now.
+ * Tries multiple date windows to find prices for all categories
+ * (some may be sold out in near-term dates).
  * Returns: { alster: { PREMIUM: 63, JUMBO: 69, ... }, downtown: { ... } }
  */
 export async function getBaseNightlyPrices(): Promise<Record<string, Record<string, number>>> {
-  const from = new Date();
-  from.setDate(from.getDate() + 14);
-  const to = new Date(from);
-  to.setDate(to.getDate() + 5);
-
-  const checkIn = from.toISOString().slice(0, 10);
-  const checkOut = to.toISOString().slice(0, 10);
+  const result: Record<string, Record<string, number>> = {};
   const nights = 5;
 
-  const result: Record<string, Record<string, number>> = {};
+  // Try 3 date windows: 2 weeks, 2 months, 6 months from now
+  const windows = [14, 60, 180];
 
   const slugs = Object.keys(PROPERTY_MAP);
   const fetches = slugs.map(async (slug) => {
     const propertyId = PROPERTY_MAP[slug];
     const ratePlanCodes = RATE_PLAN_CODES[propertyId] || {};
+    const prices: Record<string, number> = {};
 
-    try {
-      const offersData = await apiFetch(`/booking/v1/offers?${new URLSearchParams({
-        propertyId, arrival: checkIn, departure: checkOut, adults: "1",
-      })}`);
+    for (const daysAhead of windows) {
+      const from = new Date();
+      from.setDate(from.getDate() + daysAhead);
+      const to = new Date(from);
+      to.setDate(to.getDate() + nights);
 
-      const prices: Record<string, number> = {};
-      for (const offer of offersData.offers || []) {
-        const category = APALEO_NAME_TO_CATEGORY[offer.unitGroup?.name];
-        if (!category) continue;
-        const expectedCode = ratePlanCodes[category];
-        if (!expectedCode || offer.ratePlan?.code !== expectedCode) continue;
-        prices[category] = Math.round((offer.totalGrossAmount.amount / nights) * 100) / 100;
+      try {
+        const offersData = await apiFetch(`/booking/v1/offers?${new URLSearchParams({
+          propertyId, arrival: from.toISOString().slice(0, 10),
+          departure: to.toISOString().slice(0, 10), adults: "1",
+        })}`);
+
+        for (const offer of offersData.offers || []) {
+          const category = APALEO_NAME_TO_CATEGORY[offer.unitGroup?.name];
+          if (!category || prices[category]) continue; // keep first (nearest) price
+          const expectedCode = ratePlanCodes[category];
+          if (!expectedCode || offer.ratePlan?.code !== expectedCode) continue;
+          prices[category] = Math.round((offer.totalGrossAmount.amount / nights) * 100) / 100;
+        }
+      } catch {
+        // continue to next window
       }
-      result[slug] = prices;
-    } catch {
-      result[slug] = {};
+
+      // Stop early if we have all categories
+      if (Object.keys(prices).length >= Object.keys(ratePlanCodes).length) break;
     }
+
+    result[slug] = prices;
   });
 
   await Promise.all(fetches);
