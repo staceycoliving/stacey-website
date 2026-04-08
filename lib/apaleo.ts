@@ -97,6 +97,25 @@ const APALEO_NAME_TO_CATEGORY: Record<string, string> = {
 
 const COUPLE_CATEGORIES = new Set(["JUMBO", "JUMBO_BALCONY", "STUDIO", "PREMIUM_PLUS_BALCONY", "ENSUITE"]);
 
+// ─── Rate plan codes for website pricing (per property) ─────
+
+const RATE_PLAN_CODES: Record<string, Record<string, string>> = {
+  ALSTER: {
+    PREMIUM: "PREMIUM",
+    PREMIUM_BALCONY: "PREMIUM_BALCONY",
+    PREMIUM_PLUS: "PREMIUM_PLUS",
+    PREMIUM_PLUS_BALCONY: "PREMIUM_PLUS_BALCONY",
+    JUMBO: "JUMBO",
+  },
+  DOWNTOWN: {
+    MIGHTY: "MIGHTY",
+    PREMIUM: "PREMIUM",
+    PREMIUM_BALCONY: "PREMIUM_BALCONY",
+    PREMIUM_PLUS: "PREMIUMPL",
+    JUMBO: "JUMBO",
+  },
+};
+
 // ─── Public API ─────────────────────────────────────────────
 
 export function isApaleoProperty(slug: string): boolean {
@@ -108,8 +127,8 @@ export function getPropertyId(slug: string): string | null {
 }
 
 /**
- * Get availability for a SHORT stay property from apaleo.
- * Returns the same format as our DB-based availability.
+ * Get availability + prices for a SHORT stay property from apaleo.
+ * Fetches availability (all nights) and offers (prices) in parallel.
  */
 export async function getShortStayAvailability(
   slug: string,
@@ -120,17 +139,33 @@ export async function getShortStayAvailability(
   const propertyId = PROPERTY_MAP[slug];
   if (!propertyId) throw new Error(`Unknown SHORT stay property: ${slug}`);
 
-  const params = new URLSearchParams({
-    propertyId,
-    from: checkIn,
-    to: checkOut,
-    adults: String(persons),
-  });
+  // Fetch availability and offers in parallel
+  const [availData, offersData] = await Promise.all([
+    apiFetch(`/availability/v1/unit-groups?${new URLSearchParams({
+      propertyId, from: checkIn, to: checkOut, adults: String(persons),
+    })}`),
+    apiFetch(`/booking/v1/offers?${new URLSearchParams({
+      propertyId, arrival: checkIn, departure: checkOut, adults: String(persons),
+    })}`),
+  ]);
 
-  const data = await apiFetch(`/availability/v1/unit-groups?${params}`);
-
-  const timeSlices = data.timeSlices;
+  const timeSlices = availData.timeSlices;
   if (!timeSlices?.length || !timeSlices[0]?.unitGroups) return [];
+
+  const nights = timeSlices.length;
+  const ratePlanCodes = RATE_PLAN_CODES[propertyId] || {};
+
+  // Build price map from offers: category → per-night price (using our rate plan codes)
+  const priceMap = new Map<string, number>();
+  for (const offer of offersData.offers || []) {
+    const category = APALEO_NAME_TO_CATEGORY[offer.unitGroup?.name];
+    if (!category) continue;
+    const expectedCode = ratePlanCodes[category];
+    if (!expectedCode || offer.ratePlan?.code !== expectedCode) continue;
+    // Per-night price = total / nights
+    const perNight = Math.round((offer.totalGrossAmount.amount / nights) * 100) / 100;
+    priceMap.set(category, perNight);
+  }
 
   // A room must be available for ALL nights — take the minimum sellable count across all timeslices
   const unitGroupNames = timeSlices[0].unitGroups.map(
@@ -143,7 +178,6 @@ export async function getShortStayAvailability(
       if (!category) return null;
       if (persons >= 2 && !COUPLE_CATEGORIES.has(category)) return null;
 
-      // Find minimum sellable count across all nights
       let minSellable = Infinity;
       let physicalCount = 0;
 
@@ -163,6 +197,7 @@ export async function getShortStayAvailability(
         total: physicalCount,
         booked: physicalCount - available,
         available,
+        pricePerNight: priceMap.get(category) || null,
       };
     })
     .filter(Boolean)
@@ -197,7 +232,7 @@ export async function createShortStayBooking(params: {
 
   const unitGroupId = `${propertyId}-${unitGroupCode}`;
 
-  // First get an offer to book against
+  // Get offer with the correct rate plan for website bookings
   const offerParams = new URLSearchParams({
     propertyId,
     arrival: params.checkIn,
@@ -207,7 +242,13 @@ export async function createShortStayBooking(params: {
   });
 
   const offers = await apiFetch(`/booking/v1/offers?${offerParams}`);
-  const offer = offers.offers?.[0];
+
+  // Find offer matching our rate plan code
+  const ratePlanCodes = RATE_PLAN_CODES[propertyId] || {};
+  const expectedCode = ratePlanCodes[params.category];
+  const offer = (offers.offers || []).find(
+    (o: { ratePlan?: { code: string } }) => o.ratePlan?.code === expectedCode
+  ) || offers.offers?.[0];
 
   if (!offer) {
     throw new Error("NOT_AVAILABLE");

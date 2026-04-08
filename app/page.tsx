@@ -658,7 +658,7 @@ export default function HomePage() {
                               </p>
                               <h3 className="mt-1 text-xl font-bold text-white">{loc.name}</h3>
                               <span className="mt-2 inline-block rounded-[5px] bg-white/20 px-2.5 py-1 text-sm font-bold text-white backdrop-blur-sm">
-                                from &euro;{loc.priceFrom}/mo
+                                from &euro;{loc.priceFrom}{loc.stayType === "SHORT" ? "/night" : "/mo"}
                               </span>
                             </div>
                             <div className="absolute inset-0 flex items-center justify-center opacity-0 transition-opacity duration-300 group-hover:opacity-100">

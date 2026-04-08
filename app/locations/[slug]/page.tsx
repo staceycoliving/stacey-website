@@ -47,6 +47,7 @@ function BookingCardContent({
   availableDates,
   availableRoomCount,
   loadingAvail,
+  lowestNightlyPrice,
   variant,
 }: {
   location: Location;
@@ -65,13 +66,14 @@ function BookingCardContent({
   availableDates: { value: string; label: string }[];
   availableRoomCount: number;
   loadingAvail: boolean;
+  lowestNightlyPrice: number | null;
   variant: "desktop" | "mobile";
 }) {
   return (
     <div className="rounded-[5px] bg-black p-6 text-white">
       <p className="text-base text-white/60">Starting from</p>
       <p className="mt-1 text-4xl font-extrabold tracking-tight">
-        &euro;{location.priceFrom}<span className="text-lg font-normal text-white/60">/mo</span>
+        &euro;{isShort && lowestNightlyPrice ? lowestNightlyPrice : location.priceFrom}<span className="text-lg font-normal text-white/60">{isShort ? "/night" : "/mo"}</span>
       </p>
       <p className="mt-2 text-sm text-white/50">
         {location.stayType === "LONG"
@@ -287,7 +289,7 @@ function LocationDetail({ location }: { location: Location }) {
   const tooShort = nights > 0 && nights < 5;
 
   // ─── Availability from DB ───
-  type CatAvail = { available: number; moveInDates?: string[] };
+  type CatAvail = { available: number; moveInDates?: string[]; pricePerNight?: number | null };
   const [availability, setAvailability] = useState<Record<string, CatAvail>>({});
   const [loadingAvail, setLoadingAvail] = useState(false);
 
@@ -311,6 +313,7 @@ function LocationDetail({ location }: { location: Location }) {
           map[cat.category] = {
             available: cat.available ?? cat.freeNow ?? 0,
             moveInDates: cat.moveInDates,
+            pricePerNight: cat.pricePerNight ?? null,
           };
         }
         setAvailability(map);
@@ -386,6 +389,14 @@ function LocationDetail({ location }: { location: Location }) {
   const cityLabel = location.city === "hamburg" ? "Hamburg" : location.city === "berlin" ? "Berlin" : "Vallendar";
 
   // Shared booking card props
+  // For SHORT stay: compute lowest per-night price from API
+  const lowestNightlyPrice = isShort
+    ? Object.values(availability).reduce((min, cat) => {
+        if (cat.pricePerNight && (min === null || cat.pricePerNight < min)) return cat.pricePerNight;
+        return min;
+      }, null as number | null)
+    : null;
+
   const bookingProps = {
     location,
     isShort,
@@ -403,6 +414,7 @@ function LocationDetail({ location }: { location: Location }) {
     availableDates,
     availableRoomCount: availableRooms.length,
     loadingAvail,
+    lowestNightlyPrice,
   } as const;
 
   return (
@@ -593,7 +605,13 @@ function LocationDetail({ location }: { location: Location }) {
                           <div className="absolute bottom-0 left-0 right-0 p-4">
                             <p className="text-lg font-extrabold text-white">{room.name}</p>
                             <span className="mt-1 inline-block rounded-[5px] bg-white/20 px-2.5 py-1 text-sm font-bold text-white backdrop-blur-sm">
-                              &euro;{room.priceMonthly}/mo
+                              {isShort
+                                ? (() => {
+                                    const cat = ROOM_NAME_TO_CATEGORY[room.name];
+                                    const price = cat ? availability[cat]?.pricePerNight : null;
+                                    return price ? <>&euro;{price}/night</> : <>&euro;{room.priceMonthly}/mo</>;
+                                  })()
+                                : <>&euro;{room.priceMonthly}/mo</>}
                             </span>
                           </div>
                         </div>
@@ -889,7 +907,7 @@ function LocationDetail({ location }: { location: Location }) {
                         <p className="text-[11px] font-bold uppercase tracking-wider text-white/60">{locCity}</p>
                         <h3 className="mt-1 text-xl font-bold text-white">{loc.name}</h3>
                         <span className="mt-2 inline-block rounded-[5px] bg-white/20 px-2.5 py-1 text-sm font-bold text-white backdrop-blur-sm">
-                          from &euro;{loc.priceFrom}/mo
+                          from &euro;{loc.priceFrom}{loc.stayType === "SHORT" ? "/night" : "/mo"}
                         </span>
                       </div>
                       <div className="absolute inset-0 flex items-center justify-center opacity-0 transition-opacity duration-300 group-hover:opacity-100">

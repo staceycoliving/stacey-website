@@ -101,7 +101,7 @@ export default function LocationMap({ onMarkerHover }: { onMarkerHover?: (slug: 
               background: rgba(255,255,255,0.2); backdrop-filter: blur(4px);
               color: white; padding: 3px 8px; border-radius: 5px;
               font-size: 12px; font-weight: 700;
-            ">€${loc.priceFrom}/mo</span>
+            ">€${loc.priceFrom}${loc.stayType === "SHORT" ? "/night" : "/mo"}</span>
           </div>
           <div style="padding: 12px;">
             <p style="font-weight: 800; font-size: 15px; margin: 0; color: #1A1A1A;">STACEY ${loc.name}</p>

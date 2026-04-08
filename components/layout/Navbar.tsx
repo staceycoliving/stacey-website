@@ -127,7 +127,7 @@ export default function Navbar({
                             </div>
                             <div className="flex-1">
                               <p className="text-sm font-semibold">{loc.name}</p>
-                              <p className="text-[11px] text-gray">from €{loc.priceFrom}/mo</p>
+                              <p className="text-[11px] text-gray">from €{loc.priceFrom}{loc.stayType === "SHORT" ? "/night" : "/mo"}</p>
                             </div>
                             <span className={`rounded-[5px] px-2 py-0.5 text-[9px] font-bold ${
                               loc.stayType === "SHORT" ? "bg-black text-white" : "bg-pink text-white"

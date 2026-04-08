@@ -295,7 +295,7 @@ export const locations: Location[] = [
     name: "Downtown",
     address: "Brandstwiete 36, 20457 Hamburg",
     stayType: "SHORT",
-    priceFrom: 995,
+    priceFrom: 45,
     // Mighty=995, Premium=1095, PremiumBalcony=1145, Premium+=1195, Jumbo=1395
     tagline: "Right in the heart of Hamburg's city center",
     description:
@@ -384,7 +384,7 @@ export const locations: Location[] = [
     name: "Alster",
     address: "Gurlittstraße 28, 20099 Hamburg",
     stayType: "SHORT",
-    priceFrom: 995,
+    priceFrom: 48,
     tagline: "Right on the Outer Alster — the most beautiful view in the city",
     description:
       "Wake up to views of the Alster! Our location in St. Georg sits right on the Outer Alster and offers short stays in one of Hamburg's most beautiful corners.",
@@ -546,7 +546,7 @@ export const locations: Location[] = [
     name: "Othmarschen",
     address: "Baurstraße 8d, 22605 Hamburg",
     stayType: "SHORT",
-    priceFrom: 995,
+    priceFrom: 45,
     tagline: "Peaceful living in Hamburg's green west side",
     description:
       "Othmarschen offers the perfect balance between city access and tranquility. Our location sits in the green west of Hamburg, ideal for shorter stays.",
