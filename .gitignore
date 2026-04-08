@@ -44,6 +44,8 @@ next-env.d.ts
 
 # data files (not in git)
 *.xlsx
+*.png
+!public/**/*.png
 .next 2/
 
 # large video files (deploy separately)
