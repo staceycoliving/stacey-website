@@ -129,23 +129,40 @@ export async function getShortStayAvailability(
 
   const data = await apiFetch(`/availability/v1/unit-groups?${params}`);
 
-  // apaleo returns timeslices — we take the first one (overall availability)
-  const timeSlice = data.timeSlices?.[0];
-  if (!timeSlice?.unitGroups) return [];
+  const timeSlices = data.timeSlices;
+  if (!timeSlices?.length || !timeSlices[0]?.unitGroups) return [];
 
-  const categories = timeSlice.unitGroups
-    .map((g: { unitGroup: { name: string }; physicalCount: number; sellableCount: number }) => {
-      const category = APALEO_NAME_TO_CATEGORY[g.unitGroup.name];
+  // A room must be available for ALL nights — take the minimum sellable count across all timeslices
+  const unitGroupNames = timeSlices[0].unitGroups.map(
+    (g: { unitGroup: { name: string } }) => g.unitGroup.name
+  );
+
+  const categories = unitGroupNames
+    .map((name: string) => {
+      const category = APALEO_NAME_TO_CATEGORY[name];
       if (!category) return null;
-
-      // Filter couples
       if (persons >= 2 && !COUPLE_CATEGORIES.has(category)) return null;
+
+      // Find minimum sellable count across all nights
+      let minSellable = Infinity;
+      let physicalCount = 0;
+
+      for (const ts of timeSlices) {
+        const group = ts.unitGroups?.find(
+          (g: { unitGroup: { name: string } }) => g.unitGroup.name === name
+        );
+        if (!group) { minSellable = 0; break; }
+        physicalCount = group.physicalCount;
+        minSellable = Math.min(minSellable, group.sellableCount);
+      }
+
+      const available = Math.max(0, minSellable === Infinity ? 0 : minSellable);
 
       return {
         category,
-        total: g.physicalCount,
-        booked: g.physicalCount - Math.max(0, g.sellableCount),
-        available: Math.max(0, g.sellableCount),
+        total: physicalCount,
+        booked: physicalCount - available,
+        available,
       };
     })
     .filter(Boolean)
