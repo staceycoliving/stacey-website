@@ -44,7 +44,7 @@ export default function HomePage() {
   const [longStayDates, setLongStayDates] = useState<{ value: string; label: string }[]>([]);
   const [loadingLongDates, setLoadingLongDates] = useState(false);
   // Raw availability per location → category → moveInDates
-  type AvailMap = Record<string, Record<string, { available: number; moveInDates?: string[] }>>;
+  type AvailMap = Record<string, Record<string, { available: number; moveInDates?: string[]; pricePerNight?: number | null }>>;
   const [longAvailability, setLongAvailability] = useState<AvailMap>({});
   const [shortAvailability, setShortAvailability] = useState<AvailMap>({});
 
@@ -65,9 +65,9 @@ export default function HomePage() {
       const map: AvailMap = {};
       for (const data of results) {
         if (!data?.categories) continue;
-        const catMap: Record<string, { available: number }> = {};
+        const catMap: Record<string, { available: number; pricePerNight?: number | null }> = {};
         for (const cat of data.categories) {
-          catMap[cat.category] = { available: cat.available ?? 0 };
+          catMap[cat.category] = { available: cat.available ?? 0, pricePerNight: cat.pricePerNight ?? null };
         }
         map[data.location] = catMap;
       }
@@ -585,7 +585,13 @@ export default function HomePage() {
                               {room.sizeSqm && <p className="text-xs text-gray">{room.sizeSqm} m&sup2;</p>}
                             </div>
                             <p className="mt-1 text-xl font-extrabold">
-                              &euro;{room.priceMonthly}<span className="text-xs font-normal text-gray">/mo</span>
+                              {loc.stayType === "SHORT" ? (() => {
+                                const cat = ROOM_NAME_TO_CATEGORY[room.name];
+                                const price = cat ? shortAvailability[loc.slug]?.[cat]?.pricePerNight : null;
+                                return <>&euro;{price || room.priceMonthly}<span className="text-xs font-normal text-gray">{price ? "/night" : "/mo"}</span></>;
+                              })() : (
+                                <>&euro;{room.priceMonthly}<span className="text-xs font-normal text-gray">/mo</span></>
+                              )}
                             </p>
                           </div>
                         </button>
