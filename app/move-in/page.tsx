@@ -383,9 +383,22 @@ function MoveInFlow() {
   const leaseRef = useRef<HTMLDivElement>(null);
 
   // ─── Availability from DB ───
-  type AvailabilityMap = Record<string, Record<string, { available: number; total: number; moveInDates?: string[] }>>;
+  type AvailabilityMap = Record<string, Record<string, { available: number; total: number; moveInDates?: string[]; pricePerNight?: number | null }>>;
   const [availability, setAvailability] = useState<AvailabilityMap>({});
   const [loadingAvailability, setLoadingAvailability] = useState(false);
+
+  // Base nightly prices from apaleo (fetched once on mount)
+  const [basePrices, setBasePrices] = useState<Record<string, Record<string, number>>>({});
+  useEffect(() => {
+    fetch("/api/prices").then(r => r.ok ? r.json() : {}).then(setBasePrices).catch(() => {});
+  }, []);
+
+  // Helper: get nightly price for a room (live > base > null)
+  const getNightlyPrice = (roomName: string, locSlug: string): number | null => {
+    const cat = ROOM_NAME_TO_CATEGORY[roomName];
+    if (!cat) return null;
+    return availability[locSlug]?.[cat]?.pricePerNight || basePrices[locSlug]?.[cat] || null;
+  };
 
   // Fetch availability from DB
   const fetchAvailability = useCallback((locs: Location[], opts?: { ci?: string; co?: string }) => {
@@ -407,12 +420,13 @@ function MoveInFlow() {
       const map: AvailabilityMap = {};
       results.forEach((data) => {
         if (!data) return;
-        const catMap: Record<string, { available: number; total: number; moveInDates?: string[] }> = {};
+        const catMap: Record<string, { available: number; total: number; moveInDates?: string[]; pricePerNight?: number | null }> = {};
         for (const cat of data.categories) {
           catMap[cat.category] = {
             available: cat.available ?? cat.freeNow ?? 0,
             total: cat.total,
             moveInDates: cat.moveInDates,
+            pricePerNight: cat.pricePerNight ?? null,
           };
         }
         map[data.location] = catMap;
@@ -876,7 +890,13 @@ function MoveInFlow() {
                         {persons} {persons === 1 ? "person" : "persons"} ·{" "}
                         {moveInDate ? `from ${formatDate(moveInDate)}` : checkIn && checkOut ? `${formatDate(checkIn)} — ${formatDate(checkOut)}` : ""}
                       </p>
-                      <p className="mt-0.5 text-sm font-semibold">€{selectedRoom.priceMonthly}/mo</p>
+                      <p className="mt-0.5 text-sm font-semibold">{(() => {
+                        if (stayType === "SHORT" && selectedLocation) {
+                          const price = getNightlyPrice(selectedRoom.name, selectedLocation.slug);
+                          if (price) return `€${price}/night`;
+                        }
+                        return `€${selectedRoom.priceMonthly}/mo`;
+                      })()}</p>
                     </div>
                   </div>
                 </div>
@@ -1088,9 +1108,15 @@ function MoveInFlow() {
                                 {room.sizeSqm && <p className="text-xs text-gray">{room.sizeSqm} m²</p>}
                               </div>
                               <p className="mt-1 text-xl font-extrabold">
-                                €{room.priceMonthly}<span className="text-xs font-normal text-gray">/mo</span>
+                                {(() => {
+                                  if (stayType === "SHORT") {
+                                    const price = getNightlyPrice(room.name, loc.slug);
+                                    if (price) return <>{"\u20AC"}{price}<span className="text-xs font-normal text-gray">/night</span></>;
+                                  }
+                                  return <>{"\u20AC"}{room.priceMonthly}<span className="text-xs font-normal text-gray">/mo</span></>;
+                                })()}
                               </p>
-                              <p className="mt-0.5 text-[11px] text-gray">All-inclusive · fully furnished</p>
+                              <p className="mt-0.5 text-[11px] text-gray">Almost everything included · fully furnished</p>
                             </div>
                             {/* Details + Book — visible on hover (desktop) / always visible (mobile) */}
                             <div className="border-t border-[#E8E6E0] p-4 max-lg:block lg:max-h-0 lg:overflow-hidden lg:border-t-0 lg:p-0 lg:opacity-0 lg:transition-all lg:duration-300 lg:group-hover:max-h-60 lg:group-hover:border-t lg:group-hover:p-4 lg:group-hover:opacity-100">
@@ -1131,7 +1157,13 @@ function MoveInFlow() {
               <div className="flex items-center justify-between rounded-[5px] bg-[#F5F5F5] px-5 py-3">
                 <p className="text-sm">
                   <span className="font-bold">{selectedRoom.name}</span>
-                  <span className="text-gray"> · STACEY {selectedLocation.name} · €{selectedRoom.priceMonthly}/mo</span>
+                  <span className="text-gray"> · STACEY {selectedLocation.name} · {(() => {
+                    if (stayType === "SHORT") {
+                      const price = getNightlyPrice(selectedRoom.name, selectedLocation.slug);
+                      if (price) return `€${price}/night`;
+                    }
+                    return `€${selectedRoom.priceMonthly}/mo`;
+                  })()}</span>
                 </p>
                 <button onClick={editRoom} className="flex items-center gap-1.5 text-xs font-medium text-gray transition-colors hover:text-black">
                   <Pencil size={11} /> Change room
@@ -1190,7 +1222,13 @@ function MoveInFlow() {
                         <div className="mt-4 border-t border-white/10 pt-4">
                           <div className="flex items-center justify-between">
                             <p className="text-sm text-white/60">Starting from</p>
-                            <p className="text-2xl font-extrabold">€{selectedRoom.priceMonthly}<span className="text-sm font-normal text-white/60">/mo</span></p>
+                            <p className="text-2xl font-extrabold">{(() => {
+                              if (stayType === "SHORT" && selectedLocation) {
+                                const price = getNightlyPrice(selectedRoom.name, selectedLocation.slug);
+                                if (price) return <>€{price}<span className="text-sm font-normal text-white/60">/night</span></>;
+                              }
+                              return <>€{selectedRoom.priceMonthly}<span className="text-sm font-normal text-white/60">/mo</span></>;
+                            })()}</p>
                           </div>
                         </div>
 
@@ -1270,7 +1308,13 @@ function MoveInFlow() {
                         <div className="mt-4 border-t border-white/10 pt-4">
                           <div className="flex items-center justify-between">
                             <p className="text-sm text-white/60">Starting from</p>
-                            <p className="text-2xl font-extrabold">€{selectedRoom.priceMonthly}<span className="text-sm font-normal text-white/60">/mo</span></p>
+                            <p className="text-2xl font-extrabold">{(() => {
+                              if (stayType === "SHORT" && selectedLocation) {
+                                const price = getNightlyPrice(selectedRoom.name, selectedLocation.slug);
+                                if (price) return <>€{price}<span className="text-sm font-normal text-white/60">/night</span></>;
+                              }
+                              return <>€{selectedRoom.priceMonthly}<span className="text-sm font-normal text-white/60">/mo</span></>;
+                            })()}</p>
                           </div>
                         </div>
                         <div className="mt-4 space-y-2 border-t border-white/10 pt-4">
