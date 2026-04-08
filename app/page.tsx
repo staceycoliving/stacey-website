@@ -330,7 +330,7 @@ export default function HomePage() {
                 )}
                 {persons === null && stayType === "SHORT" && (
                   <p className="mt-4 text-xs text-white/40 sm:text-sm">
-                    All-inclusive from &euro;995/month
+                    Almost everything included from &euro;45/night
                   </p>
                 )}
                 <button onClick={() => setStep(0)} className="mt-4 text-sm text-white/40 hover:text-white/70">
@@ -351,7 +351,7 @@ export default function HomePage() {
                     <div>
                       <p className="text-sm font-bold">Short Stay · Hamburg</p>
                       <p className="text-[11px] text-gray">
-                        {persons === 2 ? "2 persons · couple-friendly rooms" : "1 person"} · from &euro;995/mo
+                        {persons === 2 ? "2 persons · couple-friendly rooms" : "1 person"} · from &euro;45/night
                       </p>
                     </div>
                     <button onClick={handleReset} className="text-xs text-gray hover:text-black">
