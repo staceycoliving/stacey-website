@@ -40,7 +40,7 @@ export async function PATCH(request: NextRequest) {
   if (action === "calculate_refund") {
     // Sum unpaid rent
     const arrearsAmount = tenant.rentPayments.reduce(
-      (sum, rp) => sum + (rp.amount - rp.paidAmount),
+      (sum: number, rp: { amount: number; paidAmount: number }) => sum + (rp.amount - rp.paidAmount),
       0
     );
     const deposit = tenant.depositAmount || 0;

@@ -181,7 +181,7 @@ export async function POST(request: NextRequest) {
     // Active booking statuses that "reserve" a room
     const ACTIVE_STATUSES: BookingStatus[] = ["PENDING", "SIGNED", "PAID", "DEPOSIT_PENDING"];
 
-    const booking = await prisma.$transaction(async (tx) => {
+    const booking = await prisma.$transaction(async (tx: any) => {
       // Find all eligible rooms: matching category, at this location
       const allRooms = await tx.room.findMany({
         where: {
@@ -204,7 +204,7 @@ export async function POST(request: NextRequest) {
       }
 
       // Filter to rooms that are free on the requested moveInDate
-      const freeRooms = allRooms.filter((room) => {
+      const freeRooms = allRooms.filter((room: any) => {
         // Room has active booking → not available
         if (room.bookings.length > 0) return false;
 
