@@ -33,12 +33,46 @@ export async function GET(request: NextRequest) {
   }
 
   if (action === "accounts") {
-    // List accounts/sub-accounts
-    const res = await fetch(`${API_URL}/finance/v1/accounts?propertyId=${propertyId}`, {
+    // List sub-accounts for property
+    const res = await fetch(`${API_URL}/finance/v1/sub-accounts?propertyId=${propertyId}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
-    const data = await res.json();
-    return Response.json({ propertyId, accounts: data });
+    const text = await res.text();
+    try {
+      return Response.json({ propertyId, status: res.status, accounts: JSON.parse(text) });
+    } catch {
+      return Response.json({ propertyId, status: res.status, raw: text });
+    }
+  }
+
+  if (action === "create-service") {
+    // Create city tax service
+    const res = await fetch(`${API_URL}/rateplan/v1/services`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        code: "CITY_TAX",
+        name: "Kultur- und Tourismustaxe",
+        description: "Hamburger Kultur- und Tourismustaxe (Durchlaufposten)",
+        defaultGrossPrice: { amount: 0, currency: "EUR" },
+        pricingUnit: "Room",
+        postNextDay: false,
+        serviceType: "Other",
+        vatType: "Without",
+        propertyId,
+        availability: {
+          mode: "Daily",
+          daysOfWeek: ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"],
+        },
+        channelCodes: ["Direct"],
+      }),
+    });
+    const text = await res.text();
+    try {
+      return Response.json({ action: "create-service", propertyId, status: res.status, result: JSON.parse(text) });
+    } catch {
+      return Response.json({ action: "create-service", propertyId, status: res.status, raw: text });
+    }
   }
 
   return Response.json({ error: "Unknown action" });
