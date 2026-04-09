@@ -339,7 +339,7 @@ export async function createShortStayBooking(params: {
 }
 
 /**
- * After Stripe payment: create booking in apaleo + record payment on folio.
+ * After Stripe payment: create booking in apaleo, post city tax charge, record payment.
  */
 export async function createPaidShortStayBooking(params: {
   slug: string;
@@ -358,9 +358,12 @@ export async function createPaidShortStayBooking(params: {
   addressCity?: string;
   country?: string;
   totalAmountEur: number;
+  cityTaxTotal: number;
   stripeSessionId: string;
 }) {
-  // 1. Create booking in apaleo
+  const propertyId = PROPERTY_MAP[params.slug];
+
+  // 1. Create booking in apaleo (room rate only)
   const booking = await createShortStayBooking({
     slug: params.slug,
     category: params.category,
@@ -374,16 +377,36 @@ export async function createPaidShortStayBooking(params: {
     message: params.message,
   });
 
-  // 2. Find the folio for this reservation
+  // 2. Find the folio + post city tax + record payment
   try {
     const reservationId = booking.reservationIds?.[0];
     if (reservationId) {
-      // Get folios for this reservation
       const folios = await apiFetch(`/finance/v1/folios?reservationIds=${reservationId}`);
       const folio = folios.folios?.[0];
 
       if (folio) {
-        // 3. Record payment on folio
+        // 2a. Post city tax as separate charge on folio
+        if (params.cityTaxTotal > 0 && propertyId) {
+          try {
+            await apiFetch(`/finance/v1/folios/${folio.id}/charges`, {
+              method: "POST",
+              body: JSON.stringify({
+                serviceId: `${propertyId}-CITY_TAX`,
+                name: { en: "City Tax", de: "Kultur- und Tourismustaxe" },
+                amount: {
+                  amount: params.cityTaxTotal,
+                  currency: "EUR",
+                },
+                quantity: 1,
+                vatType: "Without",
+              }),
+            });
+          } catch (err) {
+            console.error("Failed to post city tax charge:", err);
+          }
+        }
+
+        // 2b. Record full payment (room + city tax)
         await apiFetch(`/finance/v1/folios/${folio.id}/payments`, {
           method: "POST",
           body: JSON.stringify({
@@ -398,7 +421,6 @@ export async function createPaidShortStayBooking(params: {
       }
     }
   } catch (err) {
-    // Don't fail the booking if payment recording fails — booking is already created
     console.error("Failed to record payment in apaleo:", err);
   }
 

@@ -26,7 +26,8 @@ export async function POST(request: NextRequest) {
     const nights = parseInt(m.nights);
     const totalAmountEur = (session.amount_total || 0) / 100;
 
-    // Create booking in apaleo + record payment
+    // Create booking in apaleo + post city tax + record payment
+    const cityTaxTotal = parseFloat(m.cityTaxTotal || "0");
     const booking = await createPaidShortStayBooking({
       slug: m.slug,
       category: m.category,
@@ -44,6 +45,7 @@ export async function POST(request: NextRequest) {
       country: m.country || undefined,
       message: m.message || undefined,
       totalAmountEur,
+      cityTaxTotal,
       stripeSessionId: sessionId,
     });
 

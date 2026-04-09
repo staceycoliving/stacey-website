@@ -42,41 +42,61 @@ export async function POST(request: NextRequest) {
       return Response.json({ error: "Minimum stay is 5 nights" }, { status: 400 });
     }
 
-    // Get the per-night price from apaleo offers
-    let totalAmountCents: number;
-    if (isApaleoProperty(slug)) {
-      const categories = await getShortStayAvailability(slug, checkIn, checkOut, persons || 1);
-      const cat = categories.find((c: { category: string }) => c.category === category);
-      if (!cat || cat.available <= 0) {
-        return Response.json({ error: "No availability" }, { status: 409 });
-      }
-      if (!cat.grandTotal) {
-        return Response.json({ error: "Price not available" }, { status: 500 });
-      }
-      // grandTotal includes room rate + city tax
-      totalAmountCents = Math.round(cat.grandTotal * 100);
-    } else {
+    if (!isApaleoProperty(slug)) {
       return Response.json({ error: "Not an apaleo property" }, { status: 400 });
     }
 
+    // Get pricing from apaleo
+    const categories = await getShortStayAvailability(slug, checkIn, checkOut, persons || 1);
+    const cat = categories.find((c: { category: string }) => c.category === category);
+    if (!cat || cat.available <= 0) {
+      return Response.json({ error: "No availability" }, { status: 409 });
+    }
+    if (!cat.grandTotal || !cat.totalGross) {
+      return Response.json({ error: "Price not available" }, { status: 500 });
+    }
+
+    // Split: room rate (totalGross) and city tax (separate)
+    const roomRateCents = Math.round(cat.totalGross * 100);
+    const cityTaxCents = Math.round((cat.cityTaxTotal || 0) * 100);
+
     const origin = request.nextUrl.origin;
+    const dateRange = `${new Date(checkIn).toLocaleDateString("en-GB")} – ${new Date(checkOut).toLocaleDateString("en-GB")}`;
+
+    // Build Stripe line items: room + city tax (if applicable)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const lineItems: any[] = [
+      {
+        price_data: {
+          currency: "eur",
+          product_data: {
+            name: `STACEY ${locationName} · ${roomName}`,
+            description: `${nights} nights · ${dateRange} · incl. 7% VAT`,
+          },
+          unit_amount: roomRateCents,
+        },
+        quantity: 1,
+      },
+    ];
+
+    if (cityTaxCents > 0) {
+      lineItems.push({
+        price_data: {
+          currency: "eur",
+          product_data: {
+            name: "Kultur- und Tourismustaxe",
+            description: `Hamburg city tax · ${nights} nights`,
+          },
+          unit_amount: cityTaxCents,
+        },
+        quantity: 1,
+      });
+    }
 
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       customer_email: email,
-      line_items: [
-        {
-          price_data: {
-            currency: "eur",
-            product_data: {
-              name: `STACEY ${locationName} · ${roomName}`,
-              description: `${nights} nights · ${new Date(checkIn).toLocaleDateString("en-GB")} – ${new Date(checkOut).toLocaleDateString("en-GB")}`,
-            },
-            unit_amount: totalAmountCents,
-          },
-          quantity: 1,
-        },
-      ],
+      line_items: lineItems,
       metadata: {
         type: "short_stay",
         slug,
@@ -98,6 +118,8 @@ export async function POST(request: NextRequest) {
         message: message || "",
         locationName: locationName || "",
         roomName: roomName || "",
+        roomRateGross: String(cat.totalGross),
+        cityTaxTotal: String(cat.cityTaxTotal || 0),
       },
       success_url: `${origin}/move-in?payment=success&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/move-in?payment=cancelled`,
