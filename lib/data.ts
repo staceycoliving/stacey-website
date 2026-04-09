@@ -63,7 +63,7 @@ export const locations: Location[] = [
     name: "Mühlenkamp",
     address: "Dorotheenstraße 3-5, 22301 Hamburg",
     stayType: "LONG",
-    priceFrom: 695,
+    priceFrom: 795,
     tagline: "Hamburg's #1 coliving address right by the Alster",
     description:
       "Since 2019, STACEY has been welcoming tenants from all over the world to Hamburg's #1 coliving address — right next to the beautiful Alster. Our oldest and largest location offers private suites from 8 m² to 25 m² in shared apartments with 1 to 3 other STACEY members.",
@@ -85,7 +85,7 @@ export const locations: Location[] = [
       {
         id: "muehlenkamp-basic-plus",
         name: "Basic+",
-        priceMonthly: 695,
+        priceMonthly: 795,
         sizeSqm: null,
         forCouples: false,
         description:
@@ -472,8 +472,7 @@ export const locations: Location[] = [
     name: "St. Pauli",
     address: "Detlev-Bremer-Straße 2, 20359 Hamburg",
     stayType: "LONG",
-    // Mighty=895, Premium=995, Premium+=1095, Jumbo=1295
-    priceFrom: 995,
+    priceFrom: 895,
     tagline: "Live in the vibrant heart of St. Pauli",
     description:
       "St. Pauli is Hamburg's liveliest neighborhood — and our location is right in the thick of it. Here you'll meet creatives, night owls and a community that sticks together.",
@@ -651,7 +650,7 @@ export const locations: Location[] = [
       {
         id: "mitte-mighty",
         name: "Mighty",
-        priceMonthly: 845,
+        priceMonthly: 895,
         sizeSqm: 8,
         forCouples: false,
         description: "Your room in the heart of Berlin.",
@@ -661,7 +660,7 @@ export const locations: Location[] = [
       {
         id: "mitte-premium",
         name: "Premium",
-        priceMonthly: 945,
+        priceMonthly: 995,
         sizeSqm: 12,
         forCouples: false,
         description: "Spacious living in Berlin Mitte with Spree views.",
@@ -671,7 +670,7 @@ export const locations: Location[] = [
       {
         id: "mitte-premium-balcony",
         name: "Premium Balcony",
-        priceMonthly: 995,
+        priceMonthly: 1045,
         sizeSqm: 14,
         forCouples: false,
         description: "Your Premium suite with a balcony and Spree views.",
@@ -681,7 +680,7 @@ export const locations: Location[] = [
       {
         id: "mitte-premium-plus-balcony",
         name: "Premium+ Balcony",
-        priceMonthly: 1095,
+        priceMonthly: 1145,
         sizeSqm: 16,
         forCouples: false,
         description: "Extra space with a balcony in Berlin Mitte.",
@@ -691,7 +690,7 @@ export const locations: Location[] = [
       {
         id: "mitte-jumbo",
         name: "Jumbo",
-        priceMonthly: 1145,
+        priceMonthly: 1195,
         sizeSqm: 24,
         forCouples: true,
         description: "The biggest suite in Berlin — for those who want it all.",
@@ -711,7 +710,7 @@ export const locations: Location[] = [
       {
         id: "mitte-studio",
         name: "Studio",
-        priceMonthly: 1595,
+        priceMonthly: 1695,
         sizeSqm: 36,
         forCouples: true,
         description: "Your own private studio — with private bathroom and kitchen.",
