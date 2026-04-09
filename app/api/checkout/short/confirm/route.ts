@@ -81,6 +81,15 @@ export async function POST(request: NextRequest) {
     return Response.json({
       bookingId: booking.id,
       status: "confirmed",
+      locationName: m.locationName,
+      roomName: m.roomName,
+      category: m.category,
+      checkIn: m.checkIn,
+      checkOut: m.checkOut,
+      nights,
+      persons: parseInt(m.persons),
+      firstName: m.firstName,
+      slug: m.slug,
     });
   } catch (err) {
     console.error("SHORT stay confirm error:", err);

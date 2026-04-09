@@ -743,13 +743,32 @@ function MoveInFlow() {
     // Handle Stripe redirect
     const sessionId = searchParams.get("session_id");
     if (paymentStatus === "success") {
-      // Confirm SHORT stay booking in apaleo after Stripe payment
       if (sessionId) {
         fetch("/api/checkout/short/confirm", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ sessionId }),
-        }).catch((err) => console.error("Booking confirm error:", err));
+        })
+          .then((r) => r.ok ? r.json() : null)
+          .then((data) => {
+            if (!data) return;
+            // Restore state from Stripe session metadata
+            setStayType("SHORT");
+            setFirstName(data.firstName || "");
+            setPersons(data.persons || 1);
+            setCheckIn(data.checkIn || null);
+            setCheckOut(data.checkOut || null);
+            // Find and set the room/location from the booking data
+            const loc = locations.find((l) => l.slug === data.slug);
+            if (loc) {
+              setCity(loc.city);
+              const room = loc.rooms.find((r) => ROOM_NAME_TO_CATEGORY[r.name] === data.category);
+              if (room) {
+                setSelectedRoomId(room.id);
+              }
+            }
+          })
+          .catch((err) => console.error("Booking confirm error:", err));
       }
       setSubmitted(true);
       return;
