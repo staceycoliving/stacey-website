@@ -444,21 +444,18 @@ export async function createPaidShortStayBooking(params: {
       }
 
       // 2b. Record full payment (room + city tax)
-      try {
-        await apiFetch(`/finance/v1/folios/${folio.id}/payments`, {
-          method: "POST",
-          body: JSON.stringify({
-            method: "CreditCard",
-            receipt: params.stripeSessionId,
-            amount: {
-              amount: params.totalAmountEur,
-              currency: "EUR",
-            },
-          }),
-        });
-      } catch (err) {
-        console.error("Failed to record payment on folio:", err);
-      }
+      console.log("[apaleo] Recording payment:", { folioId: folio.id, amount: params.totalAmountEur, receipt: params.stripeSessionId });
+      await apiFetch(`/finance/v1/folios/${folio.id}/payments`, {
+        method: "POST",
+        body: JSON.stringify({
+          method: "CreditCard",
+          receipt: params.stripeSessionId,
+          amount: {
+            amount: params.totalAmountEur,
+            currency: "EUR",
+          },
+        }),
+      });
     } else {
       console.error("No folio found for reservation:", reservationId);
     }
