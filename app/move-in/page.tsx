@@ -745,12 +745,20 @@ function MoveInFlow() {
 
     // Handle Stripe redirect
     const sessionId = searchParams.get("session_id");
+    const bookingId = searchParams.get("booking_id");
     if (paymentStatus === "success") {
       paymentProcessedRef.current = true;
       setConfirmingPayment(true);
       setConfirmError(null);
 
-      if (sessionId) {
+      if (bookingId) {
+        // LONG Stay: Booking fee paid → show confirmation (webhook handles the rest)
+        setStayType("LONG");
+        setSubmitted(true);
+        setConfirmingPayment(false);
+        window.history.replaceState({}, "", "/move-in");
+      } else if (sessionId) {
+        // SHORT Stay: confirm via apaleo
         fetch("/api/checkout/short/confirm", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -762,7 +770,6 @@ function MoveInFlow() {
             return data;
           })
           .then((data) => {
-            // Restore state from Stripe session metadata
             setStayType("SHORT");
             setFirstName(data.firstName || "");
             setPersons(data.persons || 1);
@@ -785,7 +792,7 @@ function MoveInFlow() {
             setConfirmingPayment(false);
           });
       } else {
-        setConfirmError("No session ID in URL");
+        setConfirmError("No session ID or booking ID in URL");
         setConfirmingPayment(false);
       }
       return;
@@ -1059,7 +1066,7 @@ function MoveInFlow() {
                 <p className="mx-auto mt-3 max-w-md text-sm text-gray leading-relaxed">
                   {stayType === "SHORT"
                     ? "Your booking is confirmed! We look forward to welcoming you."
-                    : "Your application has been submitted. We\u2019ll review it and get back to you within 48 hours."}
+                    : "Your room is reserved! Check your email for the deposit payment link."}
                 </p>
                 <div className="mx-auto mt-8 max-w-sm rounded-[5px] border border-[#E8E6E0] p-5 text-left">
                   <p className="text-xs font-bold uppercase tracking-wide text-gray">Your booking</p>
@@ -1105,7 +1112,7 @@ function MoveInFlow() {
                   <div className="mt-4 space-y-3">
                     {(stayType === "SHORT"
                       ? ["You\u2019ll receive a confirmation email with all the details, including the registration form \u2014 please sign and return it before check-in.", "One day before your arrival, we\u2019ll send you a welcome email with your exact room assignment and all the info you need.", "Check-in is available from 4 PM on your arrival day."]
-                      : ["We review your application and check availability", "You receive a confirmation email with lease details", "Sign digitally and prepare for your move-in day"]
+                      : ["We\u2019ve sent you an email with a payment link for your security deposit (2\u00D7 monthly rent).", "Please complete the deposit payment within 48 hours to secure your room.", "Once received, we\u2019ll send you a welcome email with check-in details 3 days before your move-in."]
                     ).map((text, i) => (
                       <div key={i} className="flex items-start gap-3">
                         <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-[#F5F5F5] text-[11px] font-bold">{i + 1}</span>
