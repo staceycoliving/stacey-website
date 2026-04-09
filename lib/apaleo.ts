@@ -198,27 +198,13 @@ export async function getShortStayAvailability(
     return { perNight, totalGross, netAmount, vatAmount, vatPercent, cityTaxTotal, grandTotal: Math.round((totalGross + cityTaxTotal) * 100) / 100 };
   };
   const priceMap = new Map<string, PriceInfo>();
-  const fallbackOffers = new Map<string, typeof offersData.offers[0]>();
-
-  // Pass 1: prefer our configured rate plan codes
   for (const offer of offersData.offers || []) {
     const category = APALEO_NAME_TO_CATEGORY[offer.unitGroup?.name];
     if (!category) continue;
     const expectedCode = ratePlanCodes[category];
-    if (expectedCode && offer.ratePlan?.code === expectedCode && !priceMap.has(category)) {
-      priceMap.set(category, extractPricing(offer, nights));
-    } else if (!fallbackOffers.has(category)) {
-      // Keep first non-matching offer as fallback
-      fallbackOffers.set(category, offer);
-    }
-  }
-
-  // Pass 2: use fallback offers for categories without a matching rate plan
-  for (const [category, offer] of fallbackOffers) {
-    if (!priceMap.has(category)) {
-      console.log(`[apaleo] ${propertyId} ${category}: no offer for rate plan "${ratePlanCodes[category]}", using fallback rate plan "${offer.ratePlan?.code}"`);
-      priceMap.set(category, extractPricing(offer, nights));
-    }
+    if (!expectedCode || offer.ratePlan?.code !== expectedCode) continue;
+    if (priceMap.has(category)) continue;
+    priceMap.set(category, extractPricing(offer, nights));
   }
 
   // A room must be available for ALL nights — take the minimum sellable count across all timeslices
@@ -244,9 +230,10 @@ export async function getShortStayAvailability(
         minSellable = Math.min(minSellable, group.sellableCount);
       }
 
-      const available = Math.max(0, minSellable === Infinity ? 0 : minSellable);
-
+      const rawAvailable = Math.max(0, minSellable === Infinity ? 0 : minSellable);
       const price = priceMap.get(category);
+      // No matching offer from our rate plan → not bookable (rate plan restrictions apply)
+      const available = price ? rawAvailable : 0;
       return {
         category,
         total: physicalCount,

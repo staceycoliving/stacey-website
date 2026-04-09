@@ -521,29 +521,6 @@ function MoveInFlow() {
   const [pricingLoading, setPricingLoading] = useState(false);
   const locSlug = selectedLocation?.slug ?? null;
   const roomName = selectedRoom?.name ?? null;
-  // Hamburg Kultur- und Tourismustaxe (client-side for fallback calculation)
-  const cityTaxPerNight = (grossPerNight: number): number => {
-    if (grossPerNight <= 10) return 0;
-    if (grossPerNight <= 25) return 0.60;
-    if (grossPerNight <= 50) return 1.20;
-    if (grossPerNight <= 100) return 2.40;
-    if (grossPerNight <= 150) return 3.60;
-    if (grossPerNight <= 200) return 4.80;
-    if (grossPerNight <= 250) return 6.00;
-    if (grossPerNight <= 300) return 7.20;
-    return 7.20 + Math.ceil((grossPerNight - 300) / 50) * 1.20;
-  };
-
-  // Build pricing from per-night rate (fallback when apaleo doesn't return grandTotal)
-  const buildPricingFromPerNight = (perNight: number, nights: number): NonNullable<PricingState> => {
-    const totalGross = Math.round(perNight * nights * 100) / 100;
-    const vatPercent = 7;
-    const vatAmount = Math.round(totalGross * vatPercent / (100 + vatPercent) * 100) / 100;
-    const ctPerNight = nights < 60 ? cityTaxPerNight(perNight) : 0;
-    const cityTaxTotal = Math.round(ctPerNight * nights * 100) / 100;
-    return { totalGross, netAmount: totalGross - vatAmount, vatAmount, vatPercent, cityTaxTotal, grandTotal: Math.round((totalGross + cityTaxTotal) * 100) / 100, perNight };
-  };
-
   useEffect(() => {
     if (stayType !== "SHORT" || !locSlug || !roomName || !checkIn || !checkOut) {
       setSelectedRoomPricing(null);
@@ -566,12 +543,6 @@ function MoveInFlow() {
         grandTotal: existing.grandTotal!,
         perNight: existing.pricePerNight!,
       });
-      setPricingLoading(false);
-      return;
-    }
-    // Fallback: availability has pricePerNight but no grandTotal (sold-out with partial data)
-    if (existing?.pricePerNight) {
-      setSelectedRoomPricing(buildPricingFromPerNight(existing.pricePerNight, nights));
       setPricingLoading(false);
       return;
     }
@@ -598,30 +569,16 @@ function MoveInFlow() {
             grandTotal: found.grandTotal,
             perNight: found.pricePerNight,
           });
-        } else if (found?.pricePerNight) {
-          // apaleo returned price but no grandTotal — calculate ourselves
-          setSelectedRoomPricing(buildPricingFromPerNight(found.pricePerNight, nights));
-        } else {
-          // No pricing at all — try base price as last resort
-          const basePrice = basePrices[locSlug]?.[cat];
-          if (basePrice) {
-            setSelectedRoomPricing(buildPricingFromPerNight(basePrice, nights));
-          }
         }
         setPricingLoading(false);
       })
       .catch((err) => {
         if (cancelled) return;
         console.error("Pricing fetch failed:", err);
-        // Last resort: base price
-        const basePrice = basePrices[locSlug]?.[cat];
-        if (basePrice) {
-          setSelectedRoomPricing(buildPricingFromPerNight(basePrice, nights));
-        }
         setPricingLoading(false);
       });
     return () => { cancelled = true; };
-  }, [stayType, locSlug, roomName, checkIn, checkOut, persons, availability, basePrices]);
+  }, [stayType, locSlug, roomName, checkIn, checkOut, persons, availability]);
 
   // Helper: get availability count for a room at a location
   const hasAvailabilityData = Object.keys(availability).length > 0;
