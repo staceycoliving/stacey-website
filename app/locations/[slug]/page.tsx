@@ -48,6 +48,7 @@ function BookingCardContent({
   availableRoomCount,
   loadingAvail,
   lowestNightlyPrice,
+  lowestMonthlyPrice,
   variant,
 }: {
   location: Location;
@@ -67,13 +68,17 @@ function BookingCardContent({
   availableRoomCount: number;
   loadingAvail: boolean;
   lowestNightlyPrice: number | null;
+  lowestMonthlyPrice: number | null;
   variant: "desktop" | "mobile";
 }) {
   return (
     <div className="rounded-[5px] bg-black p-6 text-white">
       <p className="text-base text-white/60">Starting from</p>
       <p className="mt-1 text-4xl font-extrabold tracking-tight">
-        &euro;{isShort && lowestNightlyPrice ? lowestNightlyPrice : location.priceFrom}<span className="text-lg font-normal text-white/60">{isShort ? "/night" : "/mo"}</span>
+        &euro;{isShort
+          ? (lowestNightlyPrice || location.priceFrom)
+          : (lowestMonthlyPrice || location.priceFrom)
+        }<span className="text-lg font-normal text-white/60">{isShort ? "/night" : "/mo"}</span>
       </p>
       <p className="mt-2 text-sm text-white/50">
         {location.stayType === "LONG"
@@ -289,7 +294,7 @@ function LocationDetail({ location }: { location: Location }) {
   const tooShort = nights > 0 && nights < 5;
 
   // ─── Availability from DB ───
-  type CatAvail = { available: number; moveInDates?: string[]; pricePerNight?: number | null };
+  type CatAvail = { available: number; moveInDates?: string[]; pricePerNight?: number | null; monthlyRent?: number | null };
   const [availability, setAvailability] = useState<Record<string, CatAvail>>({});
   const [loadingAvail, setLoadingAvail] = useState(false);
 
@@ -323,6 +328,7 @@ function LocationDetail({ location }: { location: Location }) {
             available: cat.available ?? cat.freeNow ?? 0,
             moveInDates: cat.moveInDates,
             pricePerNight: cat.pricePerNight ?? null,
+            monthlyRent: cat.monthlyRent ?? null,
           };
         }
         setAvailability(map);
@@ -398,7 +404,7 @@ function LocationDetail({ location }: { location: Location }) {
   const cityLabel = location.city === "hamburg" ? "Hamburg" : location.city === "berlin" ? "Berlin" : "Vallendar";
 
   // Shared booking card props
-  // For SHORT stay: compute lowest per-night price (live > base > data.ts)
+  // Compute lowest price from available categories
   const lowestNightlyPrice = isShort
     ? (() => {
         // Live prices from availability (after date selection)
@@ -407,6 +413,19 @@ function LocationDetail({ location }: { location: Location }) {
         // Base prices from apaleo (before date selection)
         const base = Object.values(basePrices);
         if (base.length > 0) return Math.min(...base);
+        return null;
+      })()
+    : null;
+
+  // LONG Stay: lowest monthly rent from available categories (in EUR)
+  const lowestMonthlyPrice = !isShort
+    ? (() => {
+        // Only consider categories that are actually shown (available for selected date)
+        const availableCatNames = availableRooms.map(r => ROOM_NAME_TO_CATEGORY[r.name]).filter(Boolean);
+        const rents = availableCatNames
+          .map(cat => availability[cat]?.monthlyRent)
+          .filter((r): r is number => r != null && r > 0);
+        if (rents.length > 0) return Math.round(Math.min(...rents) / 100);
         return null;
       })()
     : null;
@@ -429,6 +448,7 @@ function LocationDetail({ location }: { location: Location }) {
     availableRoomCount: availableRooms.length,
     loadingAvail,
     lowestNightlyPrice,
+    lowestMonthlyPrice,
   } as const;
 
   return (
