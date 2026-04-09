@@ -328,7 +328,10 @@ export async function createShortStayBooking(params: {
           unitGroup: { id: unitGroupId },
           ratePlan: { id: offer.ratePlan?.id },
           totalGrossAmount: offer.totalGrossAmount,
-          timeSlices: offer.timeSlices,
+          timeSlices: (offer.timeSlices || []).map((ts: { from: string; to: string; grossAmount: { amount: number; currency: string } }) => ({
+            ...ts,
+            ratePlanId: offer.ratePlan?.id,
+          })),
           comment: params.message || undefined,
         },
       ],
