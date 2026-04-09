@@ -33,15 +33,37 @@ export async function GET(request: NextRequest) {
   }
 
   if (action === "accounts") {
-    // List sub-accounts for property
-    const res = await fetch(`${API_URL}/finance/v1/sub-accounts?propertyId=${propertyId}`, {
+    // Try multiple account endpoints
+    const endpoints = [
+      `/settings/v1/accounts?propertyId=${propertyId}`,
+      `/finance/v1/sub-accounts?propertyId=${propertyId}`,
+      `/settings/v1/sub-accounts?propertyId=${propertyId}`,
+    ];
+    const results: Record<string, unknown> = {};
+    for (const ep of endpoints) {
+      const res = await fetch(`${API_URL}${ep}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const text = await res.text();
+      try {
+        results[ep] = { status: res.status, data: JSON.parse(text) };
+      } catch {
+        results[ep] = { status: res.status, raw: text };
+      }
+    }
+    return Response.json({ propertyId, results });
+  }
+
+  if (action === "existing-service-detail") {
+    // Get full detail of existing BOOKINGFEE service to see accountingConfigs format
+    const res = await fetch(`${API_URL}/rateplan/v1/services/${propertyId}-BOOKINGFEE`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     const text = await res.text();
     try {
-      return Response.json({ propertyId, status: res.status, accounts: JSON.parse(text) });
+      return Response.json({ status: res.status, service: JSON.parse(text) });
     } catch {
-      return Response.json({ propertyId, status: res.status, raw: text });
+      return Response.json({ status: res.status, raw: text });
     }
   }
 
