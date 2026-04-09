@@ -775,7 +775,7 @@ function MoveInFlow() {
               const room = loc.rooms.find((r) => ROOM_NAME_TO_CATEGORY[r.name] === data.category);
               if (room) setSelectedRoomId(room.id);
             }
-            setConfirmDebug(JSON.stringify({ paymentStatus: data.paymentStatus, totalAmountEur: data.totalAmountEur, bookingId: data.bookingId }, null, 2));
+            setConfirmDebug(JSON.stringify({ paymentStatus: data.paymentStatus, totalAmountEur: data.totalAmountEur, bookingId: data.bookingId, reservationIds: data.reservationIds, _debug: data._debug }, null, 2));
             setSubmitted(true);
             setConfirmingPayment(false);
             window.history.replaceState({}, "", "/move-in");

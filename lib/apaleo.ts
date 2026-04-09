@@ -353,10 +353,12 @@ export async function createShortStayBooking(params: {
     }),
   });
 
+  console.log("[apaleo] Booking created:", JSON.stringify(booking));
   return {
     id: booking.id,
     reservationIds: booking.reservationIds,
     paymentStatus: null as { status: number; response: string } | null,
+    _rawBooking: booking,
   };
 }
 
