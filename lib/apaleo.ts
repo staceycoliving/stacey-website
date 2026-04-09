@@ -409,7 +409,7 @@ export async function createPaidShortStayBooking(params: {
   });
 
   // 2. Find the folio + post city tax + record payment
-  const reservationId = booking.reservationIds?.[0];
+  const reservationId = booking.reservationIds?.[0]?.id || booking.reservationIds?.[0];
   if (reservationId) {
     // Folio might not be ready immediately — retry up to 3 times
     let folio = null;
