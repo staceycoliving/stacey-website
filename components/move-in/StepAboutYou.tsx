@@ -140,13 +140,51 @@ export default function StepAboutYou({
                 className={clsx(inputClass, "col-span-2")}
               />
             </div>
-            <input
-              type="text"
+            <select
               value={country || ""}
               onChange={(e) => setCountry?.(e.target.value)}
-              placeholder="Country"
-              className={inputClass}
-            />
+              className={clsx(inputClass, !country && "text-gray")}
+            >
+              <option value="">Country</option>
+              <option value="DE">Germany</option>
+              <option value="AT">Austria</option>
+              <option value="CH">Switzerland</option>
+              <option value="NL">Netherlands</option>
+              <option value="DK">Denmark</option>
+              <option value="PL">Poland</option>
+              <option value="FR">France</option>
+              <option value="IT">Italy</option>
+              <option value="ES">Spain</option>
+              <option value="GB">United Kingdom</option>
+              <option value="US">United States</option>
+              <option value="SE">Sweden</option>
+              <option value="NO">Norway</option>
+              <option value="FI">Finland</option>
+              <option value="BE">Belgium</option>
+              <option value="CZ">Czech Republic</option>
+              <option value="PT">Portugal</option>
+              <option value="IE">Ireland</option>
+              <option value="GR">Greece</option>
+              <option value="HU">Hungary</option>
+              <option value="RO">Romania</option>
+              <option value="BG">Bulgaria</option>
+              <option value="HR">Croatia</option>
+              <option value="SK">Slovakia</option>
+              <option value="SI">Slovenia</option>
+              <option value="LT">Lithuania</option>
+              <option value="LV">Latvia</option>
+              <option value="EE">Estonia</option>
+              <option value="LU">Luxembourg</option>
+              <option value="TR">Turkey</option>
+              <option value="IN">India</option>
+              <option value="CN">China</option>
+              <option value="JP">Japan</option>
+              <option value="KR">South Korea</option>
+              <option value="BR">Brazil</option>
+              <option value="CA">Canada</option>
+              <option value="AU">Australia</option>
+              <option value="NZ">New Zealand</option>
+            </select>
           </div>
         </div>
 
