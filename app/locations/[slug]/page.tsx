@@ -342,7 +342,7 @@ function LocationDetail({ location }: { location: Location }) {
     const now = new Date();
     const today = localDate(now);
     const limit = new Date(now);
-    limit.setDate(limit.getDate() + 30);
+    limit.setDate(limit.getDate() + 14);
     const limitStr = localDate(limit);
 
     const bookableDays = new Set<string>();
