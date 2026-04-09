@@ -106,10 +106,12 @@ function calculateCityTaxPerNight(grossPerNight: number): number {
   if (grossPerNight <= 25) return 0.60;
   if (grossPerNight <= 50) return 1.20;
   if (grossPerNight <= 100) return 2.40;
-  if (grossPerNight <= 150) return 2.60;
-  if (grossPerNight <= 200) return 3.00;
-  if (grossPerNight <= 250) return 3.50;
-  return 4.00; // extend if needed
+  if (grossPerNight <= 150) return 3.60;
+  if (grossPerNight <= 200) return 4.80;
+  if (grossPerNight <= 250) return 6.00;
+  if (grossPerNight <= 300) return 7.20;
+  // +1.20 per 50€ bracket
+  return 7.20 + Math.ceil((grossPerNight - 300) / 50) * 1.20;
 }
 
 // ─── Rate plan codes for website pricing (per property) ─────
