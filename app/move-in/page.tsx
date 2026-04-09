@@ -521,6 +521,29 @@ function MoveInFlow() {
   const [pricingLoading, setPricingLoading] = useState(false);
   const locSlug = selectedLocation?.slug ?? null;
   const roomName = selectedRoom?.name ?? null;
+  // Hamburg Kultur- und Tourismustaxe (client-side for fallback calculation)
+  const cityTaxPerNight = (grossPerNight: number): number => {
+    if (grossPerNight <= 10) return 0;
+    if (grossPerNight <= 25) return 0.60;
+    if (grossPerNight <= 50) return 1.20;
+    if (grossPerNight <= 100) return 2.40;
+    if (grossPerNight <= 150) return 3.60;
+    if (grossPerNight <= 200) return 4.80;
+    if (grossPerNight <= 250) return 6.00;
+    if (grossPerNight <= 300) return 7.20;
+    return 7.20 + Math.ceil((grossPerNight - 300) / 50) * 1.20;
+  };
+
+  // Build pricing from per-night rate (fallback when apaleo doesn't return grandTotal)
+  const buildPricingFromPerNight = (perNight: number, nights: number): NonNullable<PricingState> => {
+    const totalGross = Math.round(perNight * nights * 100) / 100;
+    const vatPercent = 7;
+    const vatAmount = Math.round(totalGross * vatPercent / (100 + vatPercent) * 100) / 100;
+    const ctPerNight = nights < 60 ? cityTaxPerNight(perNight) : 0;
+    const cityTaxTotal = Math.round(ctPerNight * nights * 100) / 100;
+    return { totalGross, netAmount: totalGross - vatAmount, vatAmount, vatPercent, cityTaxTotal, grandTotal: Math.round((totalGross + cityTaxTotal) * 100) / 100, perNight };
+  };
+
   useEffect(() => {
     if (stayType !== "SHORT" || !locSlug || !roomName || !checkIn || !checkOut) {
       setSelectedRoomPricing(null);
@@ -528,15 +551,12 @@ function MoveInFlow() {
       return;
     }
     const cat = ROOM_NAME_TO_CATEGORY[roomName];
-    if (!cat) { console.log("[pricing] no category for room:", roomName); return; }
+    if (!cat) return;
+    const nights = Math.round((new Date(checkOut).getTime() - new Date(checkIn).getTime()) / 86400000);
 
-    console.log("[pricing] effect running:", { locSlug, roomName, cat, checkIn, checkOut });
-
-    // Already have pricing from availability state? Use it directly.
+    // Already have pricing from availability state?
     const existing = availability[locSlug]?.[cat];
-    console.log("[pricing] availability state:", existing);
     if (existing?.grandTotal) {
-      console.log("[pricing] using availability state, grandTotal:", existing.grandTotal);
       setSelectedRoomPricing({
         totalGross: existing.totalGross!,
         netAmount: existing.vatAmount ? existing.totalGross! - existing.vatAmount! : existing.totalGross!,
@@ -549,25 +569,26 @@ function MoveInFlow() {
       setPricingLoading(false);
       return;
     }
+    // Fallback: availability has pricePerNight but no grandTotal (sold-out with partial data)
+    if (existing?.pricePerNight) {
+      setSelectedRoomPricing(buildPricingFromPerNight(existing.pricePerNight, nights));
+      setPricingLoading(false);
+      return;
+    }
 
-    // Otherwise fetch pricing from API
+    // Fetch from API
     let cancelled = false;
     setPricingLoading(true);
     setSelectedRoomPricing(null);
-    const url = `/api/availability?location=${locSlug}&checkIn=${checkIn}&checkOut=${checkOut}&persons=${persons}`;
-    console.log("[pricing] fetching:", url);
-    fetch(url)
+    fetch(`/api/availability?location=${locSlug}&checkIn=${checkIn}&checkOut=${checkOut}&persons=${persons}`)
       .then(r => {
         if (!r.ok) throw new Error(`API ${r.status}`);
         return r.json();
       })
       .then(data => {
-        if (cancelled) { console.log("[pricing] cancelled, ignoring response"); return; }
-        console.log("[pricing] API response categories:", data?.categories?.map((c: { category: string; grandTotal: number | null }) => ({ cat: c.category, grandTotal: c.grandTotal })));
+        if (cancelled) return;
         const found = data?.categories?.find((c: { category: string }) => c.category === cat);
-        console.log("[pricing] matched category:", found ? { cat: found.category, grandTotal: found.grandTotal, available: found.available } : "NOT FOUND");
         if (found?.grandTotal) {
-          console.log("[pricing] SUCCESS — setting pricing:", found.grandTotal);
           setSelectedRoomPricing({
             totalGross: found.totalGross,
             netAmount: found.netAmount,
@@ -577,18 +598,30 @@ function MoveInFlow() {
             grandTotal: found.grandTotal,
             perNight: found.pricePerNight,
           });
+        } else if (found?.pricePerNight) {
+          // apaleo returned price but no grandTotal — calculate ourselves
+          setSelectedRoomPricing(buildPricingFromPerNight(found.pricePerNight, nights));
         } else {
-          console.log("[pricing] FAIL — grandTotal is falsy:", found?.grandTotal);
+          // No pricing at all — try base price as last resort
+          const basePrice = basePrices[locSlug]?.[cat];
+          if (basePrice) {
+            setSelectedRoomPricing(buildPricingFromPerNight(basePrice, nights));
+          }
         }
         setPricingLoading(false);
       })
       .catch((err) => {
         if (cancelled) return;
-        console.error("[pricing] fetch failed:", err);
+        console.error("Pricing fetch failed:", err);
+        // Last resort: base price
+        const basePrice = basePrices[locSlug]?.[cat];
+        if (basePrice) {
+          setSelectedRoomPricing(buildPricingFromPerNight(basePrice, nights));
+        }
         setPricingLoading(false);
       });
     return () => { cancelled = true; };
-  }, [stayType, locSlug, roomName, checkIn, checkOut, persons, availability]);
+  }, [stayType, locSlug, roomName, checkIn, checkOut, persons, availability, basePrices]);
 
   // Helper: get availability count for a room at a location
   const hasAvailabilityData = Object.keys(availability).length > 0;
@@ -1254,9 +1287,19 @@ function MoveInFlow() {
                               </p>
                               <button
                                 onClick={() => handleRoomSelect(room.id)}
-                                className="mt-4 flex w-full items-center justify-center gap-2 rounded-[5px] bg-black px-6 py-3 text-sm font-semibold text-white transition-all duration-200 hover:opacity-80"
+                                disabled={loadingAvailability}
+                                className={clsx(
+                                  "mt-4 flex w-full items-center justify-center gap-2 rounded-[5px] px-6 py-3 text-sm font-semibold transition-all duration-200",
+                                  loadingAvailability
+                                    ? "cursor-not-allowed bg-gray/20 text-gray"
+                                    : "bg-black text-white hover:opacity-80"
+                                )}
                               >
-                                Book this room <ArrowRight size={14} />
+                                {loadingAvailability ? (
+                                  <><Loader2 size={14} className="animate-spin" /> Checking...</>
+                                ) : (
+                                  <>Book this room <ArrowRight size={14} /></>
+                                )}
                               </button>
                             </div>
                           </div>
