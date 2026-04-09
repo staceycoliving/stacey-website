@@ -269,6 +269,11 @@ export async function createShortStayBooking(params: {
   email: string;
   phone: string;
   message?: string;
+  dateOfBirth?: string;
+  street?: string;
+  zipCode?: string;
+  addressCity?: string;
+  country?: string;
 }) {
   const propertyId = PROPERTY_MAP[params.slug];
   if (!propertyId) throw new Error(`Unknown SHORT stay property: ${params.slug}`);
@@ -317,6 +322,15 @@ export async function createShortStayBooking(params: {
         lastName: params.lastName,
         email: params.email,
         phone: params.phone,
+        ...(params.dateOfBirth ? { birthDate: params.dateOfBirth } : {}),
+        ...(params.street ? {
+          address: {
+            addressLine1: params.street,
+            postalCode: params.zipCode || "",
+            city: params.addressCity || "",
+            countryCode: params.country || "DE",
+          },
+        } : {}),
       },
       channelCode: "Direct",
       reservations: [
@@ -381,38 +395,53 @@ export async function createPaidShortStayBooking(params: {
     email: params.email,
     phone: params.phone,
     message: params.message,
+    dateOfBirth: params.dateOfBirth,
+    street: params.street,
+    zipCode: params.zipCode,
+    addressCity: params.addressCity,
+    country: params.country,
   });
 
   // 2. Find the folio + post city tax + record payment
-  try {
-    const reservationId = booking.reservationIds?.[0];
-    if (reservationId) {
-      const folios = await apiFetch(`/finance/v1/folios?reservationIds=${reservationId}`);
-      const folio = folios.folios?.[0];
+  const reservationId = booking.reservationIds?.[0];
+  if (reservationId) {
+    // Folio might not be ready immediately — retry up to 3 times
+    let folio = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const folios = await apiFetch(`/finance/v1/folios?reservationIds=${reservationId}`);
+        folio = folios.folios?.[0];
+        if (folio) break;
+      } catch (err) {
+        console.error(`Folio lookup attempt ${attempt + 1} failed:`, err);
+      }
+      if (attempt < 2) await new Promise((r) => setTimeout(r, 1000));
+    }
 
-      if (folio) {
-        // 2a. Post city tax as separate charge on folio
-        if (params.cityTaxTotal > 0 && propertyId) {
-          try {
-            await apiFetch(`/finance/v1/folios/${folio.id}/charges`, {
-              method: "POST",
-              body: JSON.stringify({
-                serviceId: `${propertyId}-CITY_TAX`,
-                name: { en: "City Tax", de: "Kultur- und Tourismustaxe" },
-                amount: {
-                  amount: params.cityTaxTotal,
-                  currency: "EUR",
-                },
-                quantity: 1,
-                vatType: "Without",
-              }),
-            });
-          } catch (err) {
-            console.error("Failed to post city tax charge:", err);
-          }
+    if (folio) {
+      // 2a. Post city tax as separate charge on folio
+      if (params.cityTaxTotal > 0 && propertyId) {
+        try {
+          await apiFetch(`/finance/v1/folios/${folio.id}/charges`, {
+            method: "POST",
+            body: JSON.stringify({
+              serviceId: `${propertyId}-CITY_TAX`,
+              name: { en: "City Tax", de: "Kultur- und Tourismustaxe" },
+              amount: {
+                amount: params.cityTaxTotal,
+                currency: "EUR",
+              },
+              quantity: 1,
+              vatType: "Without",
+            }),
+          });
+        } catch (err) {
+          console.error("Failed to post city tax charge:", err);
         }
+      }
 
-        // 2b. Record full payment (room + city tax)
+      // 2b. Record full payment (room + city tax)
+      try {
         await apiFetch(`/finance/v1/folios/${folio.id}/payments`, {
           method: "POST",
           body: JSON.stringify({
@@ -424,10 +453,12 @@ export async function createPaidShortStayBooking(params: {
             },
           }),
         });
+      } catch (err) {
+        console.error("Failed to record payment on folio:", err);
       }
+    } else {
+      console.error("No folio found for reservation:", reservationId);
     }
-  } catch (err) {
-    console.error("Failed to record payment in apaleo:", err);
   }
 
   return booking;
