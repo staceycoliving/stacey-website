@@ -255,18 +255,7 @@ export async function POST(request: NextRequest) {
       });
     });
 
-    // Send emails (fire & forget)
-    sendLongStayConfirmation({
-      firstName,
-      lastName,
-      email,
-      locationName: location.name,
-      category,
-      persons,
-      moveInDate,
-      bookingId: booking.id,
-    }).catch((err) => console.error("Email error (guest):", err));
-
+    // Team notification only — guest email comes after deposit payment (via Stripe webhook)
     sendTeamNotification({
       stayType: "LONG",
       firstName,
