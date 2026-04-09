@@ -318,14 +318,17 @@ export async function createShortStayBooking(params: {
         email: params.email,
         phone: params.phone,
       },
+      channelCode: "Direct",
       reservations: [
         {
           arrival: params.checkIn,
           departure: params.checkOut,
           adults: params.persons,
+          channelCode: "Direct",
           unitGroup: { id: unitGroupId },
           ratePlan: { id: offer.ratePlan?.id },
           totalGrossAmount: offer.totalGrossAmount,
+          timeSlices: offer.timeSlices,
           comment: params.message || undefined,
         },
       ],
