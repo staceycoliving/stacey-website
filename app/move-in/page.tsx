@@ -1073,21 +1073,38 @@ function MoveInFlow() {
                         {persons} {persons === 1 ? "person" : "persons"} ·{" "}
                         {moveInDate ? `from ${formatDate(moveInDate)}` : checkIn && checkOut ? `${formatDate(checkIn)} — ${formatDate(checkOut)}` : ""}
                       </p>
-                      <p className="mt-0.5 text-sm font-semibold">{(() => {
-                        if (stayType === "SHORT" && selectedLocation) {
-                          const price = getNightlyPrice(selectedRoom.name, selectedLocation.slug);
-                          if (price) return `€${price}/night`;
-                        }
-                        return `€${selectedRoom.priceMonthly}/mo`;
-                      })()}</p>
                     </div>
                   </div>
+                  {stayType === "SHORT" && selectedRoomPricing && nightCount > 0 ? (
+                    <div className="mt-4 space-y-1.5 border-t border-[#E8E6E0] pt-4 text-sm">
+                      <div className="flex justify-between text-gray">
+                        <span>{"\u20AC"}{selectedRoomPricing.perNight} × {nightCount} nights</span>
+                        <span>{"\u20AC"}{selectedRoomPricing.totalGross.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between text-xs text-gray">
+                        <span>incl. {selectedRoomPricing.vatPercent}% VAT</span>
+                        <span>{"\u20AC"}{selectedRoomPricing.vatAmount.toFixed(2)}</span>
+                      </div>
+                      {selectedRoomPricing.cityTaxTotal > 0 && (
+                        <div className="flex justify-between text-gray">
+                          <span>City tax</span>
+                          <span>{"\u20AC"}{selectedRoomPricing.cityTaxTotal.toFixed(2)}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between border-t border-[#E8E6E0] pt-1.5 font-bold">
+                        <span>Total paid</span>
+                        <span>{"\u20AC"}{selectedRoomPricing.grandTotal.toFixed(2)}</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="mt-3 text-sm font-semibold">{"\u20AC"}{selectedRoom.priceMonthly}/mo</p>
+                  )}
                 </div>
                 <div className="mx-auto mt-8 max-w-sm text-left">
                   <p className="text-xs font-bold uppercase tracking-wide text-gray">What happens next</p>
                   <div className="mt-4 space-y-3">
                     {(stayType === "SHORT"
-                      ? ["You\u2019ll receive a confirmation email with all details", "Check in from 4 PM on your arrival day", "Your community manager will welcome you on site"]
+                      ? ["You\u2019ll receive a confirmation email with all the details, including the registration form \u2014 please sign and return it before check-in.", "One day before your arrival, we\u2019ll send you a welcome email with your exact room assignment and all the info you need.", "Check-in is available from 4 PM on your arrival day."]
                       : ["We review your application and check availability", "You receive a confirmation email with lease details", "Sign digitally and prepare for your move-in day"]
                     ).map((text, i) => (
                       <div key={i} className="flex items-start gap-3">
