@@ -643,7 +643,16 @@ function MoveInFlow() {
 
     // Handle Stripe redirect
     const paymentStatus = searchParams.get("payment");
+    const sessionId = searchParams.get("session_id");
     if (paymentStatus === "success") {
+      // Confirm SHORT stay booking in apaleo after Stripe payment
+      if (sessionId) {
+        fetch("/api/checkout/short/confirm", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sessionId }),
+        }).catch((err) => console.error("Booking confirm error:", err));
+      }
       setSubmitted(true);
       return;
     }
@@ -691,9 +700,10 @@ function MoveInFlow() {
   };
 
   // ─── About complete? ───
-  const isAboutComplete = stayType === "LONG"
-    ? firstName.trim() !== "" && lastName.trim() !== "" && dateOfBirth !== "" && street.trim() !== "" && zipCode.trim() !== "" && addressCity.trim() !== "" && country.trim() !== "" && email.trim() !== ""
-    : firstName.trim() !== "" && lastName.trim() !== "" && email.trim() !== "" && phone.trim() !== "" && moveInReason !== "";
+  const isAboutComplete =
+    firstName.trim() !== "" && lastName.trim() !== "" && email.trim() !== "" && phone.trim() !== "" &&
+    dateOfBirth !== "" && street.trim() !== "" && zipCode.trim() !== "" && addressCity.trim() !== "" && country.trim() !== "" &&
+    moveInReason !== "";
 
   // ─── Submit / Next ───
   const handleSubmit = async () => {
@@ -773,13 +783,13 @@ function MoveInFlow() {
       return;
     }
 
-    // SHORT stay → create booking via API
+    // SHORT stay → redirect to Stripe Checkout
     if (stayType === "SHORT" && !termsAccepted) return;
     if (!selectedLocation || !selectedRoom) return;
     setSubmitting(true);
     try {
       const cat = ROOM_NAME_TO_CATEGORY[selectedRoom.name];
-      const res = await fetch("/api/booking", {
+      const res = await fetch("/api/checkout/short", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -792,8 +802,15 @@ function MoveInFlow() {
           lastName,
           email,
           phone,
+          dateOfBirth,
+          street,
+          zipCode,
+          addressCity,
+          country,
           moveInReason,
           message,
+          locationName: selectedLocation.name,
+          roomName: selectedRoom.name,
         }),
       });
       const data = await res.json();
@@ -801,15 +818,15 @@ function MoveInFlow() {
         if (res.status === 409) {
           alert("Sorry, this room type is no longer available for your dates. Please try a different category or dates.");
         } else {
-          throw new Error(data.error || "Booking failed");
+          throw new Error(data.error || "Checkout failed");
         }
         setSubmitting(false);
         return;
       }
-      setSubmitted(true);
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      // Redirect to Stripe
+      window.location.href = data.url;
     } catch (err) {
-      console.error("Booking failed:", err);
+      console.error("Checkout failed:", err);
       alert("Something went wrong. Please try again.");
     } finally {
       setSubmitting(false);
@@ -874,7 +891,9 @@ function MoveInFlow() {
                   Welcome to <em className="font-bold italic">STACEY</em>, {firstName}!
                 </h1>
                 <p className="mx-auto mt-3 max-w-md text-sm text-gray leading-relaxed">
-                  Your application has been submitted. We&apos;ll review it and get back to you within 48 hours.
+                  {stayType === "SHORT"
+                    ? "Your booking is confirmed! We look forward to welcoming you."
+                    : "Your application has been submitted. We\u2019ll review it and get back to you within 48 hours."}
                 </p>
                 <div className="mx-auto mt-8 max-w-sm rounded-[5px] border border-[#E8E6E0] p-5 text-left">
                   <p className="text-xs font-bold uppercase tracking-wide text-gray">Your booking</p>
@@ -901,7 +920,10 @@ function MoveInFlow() {
                 <div className="mx-auto mt-8 max-w-sm text-left">
                   <p className="text-xs font-bold uppercase tracking-wide text-gray">What happens next</p>
                   <div className="mt-4 space-y-3">
-                    {["We review your application and check availability", "You receive a confirmation email with lease details", "Sign digitally and prepare for your move-in day"].map((text, i) => (
+                    {(stayType === "SHORT"
+                      ? ["You\u2019ll receive a confirmation email with all details", "Check in from 4 PM on your arrival day", "Your community manager will welcome you on site"]
+                      : ["We review your application and check availability", "You receive a confirmation email with lease details", "Sign digitally and prepare for your move-in day"]
+                    ).map((text, i) => (
                       <div key={i} className="flex items-start gap-3">
                         <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-[#F5F5F5] text-[11px] font-bold">{i + 1}</span>
                         <p className="text-sm leading-relaxed">{text}</p>
@@ -1253,11 +1275,11 @@ function MoveInFlow() {
                           )}
                         >
                           {submitting ? (
-                            <><Loader2 size={14} className="animate-spin" /> {stayType === "LONG" ? "Generating..." : "Submitting..."}</>
+                            <><Loader2 size={14} className="animate-spin" /> {stayType === "SHORT" ? "Redirecting to payment..." : "Generating..."}</>
                           ) : stayType === "LONG" ? (
                             <>Next <ArrowRight size={14} /></>
                           ) : (
-                            <>Submit application <ArrowRight size={14} /></>
+                            <>Continue to payment <ArrowRight size={14} /></>
                           )}
                         </button>
                       </div>

@@ -294,6 +294,73 @@ export async function createShortStayBooking(params: {
 }
 
 /**
+ * After Stripe payment: create booking in apaleo + record payment on folio.
+ */
+export async function createPaidShortStayBooking(params: {
+  slug: string;
+  category: string;
+  persons: number;
+  checkIn: string;
+  checkOut: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  message?: string;
+  dateOfBirth?: string;
+  street?: string;
+  zipCode?: string;
+  addressCity?: string;
+  country?: string;
+  totalAmountEur: number;
+  stripeSessionId: string;
+}) {
+  // 1. Create booking in apaleo
+  const booking = await createShortStayBooking({
+    slug: params.slug,
+    category: params.category,
+    persons: params.persons,
+    checkIn: params.checkIn,
+    checkOut: params.checkOut,
+    firstName: params.firstName,
+    lastName: params.lastName,
+    email: params.email,
+    phone: params.phone,
+    message: params.message,
+  });
+
+  // 2. Find the folio for this reservation
+  try {
+    const reservationId = booking.reservationIds?.[0];
+    if (reservationId) {
+      // Get folios for this reservation
+      const folios = await apiFetch(`/finance/v1/folios?reservationIds=${reservationId}`);
+      const folio = folios.folios?.[0];
+
+      if (folio) {
+        // 3. Record payment on folio
+        await apiFetch(`/finance/v1/folios/${folio.id}/payments`, {
+          method: "POST",
+          body: JSON.stringify({
+            method: "CreditCard",
+            receipt: params.stripeSessionId,
+            amount: {
+              amount: params.totalAmountEur,
+              currency: "EUR",
+            },
+          }),
+        });
+      }
+    }
+  } catch (err) {
+    // Don't fail the booking if payment recording fails — booking is already created
+    console.error("Failed to record payment in apaleo:", err);
+  }
+
+  return booking;
+}
+
+/**
  * Get base per-night prices for all SHORT stay properties.
  * Tries multiple date windows to find prices for all categories
  * (some may be sold out in near-term dates).

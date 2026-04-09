@@ -157,7 +157,7 @@ export default function LocationMap({ onMarkerHover }: { onMarkerHover?: (slug: 
       {/* City tabs */}
       <div className="mb-4 flex items-center justify-center gap-2">
         {[
-          { slug: "hamburg", label: "Hamburg", count: 7 },
+          { slug: "hamburg", label: "Hamburg", count: 6 },
           { slug: "berlin", label: "Berlin", count: 1 },
           { slug: "vallendar", label: "Vallendar", count: 1 },
         ].map((city) => (
