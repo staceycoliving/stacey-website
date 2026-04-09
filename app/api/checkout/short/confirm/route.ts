@@ -22,6 +22,24 @@ export async function POST(request: NextRequest) {
       return Response.json({ error: "Payment not completed" }, { status: 400 });
     }
 
+    // Idempotency: if already processed, return cached result
+    if (session.metadata?.apaleoBookingId) {
+      const m = session.metadata;
+      return Response.json({
+        bookingId: m.apaleoBookingId,
+        status: "already_confirmed",
+        locationName: m.locationName,
+        roomName: m.roomName,
+        category: m.category,
+        checkIn: m.checkIn,
+        checkOut: m.checkOut,
+        nights: parseInt(m.nights),
+        persons: parseInt(m.persons),
+        firstName: m.firstName,
+        slug: m.slug,
+      });
+    }
+
     const m = session.metadata!;
     const nights = parseInt(m.nights);
     const totalAmountEur = (session.amount_total || 0) / 100;
@@ -48,6 +66,15 @@ export async function POST(request: NextRequest) {
       cityTaxTotal,
       stripeSessionId: sessionId,
     });
+
+    // Mark session as processed (idempotency)
+    try {
+      await stripe.checkout.sessions.update(sessionId, {
+        metadata: { ...m, apaleoBookingId: booking.id },
+      });
+    } catch (err) {
+      console.error("Failed to update Stripe session metadata:", err);
+    }
 
     // Send confirmation emails
     sendShortStayConfirmation({

@@ -743,6 +743,9 @@ function MoveInFlow() {
     // Handle Stripe redirect
     const sessionId = searchParams.get("session_id");
     if (paymentStatus === "success") {
+      // Clean URL params immediately to prevent re-processing on refresh
+      window.history.replaceState({}, "", "/move-in");
+
       if (sessionId) {
         fetch("/api/checkout/short/confirm", {
           method: "POST",
@@ -758,14 +761,11 @@ function MoveInFlow() {
             setPersons(data.persons || 1);
             setCheckIn(data.checkIn || null);
             setCheckOut(data.checkOut || null);
-            // Find and set the room/location from the booking data
             const loc = locations.find((l) => l.slug === data.slug);
             if (loc) {
               setCity(loc.city);
               const room = loc.rooms.find((r) => ROOM_NAME_TO_CATEGORY[r.name] === data.category);
-              if (room) {
-                setSelectedRoomId(room.id);
-              }
+              if (room) setSelectedRoomId(room.id);
             }
           })
           .catch((err) => console.error("Booking confirm error:", err));
