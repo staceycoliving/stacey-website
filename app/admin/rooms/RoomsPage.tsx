@@ -12,11 +12,21 @@ type Tenant = {
   notice: string | null;
 };
 
+type ActiveBooking = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  status: string;
+  moveInDate: string | null;
+};
+
 type Room = {
   id: string;
   roomNumber: string;
   category: string;
+  monthlyRent: number;
   tenant: Tenant | null;
+  bookings: ActiveBooking[];
 };
 
 type Apartment = {
@@ -27,21 +37,12 @@ type Apartment = {
   rooms: Room[];
 };
 
-type LongLocation = {
+type Location = {
   id: string;
   slug: string;
   name: string;
   city: string;
   apartments: Apartment[];
-};
-
-type ShortLocation = {
-  id: string;
-  slug: string;
-  name: string;
-  city: string;
-  capacities: { id: string; category: string; totalUnits: number }[];
-  bookings: { id: string; category: string; checkIn: string; checkOut: string }[];
 };
 
 function formatDate(d: string | null) {
@@ -64,21 +65,18 @@ function formatCategory(cat: string) {
 
 export default function RoomsPage({
   locations,
-  shortLocations,
 }: {
-  locations: LongLocation[];
-  shortLocations: ShortLocation[];
+  locations: Location[];
 }) {
   const [selectedLocation, setSelectedLocation] = useState(locations[0]?.id || "");
-  const [showShort, setShowShort] = useState(false);
 
-  // LONG stay stats
   const allRooms = locations.flatMap((l) =>
     l.apartments.flatMap((a) => a.rooms)
   );
   const totalRooms = allRooms.length;
   const occupied = allRooms.filter((r) => r.tenant).length;
-  const vacant = totalRooms - occupied;
+  const reserved = allRooms.filter((r) => !r.tenant && r.bookings.length > 0).length;
+  const vacant = totalRooms - occupied - reserved;
   const leaving = allRooms.filter((r) => r.tenant?.moveOut).length;
 
   const selectedLoc = locations.find((l) => l.id === selectedLocation);
@@ -86,7 +84,7 @@ export default function RoomsPage({
   return (
     <div>
       {/* Stats */}
-      <div className="grid grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-5 gap-4 mb-6">
         <div className="bg-white rounded-[5px] border border-lightgray p-4">
           <p className="text-xs text-gray uppercase tracking-wide">Total rooms</p>
           <p className="text-2xl font-bold mt-1">{totalRooms}</p>
@@ -94,6 +92,10 @@ export default function RoomsPage({
         <div className="bg-white rounded-[5px] border border-lightgray p-4">
           <p className="text-xs text-gray uppercase tracking-wide">Occupied</p>
           <p className="text-2xl font-bold mt-1 text-green-600">{occupied}</p>
+        </div>
+        <div className="bg-white rounded-[5px] border border-lightgray p-4">
+          <p className="text-xs text-gray uppercase tracking-wide">Reserved</p>
+          <p className="text-2xl font-bold mt-1 text-orange-600">{reserved}</p>
         </div>
         <div className="bg-white rounded-[5px] border border-lightgray p-4">
           <p className="text-xs text-gray uppercase tracking-wide">Vacant</p>
@@ -105,28 +107,7 @@ export default function RoomsPage({
         </div>
       </div>
 
-      {/* Toggle LONG / SHORT */}
-      <div className="flex gap-3 mb-4">
-        <button
-          onClick={() => setShowShort(false)}
-          className={`px-4 py-2 rounded-[5px] text-sm font-medium transition-colors ${
-            !showShort ? "bg-black text-white" : "bg-white border border-lightgray text-gray hover:text-black"
-          }`}
-        >
-          LONG Stay ({locations.length} locations)
-        </button>
-        <button
-          onClick={() => setShowShort(true)}
-          className={`px-4 py-2 rounded-[5px] text-sm font-medium transition-colors ${
-            showShort ? "bg-black text-white" : "bg-white border border-lightgray text-gray hover:text-black"
-          }`}
-        >
-          SHORT Stay ({shortLocations.length} locations)
-        </button>
-      </div>
-
-      {!showShort ? (
-        <>
+      <div>
           {/* Location picker */}
           <div className="flex flex-wrap gap-2 mb-4">
             {locations.map((loc) => {
@@ -164,14 +145,18 @@ export default function RoomsPage({
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 p-4">
                     {apt.rooms.map((room) => {
-                      const isVacant = !room.tenant;
+                      const isVacant = !room.tenant && room.bookings.length === 0;
+                      const isReserved = !room.tenant && room.bookings.length > 0;
                       const isLeaving = room.tenant?.moveOut;
+                      const activeBooking = room.bookings[0];
                       return (
                         <div
                           key={room.id}
                           className={`rounded-[5px] border p-3 text-sm ${
                             isVacant
                               ? "border-green-200 bg-green-50"
+                              : isReserved
+                              ? "border-orange-200 bg-orange-50"
                               : isLeaving
                               ? "border-yellow-200 bg-yellow-50"
                               : "border-lightgray"
@@ -194,6 +179,16 @@ export default function RoomsPage({
                                 )}
                               </div>
                             </>
+                          ) : isReserved && activeBooking ? (
+                            <>
+                              <p className="text-sm">{activeBooking.firstName} {activeBooking.lastName}</p>
+                              <p className="text-xs text-orange-600 font-medium">
+                                Reserved — {activeBooking.status.replace(/_/g, " ")}
+                              </p>
+                              {activeBooking.moveInDate && (
+                                <span className="text-xs text-gray">Move-in: {formatDate(activeBooking.moveInDate)}</span>
+                              )}
+                            </>
                           ) : (
                             <p className="text-green-600 text-xs font-medium mt-1">Vacant</p>
                           )}
@@ -205,48 +200,7 @@ export default function RoomsPage({
               ))}
             </div>
           )}
-        </>
-      ) : (
-        /* SHORT Stay overview */
-        <div className="space-y-4">
-          {shortLocations.map((loc) => (
-            <div key={loc.id} className="bg-white rounded-[5px] border border-lightgray overflow-hidden">
-              <div className="px-4 py-3 bg-background-alt border-b border-lightgray">
-                <h3 className="font-semibold text-sm">{loc.name} — {loc.city}</h3>
-              </div>
-              <div className="p-4">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="text-left text-xs text-gray uppercase tracking-wide">
-                      <th className="pb-2">Category</th>
-                      <th className="pb-2">Total units</th>
-                      <th className="pb-2">Active bookings</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {loc.capacities.map((cap) => {
-                      const activeBookings = loc.bookings.filter(
-                        (b) => b.category === cap.category
-                      ).length;
-                      return (
-                        <tr key={cap.id} className="border-t border-lightgray/50">
-                          <td className="py-2 font-medium">{formatCategory(cap.category)}</td>
-                          <td className="py-2">{cap.totalUnits}</td>
-                          <td className="py-2">
-                            <span className={activeBookings >= cap.totalUnits ? "text-red-500 font-medium" : ""}>
-                              {activeBookings}
-                            </span>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+      </div>
     </div>
   );
 }

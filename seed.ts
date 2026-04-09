@@ -56,7 +56,6 @@ async function main() {
   // Clear existing data
   await prisma.tenant.deleteMany();
   await prisma.booking.deleteMany();
-  await prisma.roomCapacity.deleteMany();
   await prisma.room.deleteMany();
   await prisma.apartment.deleteMany();
   await prisma.location.deleteMany();

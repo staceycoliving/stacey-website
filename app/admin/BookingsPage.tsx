@@ -43,11 +43,12 @@ const STATUS_COLORS: Record<string, string> = {
   PENDING: "bg-yellow-100 text-yellow-800",
   SIGNED: "bg-blue-100 text-blue-800",
   PAID: "bg-green-100 text-green-800",
+  DEPOSIT_PENDING: "bg-orange-100 text-orange-800",
   CONFIRMED: "bg-green-200 text-green-900",
   CANCELLED: "bg-red-100 text-red-800",
 };
 
-const STATUS_OPTIONS = ["PENDING", "SIGNED", "PAID", "CONFIRMED", "CANCELLED"];
+const STATUS_OPTIONS = ["PENDING", "SIGNED", "PAID", "DEPOSIT_PENDING", "CONFIRMED", "CANCELLED"];
 
 function formatDate(d: string | null) {
   if (!d) return "—";

@@ -12,7 +12,17 @@ export default async function AdminRoomsPage() {
       apartments: {
         include: {
           rooms: {
-            include: { tenant: true },
+            include: {
+              tenant: true,
+              bookings: {
+                where: {
+                  stayType: "LONG",
+                  status: { notIn: ["CANCELLED", "CONFIRMED"] },
+                },
+                orderBy: { createdAt: "desc" },
+                take: 1,
+              },
+            },
             orderBy: { roomNumber: "asc" },
           },
         },
@@ -22,25 +32,9 @@ export default async function AdminRoomsPage() {
     orderBy: { name: "asc" },
   });
 
-  // Also fetch SHORT stay locations with capacity info
-  const shortLocations = await prisma.location.findMany({
-    where: { stayType: "SHORT" },
-    include: {
-      capacities: true,
-      bookings: {
-        where: {
-          status: { not: "CANCELLED" },
-          checkOut: { gte: new Date() },
-        },
-      },
-    },
-    orderBy: { name: "asc" },
-  });
-
   return (
     <RoomsPage
       locations={JSON.parse(JSON.stringify(locations))}
-      shortLocations={JSON.parse(JSON.stringify(shortLocations))}
     />
   );
 }

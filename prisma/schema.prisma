@@ -18,7 +18,6 @@ model Location {
   stayType  StayType // SHORT oder LONG
 
   apartments Apartment[] // nur LONG Stay
-  capacities RoomCapacity[] // nur SHORT Stay
   bookings   Booking[]
 
   createdAt DateTime @default(now())
@@ -56,6 +55,7 @@ model Room {
 
   roomNumber  String       // Zimmernummer (z.B. "201")
   category    RoomCategory // Cozy, Comfy, Jumbo, etc.
+  monthlyRent Int          @default(0) // Monatliche Miete in Cent
 
   tenant   Tenant? // Aktueller Mieter (oder null = frei)
   bookings Booking[]
@@ -85,34 +85,45 @@ model Tenant {
   id        String   @id @default(cuid())
   roomId    String   @unique
   room      Room     @relation(fields: [roomId], references: [id])
+  bookingId String?  @unique
+  booking   Booking? @relation(fields: [bookingId], references: [id])
 
   firstName String
   lastName  String
   email     String
   phone     String?
+  dateOfBirth DateTime?
+  street      String?
+  zipCode     String?
+  addressCity String?
+  country     String?
+
+  monthlyRent Int @default(0) // Miete in Cent (Snapshot bei Einzug)
 
   moveIn    DateTime // Einzugsdatum
   moveOut   DateTime? // Geplantes Auszugsdatum (null = keine Kündigung)
   notice    DateTime? // Kündigungsdatum (wann wurde gekündigt)
 
+  // Stripe / SEPA
+  stripeCustomerId String?
+  sepaMandateId    String?
+
+  // Kaution
+  depositAmount       Int?
+  depositStatus       DepositStatus @default(PENDING)
+  damagesAmount       Int           @default(0) // Mängel in Cent
+  arrearsAmount       Int           @default(0) // Mietrückstände in Cent
+  depositRefundAmount Int?          // Kaution - Mängel - Rückstände
+  depositRefundIban   String?
+  depositReturnedAt   DateTime?
+
+  // Emails
+  welcomeEmailSentAt DateTime?
+
+  rentPayments RentPayment[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-}
-
-// ─── SHORT STAY: Kapazitäten pro Kategorie ──────────────
-
-model RoomCapacity {
-  id         String       @id @default(cuid())
-  locationId String
-  location   Location     @relation(fields: [locationId], references: [id])
-
-  category   RoomCategory
-  totalUnits Int          // Wie viele Zimmer dieser Kategorie
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@unique([locationId, category])
 }
 
 // ─── BUCHUNGEN (SHORT + LONG) ───────────────────────────
@@ -151,11 +162,24 @@ model Booking {
   moveInReason   String?
   message        String?
 
-  // Zahlung & Vertrag
-  stripeSessionId      String?   @unique
+  // Vertrag (Yousign)
   signatureRequestId   String?   @unique
-  depositAmount        Int?      // Kaution in Cent
-  depositStatus        DepositStatus @default(PENDING)
+  signatureDocumentId  String?   // Yousign Document ID für Download
+
+  // Booking Fee (EUR 195)
+  bookingFeeSessionId  String?   @unique  // Stripe Checkout Session ID
+  bookingFeePaidAt     DateTime?
+
+  // Kaution
+  depositAmount         Int?      // Kaution in Cent (2× Monatsmiete)
+  depositStatus         DepositStatus @default(PENDING)
+  depositPaymentLinkId  String?   // Stripe Payment Link ID
+  depositPaymentLinkUrl String?   // URL für Gast
+  depositDeadline       DateTime? // 48h nach Booking Fee
+  depositPaidAt         DateTime?
+
+  // Tenant (Rück-Referenz)
+  tenant     Tenant?
 
   // Status
   status     BookingStatus @default(PENDING)
@@ -166,14 +190,16 @@ model Booking {
   @@index([locationId])
   @@index([status])
   @@index([checkIn, checkOut])
+  @@index([depositDeadline])
 }
 
 enum BookingStatus {
-  PENDING      // Buchung angelegt
-  SIGNED       // Vertrag unterschrieben (LONG)
-  PAID         // Zahlung eingegangen
-  CONFIRMED    // Buchung bestätigt
-  CANCELLED    // Storniert
+  PENDING          // Buchung angelegt, Vertrag noch nicht unterschrieben
+  SIGNED           // Vertrag unterschrieben, Booking Fee ausstehend
+  PAID             // Booking Fee bezahlt, Deposit-Link verschickt
+  DEPOSIT_PENDING  // Warten auf Kaution (48h Frist)
+  CONFIRMED        // Kaution bezahlt, Tenant angelegt
+  CANCELLED        // Storniert
 }
 
 enum DepositStatus {
@@ -181,4 +207,43 @@ enum DepositStatus {
   RECEIVED     // Eingegangen
   RETURNED     // Zurückgezahlt
   RETAINED     // Einbehalten
+}
+
+// ─── MIET-TRACKING ──────────────────────────────────────
+
+model RentPayment {
+  id        String   @id @default(cuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  month     DateTime // 1. des Monats (z.B. 2026-05-01)
+  amount    Int      // Erwarteter Betrag in Cent
+  paidAmount Int     @default(0) // Tatsächlich gezahlt in Cent
+  status    RentPaymentStatus @default(PENDING)
+
+  stripePaymentIntentId String?
+  paidAt    DateTime?
+  failedAt  DateTime?
+  failureReason String?
+
+  // Mahnung-Tracking
+  reminder1SentAt DateTime? // Tag 3: freundliche Erinnerung
+  mahnung1SentAt  DateTime? // Tag 14: 1. Mahnung
+  mahnung2SentAt  DateTime? // Tag 30: 2. Mahnung + Kündigungsandrohung
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([tenantId, month])
+  @@index([tenantId])
+  @@index([status])
+  @@index([month])
+}
+
+enum RentPaymentStatus {
+  PENDING     // Noch nicht versucht
+  PROCESSING  // SEPA Lastschrift initiiert
+  PAID        // Bestätigt
+  FAILED      // Fehlgeschlagen
+  PARTIAL     // Teilweise bezahlt (manuelle Anpassung)
 }

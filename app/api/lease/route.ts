@@ -6,6 +6,7 @@ import {
   createLeaseSigningSession,
   isYousignConfigured,
 } from "@/lib/yousign";
+import { prisma } from "@/lib/db";
 
 // German month names for the contract date format
 const GERMAN_MONTHS = [
@@ -99,6 +100,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
 
     const {
+      bookingId,
       firstName,
       lastName,
       dateOfBirth,
@@ -153,6 +155,17 @@ export async function POST(request: NextRequest) {
         fileName,
         { firstName, lastName, email }
       );
+
+      // Store signature IDs on booking for webhook tracking
+      if (bookingId) {
+        await prisma.booking.update({
+          where: { id: bookingId },
+          data: {
+            signatureRequestId: session.signatureRequestId,
+            signatureDocumentId: session.documentId,
+          },
+        });
+      }
 
       return Response.json({
         signingUrl: session.signingUrl,

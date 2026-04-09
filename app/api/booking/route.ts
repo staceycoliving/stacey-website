@@ -163,87 +163,8 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      // Fallback: DB-based booking (legacy)
-      const booking = await prisma.$transaction(async (tx) => {
-        const booked = await tx.booking.count({
-          where: {
-            locationId: location.id,
-            category: category as RoomCategory,
-            stayType: "SHORT",
-            status: { not: "CANCELLED" },
-            checkIn: { lt: coDate },
-            checkOut: { gt: ciDate },
-          },
-        });
-
-        const capacity = await tx.roomCapacity.findFirst({
-          where: {
-            locationId: location.id,
-            category: category as RoomCategory,
-          },
-        });
-
-        if (!capacity || booked >= capacity.totalUnits) {
-          throw new Error("NOT_AVAILABLE");
-        }
-
-        return tx.booking.create({
-          data: {
-            locationId: location.id,
-            stayType: "SHORT",
-            category: category as RoomCategory,
-            persons,
-            checkIn: ciDate,
-            checkOut: coDate,
-            firstName,
-            lastName,
-            email,
-            phone: phone || "",
-            message: message || null,
-            status: "PENDING",
-          },
-        });
-      });
-
-      // Send emails (fire & forget)
-      sendShortStayConfirmation({
-        firstName,
-        lastName,
-        email,
-        locationName: location.name,
-        category,
-        persons,
-        checkIn,
-        checkOut,
-        nights,
-        bookingId: booking.id,
-      }).catch((err) => console.error("Email error (guest):", err));
-
-      sendTeamNotification({
-        stayType: "SHORT",
-        firstName,
-        lastName,
-        email,
-        phone,
-        locationName: location.name,
-        category,
-        persons,
-        checkIn,
-        checkOut,
-        nights,
-        bookingId: booking.id,
-      }).catch((err) => console.error("Email error (team):", err));
-
-      return Response.json({
-        id: booking.id,
-        stayType: "SHORT",
-        location: slug,
-        category,
-        checkIn,
-        checkOut,
-        nights,
-        status: booking.status,
-      });
+      // SHORT Stay ohne apaleo — nicht unterstützt
+      return Response.json({ error: "SHORT stay booking requires apaleo" }, { status: 400 });
     }
 
     // ─── LONG Stay Booking ──────────────────────────────────
@@ -257,49 +178,51 @@ export async function POST(request: NextRequest) {
 
     const miDate = new Date(moveInDate);
 
+    // Active booking statuses that "reserve" a room
+    const ACTIVE_STATUSES: BookingStatus[] = ["PENDING", "SIGNED", "PAID", "DEPOSIT_PENDING"];
+
     const booking = await prisma.$transaction(async (tx) => {
-      // Count total rooms of this category at this location
-      const totalRooms = await tx.room.count({
+      // Find all eligible rooms: matching category, at this location
+      const allRooms = await tx.room.findMany({
         where: {
           apartment: { locationId: location.id },
           category: category as RoomCategory,
         },
-      });
-
-      if (totalRooms === 0) {
-        throw new Error("NOT_AVAILABLE");
-      }
-
-      // Count rooms occupied at the requested move-in date
-      // (tenant exists AND (no moveOut OR moveOut >= moveInDate))
-      const occupied = await tx.room.count({
-        where: {
-          apartment: { locationId: location.id },
-          category: category as RoomCategory,
-          tenant: {
-            OR: [
-              { moveOut: null },
-              { moveOut: { gte: miDate } },
-            ],
+        include: {
+          tenant: true,
+          bookings: {
+            where: {
+              stayType: "LONG",
+              status: { in: ACTIVE_STATUSES },
+            },
           },
         },
       });
 
-      // Count pending LONG bookings (not yet assigned a room)
-      const pendingBookings = await tx.booking.count({
-        where: {
-          locationId: location.id,
-          category: category as RoomCategory,
-          stayType: "LONG",
-          status: { notIn: ["CANCELLED"] },
-          roomId: null,
-        },
-      });
-
-      const available = totalRooms - occupied - pendingBookings;
-      if (available <= 0) {
+      if (allRooms.length === 0) {
         throw new Error("NOT_AVAILABLE");
       }
+
+      // Filter to rooms that are free on the requested moveInDate
+      const freeRooms = allRooms.filter((room) => {
+        // Room has active booking → not available
+        if (room.bookings.length > 0) return false;
+
+        const tenant = room.tenant;
+        if (!tenant) return true; // No tenant → free
+        if (!tenant.moveOut) return false; // Occupied indefinitely
+        // Tenant has moveOut: room is free if moveOut <= moveInDate
+        const moveOutDate = new Date(tenant.moveOut);
+        moveOutDate.setHours(0, 0, 0, 0);
+        return moveOutDate <= miDate;
+      });
+
+      if (freeRooms.length === 0) {
+        throw new Error("NOT_AVAILABLE");
+      }
+
+      // Random assignment from available rooms
+      const assignedRoom = freeRooms[Math.floor(Math.random() * freeRooms.length)];
 
       return tx.booking.create({
         data: {
@@ -308,6 +231,9 @@ export async function POST(request: NextRequest) {
           category: category as RoomCategory,
           persons,
           moveInDate: miDate,
+          roomId: assignedRoom.id,
+          monthlyRent: assignedRoom.monthlyRent,
+          depositAmount: assignedRoom.monthlyRent * 2, // 2× Monatsmiete
           firstName,
           lastName,
           email,
@@ -321,6 +247,7 @@ export async function POST(request: NextRequest) {
           message: message || null,
           status: "PENDING",
         },
+        include: { room: true },
       });
     });
 
@@ -355,6 +282,9 @@ export async function POST(request: NextRequest) {
       location: slug,
       category,
       moveInDate,
+      roomNumber: booking.room?.roomNumber || null,
+      monthlyRent: booking.monthlyRent,
+      depositAmount: booking.depositAmount,
       status: booking.status,
     });
   } catch (err: any) {

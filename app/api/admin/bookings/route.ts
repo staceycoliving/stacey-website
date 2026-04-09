@@ -3,7 +3,7 @@ import { isAuthenticated } from "@/lib/admin-auth";
 import { prisma } from "@/lib/db";
 import { BookingStatus } from "@/lib/generated/prisma/client";
 
-const VALID_STATUSES = new Set(["PENDING", "SIGNED", "PAID", "CONFIRMED", "CANCELLED"]);
+const VALID_STATUSES = new Set(["PENDING", "SIGNED", "PAID", "DEPOSIT_PENDING", "CONFIRMED", "CANCELLED"]);
 
 export async function PATCH(request: NextRequest) {
   if (!(await isAuthenticated())) {
