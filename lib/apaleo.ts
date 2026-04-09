@@ -353,12 +353,9 @@ export async function createShortStayBooking(params: {
     }),
   });
 
-  console.log("[apaleo] Booking created:", JSON.stringify(booking));
   return {
     id: booking.id,
     reservationIds: booking.reservationIds,
-    paymentStatus: null as { status: number; response: string } | null,
-    _rawBooking: booking,
   };
 }
 
@@ -447,30 +444,17 @@ export async function createPaidShortStayBooking(params: {
       }
 
       // 2b. Record full payment (room + city tax)
-      const paymentBody = {
-        method: "CreditCard",
-        receipt: params.stripeSessionId,
-        amount: {
-          amount: params.totalAmountEur,
-          currency: "EUR",
-        },
-      };
-      console.log("[apaleo] Recording payment:", JSON.stringify(paymentBody), "on folio:", folio.id);
-      const token = await getToken();
-      const paymentRes = await fetch(`${API_URL}/finance/v1/folios/${folio.id}/payments`, {
+      await apiFetch(`/finance/v1/folios/${folio.id}/payments`, {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(paymentBody),
+        body: JSON.stringify({
+          method: "CreditCard",
+          receipt: params.stripeSessionId,
+          amount: {
+            amount: params.totalAmountEur,
+            currency: "EUR",
+          },
+        }),
       });
-      const paymentText = await paymentRes.text();
-      console.log("[apaleo] Payment response:", paymentRes.status, paymentText);
-      if (!paymentRes.ok) {
-        throw new Error(`Payment recording failed: ${paymentRes.status} ${paymentText}`);
-      }
-      booking.paymentStatus = { status: paymentRes.status, response: paymentText };
     } else {
       console.error("No folio found for reservation:", reservationId);
     }

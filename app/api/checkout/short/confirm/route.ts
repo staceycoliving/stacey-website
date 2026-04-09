@@ -91,10 +91,6 @@ export async function POST(request: NextRequest) {
       persons: parseInt(m.persons),
       firstName: m.firstName,
       slug: m.slug,
-      paymentStatus: booking.paymentStatus || null,
-      totalAmountEur: (session.amount_total || 0) / 100,
-      reservationIds: booking.reservationIds,
-      _debug: booking._rawBooking,
     });
   } catch (err) {
     console.error("SHORT stay confirm error:", err);
