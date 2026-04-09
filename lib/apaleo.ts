@@ -175,7 +175,7 @@ export async function getShortStayAvailability(
   );
   const ratePlanCodes = RATE_PLAN_CODES[propertyId] || {};
 
-  // Build price map from offers: category → pricing details (using our rate plan codes)
+  // Build price map from offers: category → pricing details
   type PriceInfo = {
     perNight: number;
     totalGross: number;
@@ -185,35 +185,40 @@ export async function getShortStayAvailability(
     cityTaxTotal: number;
     grandTotal: number;
   };
-  const priceMap = new Map<string, PriceInfo>();
-  for (const offer of offersData.offers || []) {
-    const category = APALEO_NAME_TO_CATEGORY[offer.unitGroup?.name];
-    if (!category) continue;
-    const expectedCode = ratePlanCodes[category];
-    if (!expectedCode || offer.ratePlan?.code !== expectedCode) continue;
-    if (priceMap.has(category)) continue;
-
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const extractPricing = (offer: any, n: number): PriceInfo => {
     const totalGross = offer.totalGrossAmount.amount;
     const tax = offer.taxDetails?.[0];
     const netAmount = tax?.net?.amount ?? totalGross;
     const vatAmount = tax?.tax?.amount ?? 0;
     const vatPercent = tax?.vatPercent ?? 7;
-    const perNight = Math.round((totalGross / nights) * 100) / 100;
+    const perNight = Math.round((totalGross / n) * 100) / 100;
+    const cityTaxPerNight = n < 60 ? calculateCityTaxPerNight(perNight) : 0;
+    const cityTaxTotal = Math.round(cityTaxPerNight * n * 100) / 100;
+    return { perNight, totalGross, netAmount, vatAmount, vatPercent, cityTaxTotal, grandTotal: Math.round((totalGross + cityTaxTotal) * 100) / 100 };
+  };
+  const priceMap = new Map<string, PriceInfo>();
+  const fallbackOffers = new Map<string, typeof offersData.offers[0]>();
 
-    // City tax: own calculation (Hamburg Kultur- und Tourismustaxe)
-    // Only for stays under 2 months (60 nights)
-    const cityTaxPerNight = nights < 60 ? calculateCityTaxPerNight(perNight) : 0;
-    const cityTaxTotal = Math.round(cityTaxPerNight * nights * 100) / 100;
+  // Pass 1: prefer our configured rate plan codes
+  for (const offer of offersData.offers || []) {
+    const category = APALEO_NAME_TO_CATEGORY[offer.unitGroup?.name];
+    if (!category) continue;
+    const expectedCode = ratePlanCodes[category];
+    if (expectedCode && offer.ratePlan?.code === expectedCode && !priceMap.has(category)) {
+      priceMap.set(category, extractPricing(offer, nights));
+    } else if (!fallbackOffers.has(category)) {
+      // Keep first non-matching offer as fallback
+      fallbackOffers.set(category, offer);
+    }
+  }
 
-    priceMap.set(category, {
-      perNight,
-      totalGross,
-      netAmount,
-      vatAmount,
-      vatPercent,
-      cityTaxTotal,
-      grandTotal: Math.round((totalGross + cityTaxTotal) * 100) / 100,
-    });
+  // Pass 2: use fallback offers for categories without a matching rate plan
+  for (const [category, offer] of fallbackOffers) {
+    if (!priceMap.has(category)) {
+      console.log(`[apaleo] ${propertyId} ${category}: no offer for rate plan "${ratePlanCodes[category]}", using fallback rate plan "${offer.ratePlan?.code}"`);
+      priceMap.set(category, extractPricing(offer, nights));
+    }
   }
 
   // A room must be available for ALL nights — take the minimum sellable count across all timeslices
@@ -239,11 +244,9 @@ export async function getShortStayAvailability(
         minSellable = Math.min(minSellable, group.sellableCount);
       }
 
-      const rawAvailable = Math.max(0, minSellable === Infinity ? 0 : minSellable);
+      const available = Math.max(0, minSellable === Infinity ? 0 : minSellable);
 
       const price = priceMap.get(category);
-      // No bookable offer from apaleo → treat as unavailable (can't create reservation without offer)
-      const available = price ? rawAvailable : 0;
       return {
         category,
         total: physicalCount,
