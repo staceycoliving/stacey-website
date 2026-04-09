@@ -396,9 +396,9 @@ function LocationDetail({ location }: { location: Location }) {
       const catData = cat ? availability[cat] : null;
       if (!catData) return false; // not in DB → hide
       if (isShort) return catData.available > 0;
-      // LONG: check moveInDate
-      if (!catData.moveInDates) return catData.available > 0;
-      return catData.moveInDates.some((d) => moveInDate >= d);
+      // LONG: check if the selected moveInDate is actually bookable for this category
+      const roomDates = getRoomDates(r.name);
+      return roomDates.some((d) => d.value === moveInDate);
     });
   const nearby = getNearbyLocations(location);
   const cityLabel = location.city === "hamburg" ? "Hamburg" : location.city === "berlin" ? "Berlin" : "Vallendar";
