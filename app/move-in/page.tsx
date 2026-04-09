@@ -373,6 +373,7 @@ function MoveInFlow() {
   const [submitted, setSubmitted] = useState(false);
   const [confirmingPayment, setConfirmingPayment] = useState(false);
   const [confirmError, setConfirmError] = useState<string | null>(null);
+  const [confirmDebug, setConfirmDebug] = useState<string | null>(null);
   // Lease signing (LONG only)
   const [showLease, setShowLease] = useState(false);
   const [signingUrl, setSigningUrl] = useState<string | null>(null);
@@ -774,9 +775,9 @@ function MoveInFlow() {
               const room = loc.rooms.find((r) => ROOM_NAME_TO_CATEGORY[r.name] === data.category);
               if (room) setSelectedRoomId(room.id);
             }
+            setConfirmDebug(JSON.stringify({ paymentStatus: data.paymentStatus, totalAmountEur: data.totalAmountEur, bookingId: data.bookingId }, null, 2));
             setSubmitted(true);
             setConfirmingPayment(false);
-            // Clean URL params after all state is set
             window.history.replaceState({}, "", "/move-in");
           })
           .catch((err) => {
@@ -1062,6 +1063,9 @@ function MoveInFlow() {
                     ? "Your booking is confirmed! We look forward to welcoming you."
                     : "Your application has been submitted. We\u2019ll review it and get back to you within 48 hours."}
                 </p>
+                {confirmDebug && (
+                  <pre className="mx-auto mt-4 max-w-sm rounded-[5px] bg-[#FAFAFA] p-3 text-xs font-mono text-gray text-left break-all whitespace-pre-wrap">{confirmDebug}</pre>
+                )}
                 <div className="mx-auto mt-8 max-w-sm rounded-[5px] border border-[#E8E6E0] p-5 text-left">
                   <p className="text-xs font-bold uppercase tracking-wide text-gray">Your booking</p>
                   <div className="mt-3 flex gap-3">
