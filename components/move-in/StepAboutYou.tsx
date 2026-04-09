@@ -152,7 +152,7 @@ export default function StepAboutYou({
 
         {/* Move-in reason (SHORT + LONG) */}
         <div>
-          <label className="mb-1.5 block text-sm font-medium">{isLong ? "Why are you moving?" : "What brings you to Hamburg?"} *</label>
+          <label className="mb-1.5 block text-sm font-medium">{isLong ? "Why are you moving?" : "What brings you to Hamburg?"}</label>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             {reasons.map((r) => (
               <button

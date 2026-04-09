@@ -843,8 +843,7 @@ function MoveInFlow() {
   // ─── About complete? ───
   const isAboutComplete =
     firstName.trim() !== "" && lastName.trim() !== "" && email.trim() !== "" && phone.trim() !== "" &&
-    dateOfBirth !== "" && street.trim() !== "" && zipCode.trim() !== "" && addressCity.trim() !== "" && country.trim() !== "" &&
-    moveInReason !== "";
+    dateOfBirth !== "" && street.trim() !== "" && zipCode.trim() !== "" && addressCity.trim() !== "" && country.trim() !== "";
 
   // ─── Submit / Next ───
   const handleSubmit = async () => {
