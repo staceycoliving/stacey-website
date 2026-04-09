@@ -12,15 +12,18 @@ export async function GET(request: NextRequest) {
   // Current month (1st of the month, 00:00:00)
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
 
-  // Find all active tenants (no moveOut or moveOut > this month)
+  // Find all active tenants who live here this month
+  // Include tenants who moved in during this month (anteilig)
+  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0); // last day
   const tenants = await prisma.tenant.findMany({
     where: {
       OR: [
         { moveOut: null },
         { moveOut: { gt: monthStart } },
       ],
-      moveIn: { lte: monthStart }, // Only tenants who have already moved in
+      moveIn: { lte: monthEnd }, // Moved in by end of this month
     },
   });
 
@@ -44,12 +47,34 @@ export async function GET(request: NextRequest) {
       continue;
     }
 
-    const amount = tenant.monthlyRent;
-    if (amount <= 0) {
+    const fullRent = tenant.monthlyRent;
+    if (fullRent <= 0) {
       console.warn(`Tenant ${tenant.id} (${tenant.firstName} ${tenant.lastName}) has no rent set`);
       skipped++;
       continue;
     }
+
+    // Calculate pro-rata amount
+    const moveInDate = new Date(tenant.moveIn);
+    const moveOutDate = tenant.moveOut ? new Date(tenant.moveOut) : null;
+
+    let startDay = 1; // default: full month
+    let endDay = daysInMonth;
+
+    // Move-in month: charge from move-in day
+    if (moveInDate.getFullYear() === now.getFullYear() && moveInDate.getMonth() === now.getMonth()) {
+      startDay = moveInDate.getDate();
+    }
+
+    // Move-out month: charge until move-out day
+    if (moveOutDate && moveOutDate.getFullYear() === now.getFullYear() && moveOutDate.getMonth() === now.getMonth()) {
+      endDay = moveOutDate.getDate();
+    }
+
+    const rentDays = endDay - startDay + 1;
+    const amount = rentDays >= daysInMonth
+      ? fullRent
+      : Math.round(fullRent * rentDays / daysInMonth);
 
     // Create RentPayment record
     const rentPayment = await prisma.rentPayment.create({
