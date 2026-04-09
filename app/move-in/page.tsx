@@ -752,11 +752,36 @@ function MoveInFlow() {
       setConfirmError(null);
 
       if (bookingId) {
-        // LONG Stay: Booking fee paid → show confirmation (webhook handles the rest)
-        setStayType("LONG");
-        setSubmitted(true);
-        setConfirmingPayment(false);
-        window.history.replaceState({}, "", "/move-in");
+        // LONG Stay: Booking fee paid → fetch booking data and show confirmation
+        fetch(`/api/booking?id=${bookingId}`)
+          .then(async (r) => {
+            const data = await r.json();
+            if (!r.ok) throw new Error(data?.error || "Failed to load booking");
+            return data;
+          })
+          .then((data) => {
+            setStayType("LONG");
+            setFirstName(data.firstName || "");
+            setPersons(data.persons || 1);
+            setMoveInDate(data.moveInDate || "");
+            const loc = locations.find((l) => l.slug === data.location);
+            if (loc) {
+              setCity(loc.city);
+              const room = loc.rooms.find((r) => ROOM_NAME_TO_CATEGORY[r.name] === data.category);
+              if (room) setSelectedRoomId(room.id);
+            }
+            setSubmitted(true);
+            setConfirmingPayment(false);
+            window.history.replaceState({}, "", "/move-in");
+          })
+          .catch((err) => {
+            console.error("Booking load error:", err);
+            // Still show confirmation even if fetch fails
+            setStayType("LONG");
+            setSubmitted(true);
+            setConfirmingPayment(false);
+            window.history.replaceState({}, "", "/move-in");
+          });
       } else if (sessionId) {
         // SHORT Stay: confirm via apaleo
         fetch("/api/checkout/short/confirm", {

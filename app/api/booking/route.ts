@@ -3,7 +3,6 @@ import { prisma } from "@/lib/db";
 import { RoomCategory, BookingStatus } from "@/lib/generated/prisma/client";
 import {
   sendShortStayConfirmation,
-  sendLongStayConfirmation,
   sendTeamNotification,
 } from "@/lib/email";
 import { isApaleoProperty, createShortStayBooking } from "@/lib/apaleo";
@@ -293,4 +292,37 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+// ─── GET: Fetch booking by ID (for confirmation page) ──────
+
+export async function GET(request: NextRequest) {
+  const id = request.nextUrl.searchParams.get("id");
+  if (!id) {
+    return Response.json({ error: "id parameter required" }, { status: 400 });
+  }
+
+  const booking = await prisma.booking.findUnique({
+    where: { id },
+    include: { location: true, room: true },
+  });
+
+  if (!booking) {
+    return Response.json({ error: "Booking not found" }, { status: 404 });
+  }
+
+  return Response.json({
+    id: booking.id,
+    stayType: booking.stayType,
+    location: booking.location.slug,
+    locationName: booking.location.name,
+    category: booking.category,
+    persons: booking.persons,
+    moveInDate: booking.moveInDate?.toISOString().split("T")[0] || null,
+    roomNumber: booking.room?.roomNumber || null,
+    monthlyRent: booking.monthlyRent,
+    depositAmount: booking.depositAmount,
+    firstName: booking.firstName,
+    status: booking.status,
+  });
 }
