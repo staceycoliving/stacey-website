@@ -758,7 +758,7 @@ function MoveInFlow() {
         })
           .then(async (r) => {
             const data = await r.json();
-            if (!r.ok) throw new Error(data?.error || `Confirm failed (${r.status})`);
+            if (!r.ok) throw new Error(data?.details || data?.error || `Confirm failed (${r.status})`);
             return data;
           })
           .then((data) => {
