@@ -50,10 +50,11 @@ export async function POST(request: NextRequest) {
       if (!cat || cat.available <= 0) {
         return Response.json({ error: "No availability" }, { status: 409 });
       }
-      if (!cat.pricePerNight) {
+      if (!cat.grandTotal) {
         return Response.json({ error: "Price not available" }, { status: 500 });
       }
-      totalAmountCents = Math.round(cat.pricePerNight * nights * 100);
+      // grandTotal includes room rate + city tax
+      totalAmountCents = Math.round(cat.grandTotal * 100);
     } else {
       return Response.json({ error: "Not an apaleo property" }, { status: 400 });
     }

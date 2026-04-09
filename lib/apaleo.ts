@@ -97,6 +97,21 @@ const APALEO_NAME_TO_CATEGORY: Record<string, string> = {
 
 const COUPLE_CATEGORIES = new Set(["JUMBO", "JUMBO_BALCONY", "STUDIO", "PREMIUM_PLUS_BALCONY", "ENSUITE"]);
 
+// ─── Hamburg Kultur- und Tourismustaxe ──────────────────────
+// Staffelung nach Brutto-Übernachtungspreis pro Zimmer pro Nacht.
+// Gilt nur für Aufenthalte unter 2 Monaten (60 Nächte).
+// Personenanzahl irrelevant — pro Zimmer gerechnet.
+function calculateCityTaxPerNight(grossPerNight: number): number {
+  if (grossPerNight <= 10) return 0;
+  if (grossPerNight <= 25) return 0.60;
+  if (grossPerNight <= 50) return 1.20;
+  if (grossPerNight <= 100) return 2.40;
+  if (grossPerNight <= 150) return 2.60;
+  if (grossPerNight <= 200) return 3.00;
+  if (grossPerNight <= 250) return 3.50;
+  return 4.00; // extend if needed
+}
+
 // ─── Rate plan codes for website pricing (per property) ─────
 
 const RATE_PLAN_CODES: Record<string, Record<string, string>> = {
@@ -181,10 +196,15 @@ export async function getShortStayAvailability(
     const netAmount = tax?.net?.amount ?? totalGross;
     const vatAmount = tax?.tax?.amount ?? 0;
     const vatPercent = tax?.vatPercent ?? 7;
-    const cityTaxTotal = offer.cityTaxes?.[0]?.totalGrossAmount?.amount ?? 0;
+    const perNight = Math.round((totalGross / nights) * 100) / 100;
+
+    // City tax: own calculation (Hamburg Kultur- und Tourismustaxe)
+    // Only for stays under 2 months (60 nights)
+    const cityTaxPerNight = nights < 60 ? calculateCityTaxPerNight(perNight) : 0;
+    const cityTaxTotal = Math.round(cityTaxPerNight * nights * 100) / 100;
 
     priceMap.set(category, {
-      perNight: Math.round((totalGross / nights) * 100) / 100,
+      perNight,
       totalGross,
       netAmount,
       vatAmount,
