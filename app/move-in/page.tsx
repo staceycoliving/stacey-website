@@ -380,6 +380,7 @@ function MoveInFlow() {
   // Refs
   const resultsRef = useRef<HTMLDivElement>(null);
   const aboutRef = useRef<HTMLDivElement>(null);
+  const paymentProcessedRef = useRef(false);
   const leaseRef = useRef<HTMLDivElement>(null);
 
   // ─── Availability from DB ───
@@ -712,8 +713,8 @@ function MoveInFlow() {
     const paramPersons = searchParams.get("persons");
     const paymentStatus = searchParams.get("payment");
 
-    // No URL params → fresh visit, reset everything
-    if (!paramRoom && !paymentStatus) {
+    // No URL params → fresh visit, reset everything (but not after payment processing)
+    if (!paramRoom && !paymentStatus && !paymentProcessedRef.current) {
       setStayType(null);
       setPersons(1);
       setCity("");
@@ -743,8 +744,7 @@ function MoveInFlow() {
     // Handle Stripe redirect
     const sessionId = searchParams.get("session_id");
     if (paymentStatus === "success") {
-      // Clean URL params immediately to prevent re-processing on refresh
-      window.history.replaceState({}, "", "/move-in");
+      paymentProcessedRef.current = true;
 
       if (sessionId) {
         fetch("/api/checkout/short/confirm", {
