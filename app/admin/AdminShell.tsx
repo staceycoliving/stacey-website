@@ -4,9 +4,11 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
 const NAV_ITEMS = [
-  { href: "/admin", label: "Bookings", icon: "📋" },
-  { href: "/admin/tenants", label: "Tenants", icon: "👤" },
-  { href: "/admin/rooms", label: "Rooms", icon: "🏠" },
+  { href: "/admin", label: "Bookings" },
+  { href: "/admin/tenants", label: "Tenants" },
+  { href: "/admin/rooms", label: "Rooms" },
+  { href: "/admin/rent", label: "Rent" },
+  { href: "/admin/deposits", label: "Deposits" },
 ];
 
 export default function AdminShell({ children }: { children: React.ReactNode }) {

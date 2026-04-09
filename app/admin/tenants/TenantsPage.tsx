@@ -15,9 +15,13 @@ type Tenant = {
   lastName: string;
   email: string;
   phone: string | null;
+  monthlyRent: number;
   moveIn: string;
   moveOut: string | null;
   notice: string | null;
+  stripeCustomerId: string | null;
+  sepaMandateId: string | null;
+  depositStatus: string;
   room: {
     id: string;
     roomNumber: string;
@@ -68,8 +72,10 @@ export default function TenantsPage({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editMoveOut, setEditMoveOut] = useState("");
   const [editNotice, setEditNotice] = useState("");
+  const [editRent, setEditRent] = useState("");
   const [saving, setSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [terminatingId, setTerminatingId] = useState<string | null>(null);
 
   const filtered = tenants.filter((t) => {
     if (filterLocation && t.room.apartment.location.id !== filterLocation) return false;
@@ -97,6 +103,40 @@ export default function TenantsPage({
     setEditingId(t.id);
     setEditMoveOut(formatDateInput(t.moveOut));
     setEditNotice(formatDateInput(t.notice));
+    setEditRent(String(t.monthlyRent / 100));
+  }
+
+  async function terminate(tenantId: string) {
+    setSaving(true);
+    try {
+      const res = await fetch("/api/admin/tenants/terminate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tenantId }),
+      });
+      if (res.ok) {
+        setTerminatingId(null);
+        router.refresh();
+      }
+    } catch (err) {
+      console.error("Failed to terminate:", err);
+    }
+    setSaving(false);
+  }
+
+  async function saveRent(tenantId: string) {
+    setSaving(true);
+    try {
+      const res = await fetch("/api/admin/tenants/rent", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tenantId, monthlyRent: Math.round(parseFloat(editRent) * 100) }),
+      });
+      if (res.ok) router.refresh();
+    } catch (err) {
+      console.error("Failed to update rent:", err);
+    }
+    setSaving(false);
   }
 
   async function saveEdit(tenantId: string) {
@@ -196,10 +236,10 @@ export default function TenantsPage({
                 <th className="text-left px-4 py-3 font-semibold text-xs text-gray uppercase tracking-wide">Name</th>
                 <th className="text-left px-4 py-3 font-semibold text-xs text-gray uppercase tracking-wide">Location</th>
                 <th className="text-left px-4 py-3 font-semibold text-xs text-gray uppercase tracking-wide">Room</th>
-                <th className="text-left px-4 py-3 font-semibold text-xs text-gray uppercase tracking-wide">Category</th>
+                <th className="text-left px-4 py-3 font-semibold text-xs text-gray uppercase tracking-wide">Rent</th>
+                <th className="text-left px-4 py-3 font-semibold text-xs text-gray uppercase tracking-wide">SEPA</th>
                 <th className="text-left px-4 py-3 font-semibold text-xs text-gray uppercase tracking-wide">Move-in</th>
                 <th className="text-left px-4 py-3 font-semibold text-xs text-gray uppercase tracking-wide">Move-out</th>
-                <th className="text-left px-4 py-3 font-semibold text-xs text-gray uppercase tracking-wide">Notice</th>
                 <th className="text-left px-4 py-3 font-semibold text-xs text-gray uppercase tracking-wide">Actions</th>
               </tr>
             </thead>
@@ -218,8 +258,34 @@ export default function TenantsPage({
                       <p className="text-xs text-gray">{t.email}</p>
                     </td>
                     <td className="px-4 py-3">{t.room.apartment.location.name}</td>
-                    <td className="px-4 py-3">{t.room.roomNumber}</td>
-                    <td className="px-4 py-3">{formatCategory(t.room.category)}</td>
+                    <td className="px-4 py-3">#{t.room.roomNumber}</td>
+                    <td className="px-4 py-3">
+                      {editingId === t.id ? (
+                        <div className="flex gap-1">
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={editRent}
+                            onChange={(e) => setEditRent(e.target.value)}
+                            className="px-2 py-1 border border-lightgray rounded-[5px] text-sm w-24"
+                          />
+                          <button
+                            onClick={() => saveRent(t.id)}
+                            disabled={saving}
+                            className="px-2 py-1 text-xs border border-lightgray rounded-[5px] hover:bg-background-alt disabled:opacity-50"
+                          >
+                            OK
+                          </button>
+                        </div>
+                      ) : (
+                        `€${(t.monthlyRent / 100).toFixed(0)}`
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={`text-xs font-medium ${t.sepaMandateId ? "text-green-600" : "text-gray"}`}>
+                        {t.sepaMandateId ? "Active" : "—"}
+                      </span>
+                    </td>
                     <td className="px-4 py-3">{formatDate(t.moveIn)}</td>
                     <td className="px-4 py-3">
                       {editingId === t.id ? (
@@ -233,18 +299,6 @@ export default function TenantsPage({
                         <span className={t.moveOut ? "text-yellow-600 font-medium" : ""}>
                           {formatDate(t.moveOut)}
                         </span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3">
-                      {editingId === t.id ? (
-                        <input
-                          type="date"
-                          value={editNotice}
-                          onChange={(e) => setEditNotice(e.target.value)}
-                          className="px-2 py-1 border border-lightgray rounded-[5px] text-sm w-36"
-                        />
-                      ) : (
-                        formatDate(t.notice)
                       )}
                     </td>
                     <td className="px-4 py-3">
@@ -280,6 +334,22 @@ export default function TenantsPage({
                             Cancel
                           </button>
                         </div>
+                      ) : terminatingId === t.id ? (
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => terminate(t.id)}
+                            disabled={saving}
+                            className="px-3 py-1 bg-red-500 text-white rounded-[5px] text-xs font-medium hover:bg-red-600 disabled:opacity-50"
+                          >
+                            {saving ? "..." : "Confirm"}
+                          </button>
+                          <button
+                            onClick={() => setTerminatingId(null)}
+                            className="px-3 py-1 border border-lightgray rounded-[5px] text-xs hover:bg-background-alt"
+                          >
+                            Cancel
+                          </button>
+                        </div>
                       ) : (
                         <div className="flex gap-2">
                           <button
@@ -288,6 +358,14 @@ export default function TenantsPage({
                           >
                             Edit
                           </button>
+                          {!t.notice && (
+                            <button
+                              onClick={() => setTerminatingId(t.id)}
+                              className="px-3 py-1 border border-orange-200 text-orange-600 rounded-[5px] text-xs hover:bg-orange-50"
+                            >
+                              Terminate
+                            </button>
+                          )}
                           <button
                             onClick={() => setConfirmDelete(t.id)}
                             className="px-3 py-1 border border-red-200 text-red-500 rounded-[5px] text-xs hover:bg-red-50"

@@ -1,12 +1,12 @@
 {
   "crons": [
     {
-      "path": "/api/cron/deposit-timeout",
+      "path": "/api/cron/daily",
       "schedule": "0 8 * * *"
     },
     {
-      "path": "/api/cron/welcome-email",
-      "schedule": "0 8 * * *"
+      "path": "/api/cron/monthly-rent",
+      "schedule": "0 6 1 * *"
     }
   ]
 }
