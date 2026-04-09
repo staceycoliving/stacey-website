@@ -383,7 +383,7 @@ function MoveInFlow() {
   const leaseRef = useRef<HTMLDivElement>(null);
 
   // ─── Availability from DB ───
-  type AvailabilityMap = Record<string, Record<string, { available: number; total: number; moveInDates?: string[]; pricePerNight?: number | null }>>;
+  type AvailabilityMap = Record<string, Record<string, { available: number; total: number; moveInDates?: string[]; pricePerNight?: number | null; totalGross?: number | null; vatAmount?: number | null; vatPercent?: number | null; cityTaxTotal?: number | null; grandTotal?: number | null }>>;
   const [availability, setAvailability] = useState<AvailabilityMap>({});
   const [loadingAvailability, setLoadingAvailability] = useState(false);
 
@@ -398,6 +398,21 @@ function MoveInFlow() {
     const cat = ROOM_NAME_TO_CATEGORY[roomName];
     if (!cat) return null;
     return availability[locSlug]?.[cat]?.pricePerNight || basePrices[locSlug]?.[cat] || null;
+  };
+
+  // Helper: get full pricing details for a room (only available after date selection)
+  const getPricingDetails = (roomName: string, locSlug: string) => {
+    const cat = ROOM_NAME_TO_CATEGORY[roomName];
+    if (!cat) return null;
+    const data = availability[locSlug]?.[cat];
+    if (!data?.grandTotal) return null;
+    return {
+      totalGross: data.totalGross!,
+      vatAmount: data.vatAmount!,
+      vatPercent: data.vatPercent!,
+      cityTaxTotal: data.cityTaxTotal!,
+      grandTotal: data.grandTotal!,
+    };
   };
 
   // Fetch availability from DB
@@ -420,13 +435,18 @@ function MoveInFlow() {
       const map: AvailabilityMap = {};
       results.forEach((data) => {
         if (!data) return;
-        const catMap: Record<string, { available: number; total: number; moveInDates?: string[]; pricePerNight?: number | null }> = {};
+        const catMap: Record<string, { available: number; total: number; moveInDates?: string[]; pricePerNight?: number | null; totalGross?: number | null; vatAmount?: number | null; vatPercent?: number | null; cityTaxTotal?: number | null; grandTotal?: number | null }> = {};
         for (const cat of data.categories) {
           catMap[cat.category] = {
             available: cat.available ?? cat.freeNow ?? 0,
             total: cat.total,
             moveInDates: cat.moveInDates,
             pricePerNight: cat.pricePerNight ?? null,
+            totalGross: cat.totalGross ?? null,
+            vatAmount: cat.vatAmount ?? null,
+            vatPercent: cat.vatPercent ?? null,
+            cityTaxTotal: cat.cityTaxTotal ?? null,
+            grandTotal: cat.grandTotal ?? null,
           };
         }
         map[data.location] = catMap;
@@ -1240,16 +1260,50 @@ function MoveInFlow() {
                         </div>
 
                         <div className="mt-4 border-t border-white/10 pt-4">
-                          <div className="flex items-center justify-between">
-                            <p className="text-sm text-white/60">Starting from</p>
-                            <p className="text-2xl font-extrabold">{(() => {
-                              if (stayType === "SHORT" && selectedLocation) {
-                                const price = getNightlyPrice(selectedRoom.name, selectedLocation.slug);
-                                if (price) return <>€{price}<span className="text-sm font-normal text-white/60">/night</span></>;
+                          {(() => {
+                            if (stayType === "SHORT" && selectedLocation) {
+                              const pricing = getPricingDetails(selectedRoom.name, selectedLocation.slug);
+                              const perNight = getNightlyPrice(selectedRoom.name, selectedLocation.slug);
+                              if (pricing) {
+                                return (
+                                  <div className="space-y-2 text-sm">
+                                    <div className="flex justify-between text-white/60">
+                                      <span>€{perNight} × {nightCount} nights</span>
+                                      <span>€{pricing.totalGross.toFixed(2)}</span>
+                                    </div>
+                                    <div className="flex justify-between text-white/40 text-xs">
+                                      <span>incl. {pricing.vatPercent}% VAT</span>
+                                      <span>€{pricing.vatAmount.toFixed(2)}</span>
+                                    </div>
+                                    {pricing.cityTaxTotal > 0 && (
+                                      <div className="flex justify-between text-white/60">
+                                        <span>City tax</span>
+                                        <span>€{pricing.cityTaxTotal.toFixed(2)}</span>
+                                      </div>
+                                    )}
+                                    <div className="flex justify-between border-t border-white/10 pt-2 font-bold text-base">
+                                      <span>Total</span>
+                                      <span>€{pricing.grandTotal.toFixed(2)}</span>
+                                    </div>
+                                  </div>
+                                );
                               }
-                              return <>€{selectedRoom.priceMonthly}<span className="text-sm font-normal text-white/60">/mo</span></>;
-                            })()}</p>
-                          </div>
+                              if (perNight) {
+                                return (
+                                  <div className="flex items-center justify-between">
+                                    <p className="text-sm text-white/60">Per night</p>
+                                    <p className="text-2xl font-extrabold">€{perNight}<span className="text-sm font-normal text-white/60">/night</span></p>
+                                  </div>
+                                );
+                              }
+                            }
+                            return (
+                              <div className="flex items-center justify-between">
+                                <p className="text-sm text-white/60">Starting from</p>
+                                <p className="text-2xl font-extrabold">€{selectedRoom.priceMonthly}<span className="text-sm font-normal text-white/60">/mo</span></p>
+                              </div>
+                            );
+                          })()}
                         </div>
 
                         {/* Terms — SHORT only */}

@@ -158,16 +158,40 @@ export async function getShortStayAvailability(
   );
   const ratePlanCodes = RATE_PLAN_CODES[propertyId] || {};
 
-  // Build price map from offers: category → per-night price (using our rate plan codes)
-  const priceMap = new Map<string, number>();
+  // Build price map from offers: category → pricing details (using our rate plan codes)
+  type PriceInfo = {
+    perNight: number;
+    totalGross: number;
+    netAmount: number;
+    vatAmount: number;
+    vatPercent: number;
+    cityTaxTotal: number;
+    grandTotal: number;
+  };
+  const priceMap = new Map<string, PriceInfo>();
   for (const offer of offersData.offers || []) {
     const category = APALEO_NAME_TO_CATEGORY[offer.unitGroup?.name];
     if (!category) continue;
     const expectedCode = ratePlanCodes[category];
     if (!expectedCode || offer.ratePlan?.code !== expectedCode) continue;
-    // Per-night price = total / nights
-    const perNight = Math.round((offer.totalGrossAmount.amount / nights) * 100) / 100;
-    priceMap.set(category, perNight);
+    if (priceMap.has(category)) continue;
+
+    const totalGross = offer.totalGrossAmount.amount;
+    const tax = offer.taxDetails?.[0];
+    const netAmount = tax?.net?.amount ?? totalGross;
+    const vatAmount = tax?.tax?.amount ?? 0;
+    const vatPercent = tax?.vatPercent ?? 7;
+    const cityTaxTotal = offer.cityTaxes?.[0]?.totalGrossAmount?.amount ?? 0;
+
+    priceMap.set(category, {
+      perNight: Math.round((totalGross / nights) * 100) / 100,
+      totalGross,
+      netAmount,
+      vatAmount,
+      vatPercent,
+      cityTaxTotal,
+      grandTotal: Math.round((totalGross + cityTaxTotal) * 100) / 100,
+    });
   }
 
   // A room must be available for ALL nights — take the minimum sellable count across all timeslices
@@ -195,12 +219,19 @@ export async function getShortStayAvailability(
 
       const available = Math.max(0, minSellable === Infinity ? 0 : minSellable);
 
+      const price = priceMap.get(category);
       return {
         category,
         total: physicalCount,
         booked: physicalCount - available,
         available,
-        pricePerNight: priceMap.get(category) || null,
+        pricePerNight: price?.perNight || null,
+        totalGross: price?.totalGross || null,
+        netAmount: price?.netAmount || null,
+        vatAmount: price?.vatAmount || null,
+        vatPercent: price?.vatPercent || null,
+        cityTaxTotal: price?.cityTaxTotal || null,
+        grandTotal: price?.grandTotal || null,
       };
     })
     .filter(Boolean)
