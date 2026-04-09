@@ -407,6 +407,7 @@ function MoveInFlow() {
     const data = availability[locSlug]?.[cat];
     if (!data?.grandTotal) return null;
     return {
+      perNight: data.pricePerNight!,
       totalGross: data.totalGross!,
       vatAmount: data.vatAmount!,
       vatPercent: data.vatPercent!,
@@ -529,6 +530,35 @@ function MoveInFlow() {
   // ─── Derived ───
   const selectedRoom = selectedRoomId ? getRoomById(selectedRoomId) ?? null : null;
   const selectedLocation = selectedRoomId ? getLocationByRoomId(selectedRoomId) ?? null : null;
+
+  // Fetch pricing when SHORT stay room is selected and we don't have grandTotal yet
+  type PricingState = { totalGross: number; netAmount: number; vatAmount: number; vatPercent: number; cityTaxTotal: number; grandTotal: number; perNight: number } | null;
+  const [selectedRoomPricing, setSelectedRoomPricing] = useState<PricingState>(null);
+  useEffect(() => {
+    if (stayType !== "SHORT" || !selectedLocation || !selectedRoom || !checkIn || !checkOut) {
+      setSelectedRoomPricing(null);
+      return;
+    }
+    const cat = ROOM_NAME_TO_CATEGORY[selectedRoom.name];
+    if (!cat) return;
+    fetch(`/api/availability?location=${selectedLocation.slug}&checkIn=${checkIn}&checkOut=${checkOut}&persons=${persons}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        const found = data?.categories?.find((c: { category: string }) => c.category === cat);
+        if (found?.grandTotal) {
+          setSelectedRoomPricing({
+            totalGross: found.totalGross,
+            netAmount: found.netAmount,
+            vatAmount: found.vatAmount,
+            vatPercent: found.vatPercent,
+            cityTaxTotal: found.cityTaxTotal,
+            grandTotal: found.grandTotal,
+            perNight: found.pricePerNight,
+          });
+        }
+      })
+      .catch(() => {});
+  }, [stayType, selectedRoomId, checkIn, checkOut, persons]);
 
   // Helper: get availability count for a room at a location
   const hasAvailabilityData = Object.keys(availability).length > 0;
@@ -1290,8 +1320,8 @@ function MoveInFlow() {
                         <div className="mt-4 border-t border-white/10 pt-4">
                           {(() => {
                             if (stayType === "SHORT" && selectedLocation) {
-                              const pricing = getPricingDetails(selectedRoom.name, selectedLocation.slug);
-                              const perNight = getNightlyPrice(selectedRoom.name, selectedLocation.slug);
+                              const pricing = selectedRoomPricing || getPricingDetails(selectedRoom.name, selectedLocation.slug);
+                              const perNight = pricing?.perNight || getNightlyPrice(selectedRoom.name, selectedLocation.slug);
                               if (pricing) {
                                 return (
                                   <div className="space-y-2 text-sm">
