@@ -267,6 +267,7 @@ export async function createShortStayBooking(params: {
   firstName: string;
   lastName: string;
   email: string;
+  idempotencyKey?: string;
   phone: string;
   message?: string;
   dateOfBirth?: string;
@@ -311,7 +312,7 @@ export async function createShortStayBooking(params: {
   const booking = await apiFetch("/booking/v1/bookings", {
     method: "POST",
     headers: {
-      "Idempotency-Key": `stacey-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      "Idempotency-Key": params.idempotencyKey || `stacey-${Date.now()}-${Math.random().toString(36).slice(2)}`,
     },
     body: JSON.stringify({
       paymentAccount: {
@@ -384,6 +385,7 @@ export async function createPaidShortStayBooking(params: {
   const propertyId = PROPERTY_MAP[params.slug];
 
   // 1. Create booking in apaleo (room rate only)
+  // Stripe session ID as idempotency key → safe to retry without duplicates
   const booking = await createShortStayBooking({
     slug: params.slug,
     category: params.category,
@@ -400,6 +402,7 @@ export async function createPaidShortStayBooking(params: {
     zipCode: params.zipCode,
     addressCity: params.addressCity,
     country: params.country,
+    idempotencyKey: `stripe-${params.stripeSessionId}`,
   });
 
   // 2. Find the folio + post city tax + record payment
