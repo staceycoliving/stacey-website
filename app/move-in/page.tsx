@@ -776,10 +776,13 @@ function MoveInFlow() {
             }
             setSubmitted(true);
             setConfirmingPayment(false);
+            // Clean URL params after all state is set
+            window.history.replaceState({}, "", "/move-in");
           })
           .catch((err) => {
             console.error("Booking confirm error:", err);
             setConfirmError(String(err));
+            window.history.replaceState({}, "", "/move-in");
             setConfirmingPayment(false);
           });
       } else {
