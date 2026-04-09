@@ -52,8 +52,8 @@ export async function GET(request: NextRequest) {
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         code: "CITY_TAX",
-        name: "Kultur- und Tourismustaxe",
-        description: "Hamburger Kultur- und Tourismustaxe (Durchlaufposten)",
+        name: { en: "City Tax", de: "Kultur- und Tourismustaxe" },
+        description: { en: "Hamburg City Tax (pass-through)", de: "Hamburger Kultur- und Tourismustaxe (Durchlaufposten)" },
         defaultGrossPrice: { amount: 0, currency: "EUR" },
         pricingUnit: "Room",
         postNextDay: false,
