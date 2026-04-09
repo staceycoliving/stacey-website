@@ -653,16 +653,44 @@ function MoveInFlow() {
     setTimeout(() => resultsRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
   };
 
-  // ─── Smart skip from URL params ───
+  // ─── Smart skip from URL params / reset on fresh visit ───
   useEffect(() => {
     const paramRoom = searchParams.get("room");
     const paramDate = searchParams.get("date");
     const paramCheckIn = searchParams.get("checkin");
     const paramCheckOut = searchParams.get("checkout");
     const paramPersons = searchParams.get("persons");
+    const paymentStatus = searchParams.get("payment");
+
+    // No URL params → fresh visit, reset everything
+    if (!paramRoom && !paymentStatus) {
+      setStayType(null);
+      setPersons(1);
+      setCity("");
+      setCheckIn(null);
+      setCheckOut(null);
+      setMoveInDate(null);
+      setShowResults(false);
+      setSelectedRoomId(null);
+      setRoomCollapsed(false);
+      setFirstName("");
+      setLastName("");
+      setEmail("");
+      setPhone("");
+      setDateOfBirth("");
+      setStreet("");
+      setZipCode("");
+      setAddressCity("");
+      setCountry("");
+      setMoveInReason("");
+      setMessage("");
+      setTermsAccepted(false);
+      setSubmitted(false);
+      setSubmitting(false);
+      return;
+    }
 
     // Handle Stripe redirect
-    const paymentStatus = searchParams.get("payment");
     const sessionId = searchParams.get("session_id");
     if (paymentStatus === "success") {
       // Confirm SHORT stay booking in apaleo after Stripe payment
