@@ -371,6 +371,8 @@ function MoveInFlow() {
   const [country, setCountry] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [confirmingPayment, setConfirmingPayment] = useState(false);
+  const [confirmError, setConfirmError] = useState<string | null>(null);
   // Lease signing (LONG only)
   const [showLease, setShowLease] = useState(false);
   const [signingUrl, setSigningUrl] = useState<string | null>(null);
@@ -745,6 +747,8 @@ function MoveInFlow() {
     const sessionId = searchParams.get("session_id");
     if (paymentStatus === "success") {
       paymentProcessedRef.current = true;
+      setConfirmingPayment(true);
+      setConfirmError(null);
 
       if (sessionId) {
         fetch("/api/checkout/short/confirm", {
@@ -752,9 +756,12 @@ function MoveInFlow() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ sessionId }),
         })
-          .then((r) => r.ok ? r.json() : null)
+          .then(async (r) => {
+            const data = await r.json();
+            if (!r.ok) throw new Error(data?.error || `Confirm failed (${r.status})`);
+            return data;
+          })
           .then((data) => {
-            if (!data) return;
             // Restore state from Stripe session metadata
             setStayType("SHORT");
             setFirstName(data.firstName || "");
@@ -767,10 +774,18 @@ function MoveInFlow() {
               const room = loc.rooms.find((r) => ROOM_NAME_TO_CATEGORY[r.name] === data.category);
               if (room) setSelectedRoomId(room.id);
             }
+            setSubmitted(true);
+            setConfirmingPayment(false);
           })
-          .catch((err) => console.error("Booking confirm error:", err));
+          .catch((err) => {
+            console.error("Booking confirm error:", err);
+            setConfirmError(String(err));
+            setConfirmingPayment(false);
+          });
+      } else {
+        setConfirmError("No session ID in URL");
+        setConfirmingPayment(false);
       }
-      setSubmitted(true);
       return;
     }
 
@@ -987,6 +1002,39 @@ function MoveInFlow() {
   const searchSummary = stayType === "SHORT"
     ? `Short stay · ${persons === 2 ? "2 persons" : "1 person"}${checkIn && checkOut ? ` · ${formatDateShort(checkIn)} → ${formatDateShort(checkOut)}` : ""}`
     : `Long stay${cityLabel ? ` · ${cityLabel}` : ""} · ${persons === 2 ? "2 persons" : "1 person"}${moveInDate ? ` · from ${formatDate(moveInDate)}` : ""}`;
+
+  // ════════════════════════════════════════
+  //  PAYMENT CONFIRMING / ERROR
+  // ════════════════════════════════════════
+  if (confirmingPayment) {
+    return (
+      <>
+        <Navbar />
+        <main className="flex min-h-screen items-center justify-center bg-white pt-24">
+          <div className="text-center">
+            <Loader2 size={32} className="mx-auto animate-spin text-gray" />
+            <p className="mt-4 text-sm text-gray">Confirming your booking...</p>
+          </div>
+        </main>
+      </>
+    );
+  }
+
+  if (confirmError) {
+    return (
+      <>
+        <Navbar />
+        <main className="flex min-h-screen items-center justify-center bg-white pt-24">
+          <div className="mx-auto max-w-md px-4 text-center">
+            <p className="text-lg font-bold">Something went wrong</p>
+            <p className="mt-2 text-sm text-gray">Your payment was successful but we couldn&apos;t confirm the booking automatically. Please contact us.</p>
+            <p className="mt-4 rounded-[5px] bg-[#FAFAFA] p-3 text-xs font-mono text-gray break-all">{confirmError}</p>
+            <a href="mailto:booking@stacey.de" className="mt-6 inline-block rounded-[5px] bg-black px-6 py-3 text-sm font-semibold text-white">Contact booking@stacey.de</a>
+          </div>
+        </main>
+      </>
+    );
+  }
 
   // ════════════════════════════════════════
   //  CONFIRMATION
