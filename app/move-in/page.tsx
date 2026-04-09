@@ -528,11 +528,15 @@ function MoveInFlow() {
       return;
     }
     const cat = ROOM_NAME_TO_CATEGORY[roomName];
-    if (!cat) return;
+    if (!cat) { console.log("[pricing] no category for room:", roomName); return; }
+
+    console.log("[pricing] effect running:", { locSlug, roomName, cat, checkIn, checkOut });
 
     // Already have pricing from availability state? Use it directly.
     const existing = availability[locSlug]?.[cat];
+    console.log("[pricing] availability state:", existing);
     if (existing?.grandTotal) {
+      console.log("[pricing] using availability state, grandTotal:", existing.grandTotal);
       setSelectedRoomPricing({
         totalGross: existing.totalGross!,
         netAmount: existing.vatAmount ? existing.totalGross! - existing.vatAmount! : existing.totalGross!,
@@ -550,15 +554,20 @@ function MoveInFlow() {
     let cancelled = false;
     setPricingLoading(true);
     setSelectedRoomPricing(null);
-    fetch(`/api/availability?location=${locSlug}&checkIn=${checkIn}&checkOut=${checkOut}&persons=${persons}`)
+    const url = `/api/availability?location=${locSlug}&checkIn=${checkIn}&checkOut=${checkOut}&persons=${persons}`;
+    console.log("[pricing] fetching:", url);
+    fetch(url)
       .then(r => {
         if (!r.ok) throw new Error(`API ${r.status}`);
         return r.json();
       })
       .then(data => {
-        if (cancelled) return;
+        if (cancelled) { console.log("[pricing] cancelled, ignoring response"); return; }
+        console.log("[pricing] API response categories:", data?.categories?.map((c: { category: string; grandTotal: number | null }) => ({ cat: c.category, grandTotal: c.grandTotal })));
         const found = data?.categories?.find((c: { category: string }) => c.category === cat);
+        console.log("[pricing] matched category:", found ? { cat: found.category, grandTotal: found.grandTotal, available: found.available } : "NOT FOUND");
         if (found?.grandTotal) {
+          console.log("[pricing] SUCCESS — setting pricing:", found.grandTotal);
           setSelectedRoomPricing({
             totalGross: found.totalGross,
             netAmount: found.netAmount,
@@ -568,12 +577,14 @@ function MoveInFlow() {
             grandTotal: found.grandTotal,
             perNight: found.pricePerNight,
           });
+        } else {
+          console.log("[pricing] FAIL — grandTotal is falsy:", found?.grandTotal);
         }
         setPricingLoading(false);
       })
       .catch((err) => {
         if (cancelled) return;
-        console.error("Pricing fetch failed:", err);
+        console.error("[pricing] fetch failed:", err);
         setPricingLoading(false);
       });
     return () => { cancelled = true; };
