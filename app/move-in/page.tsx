@@ -400,22 +400,6 @@ function MoveInFlow() {
     return availability[locSlug]?.[cat]?.pricePerNight || basePrices[locSlug]?.[cat] || null;
   };
 
-  // Helper: get full pricing details for a room (only available after date selection)
-  const getPricingDetails = (roomName: string, locSlug: string) => {
-    const cat = ROOM_NAME_TO_CATEGORY[roomName];
-    if (!cat) return null;
-    const data = availability[locSlug]?.[cat];
-    if (!data?.grandTotal) return null;
-    return {
-      perNight: data.pricePerNight!,
-      totalGross: data.totalGross!,
-      vatAmount: data.vatAmount!,
-      vatPercent: data.vatPercent!,
-      cityTaxTotal: data.cityTaxTotal!,
-      grandTotal: data.grandTotal!,
-    };
-  };
-
   // Fetch availability from DB
   const fetchAvailability = useCallback((locs: Location[], opts?: { ci?: string; co?: string }) => {
     setLoadingAvailability(true);
@@ -531,19 +515,48 @@ function MoveInFlow() {
   const selectedRoom = selectedRoomId ? getRoomById(selectedRoomId) ?? null : null;
   const selectedLocation = selectedRoomId ? getLocationByRoomId(selectedRoomId) ?? null : null;
 
-  // Fetch pricing when SHORT stay room is selected and we don't have grandTotal yet
+  // Fetch pricing when SHORT stay room is selected
   type PricingState = { totalGross: number; netAmount: number; vatAmount: number; vatPercent: number; cityTaxTotal: number; grandTotal: number; perNight: number } | null;
   const [selectedRoomPricing, setSelectedRoomPricing] = useState<PricingState>(null);
+  const [pricingLoading, setPricingLoading] = useState(false);
+  const locSlug = selectedLocation?.slug ?? null;
+  const roomName = selectedRoom?.name ?? null;
   useEffect(() => {
-    if (stayType !== "SHORT" || !selectedLocation || !selectedRoom || !checkIn || !checkOut) {
+    if (stayType !== "SHORT" || !locSlug || !roomName || !checkIn || !checkOut) {
       setSelectedRoomPricing(null);
+      setPricingLoading(false);
       return;
     }
-    const cat = ROOM_NAME_TO_CATEGORY[selectedRoom.name];
+    const cat = ROOM_NAME_TO_CATEGORY[roomName];
     if (!cat) return;
-    fetch(`/api/availability?location=${selectedLocation.slug}&checkIn=${checkIn}&checkOut=${checkOut}&persons=${persons}`)
-      .then(r => r.ok ? r.json() : null)
+
+    // Already have pricing from availability state? Use it directly.
+    const existing = availability[locSlug]?.[cat];
+    if (existing?.grandTotal) {
+      setSelectedRoomPricing({
+        totalGross: existing.totalGross!,
+        netAmount: existing.vatAmount ? existing.totalGross! - existing.vatAmount! : existing.totalGross!,
+        vatAmount: existing.vatAmount!,
+        vatPercent: existing.vatPercent!,
+        cityTaxTotal: existing.cityTaxTotal!,
+        grandTotal: existing.grandTotal!,
+        perNight: existing.pricePerNight!,
+      });
+      setPricingLoading(false);
+      return;
+    }
+
+    // Otherwise fetch pricing from API
+    let cancelled = false;
+    setPricingLoading(true);
+    setSelectedRoomPricing(null);
+    fetch(`/api/availability?location=${locSlug}&checkIn=${checkIn}&checkOut=${checkOut}&persons=${persons}`)
+      .then(r => {
+        if (!r.ok) throw new Error(`API ${r.status}`);
+        return r.json();
+      })
       .then(data => {
+        if (cancelled) return;
         const found = data?.categories?.find((c: { category: string }) => c.category === cat);
         if (found?.grandTotal) {
           setSelectedRoomPricing({
@@ -556,9 +569,15 @@ function MoveInFlow() {
             perNight: found.pricePerNight,
           });
         }
+        setPricingLoading(false);
       })
-      .catch(() => {});
-  }, [stayType, selectedRoomId, checkIn, checkOut, persons]);
+      .catch((err) => {
+        if (cancelled) return;
+        console.error("Pricing fetch failed:", err);
+        setPricingLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [stayType, locSlug, roomName, checkIn, checkOut, persons, availability]);
 
   // Helper: get availability count for a room at a location
   const hasAvailabilityData = Object.keys(availability).length > 0;
@@ -1320,13 +1339,12 @@ function MoveInFlow() {
                         <div className="mt-4 border-t border-white/10 pt-4">
                           {(() => {
                             if (stayType === "SHORT" && selectedLocation) {
-                              const pricing = selectedRoomPricing || getPricingDetails(selectedRoom.name, selectedLocation.slug);
-                              const perNight = pricing?.perNight || getNightlyPrice(selectedRoom.name, selectedLocation.slug);
+                              const pricing = selectedRoomPricing;
                               if (pricing) {
                                 return (
                                   <div className="space-y-2 text-sm">
                                     <div className="flex justify-between text-white/60">
-                                      <span>€{perNight} × {nightCount} nights</span>
+                                      <span>€{pricing.perNight} × {nightCount} nights</span>
                                       <span>€{pricing.totalGross.toFixed(2)}</span>
                                     </div>
                                     <div className="flex justify-between text-white/40 text-xs">
@@ -1346,6 +1364,17 @@ function MoveInFlow() {
                                   </div>
                                 );
                               }
+                              if (pricingLoading) {
+                                return (
+                                  <div className="space-y-2">
+                                    <div className="h-4 w-3/4 animate-pulse rounded bg-white/10" />
+                                    <div className="h-3 w-1/2 animate-pulse rounded bg-white/10" />
+                                    <div className="h-3 w-2/3 animate-pulse rounded bg-white/10" />
+                                    <div className="mt-2 h-5 w-full animate-pulse rounded bg-white/10" />
+                                  </div>
+                                );
+                              }
+                              const perNight = getNightlyPrice(selectedRoom.name, selectedLocation.slug);
                               if (perNight) {
                                 return (
                                   <div className="flex items-center justify-between">
