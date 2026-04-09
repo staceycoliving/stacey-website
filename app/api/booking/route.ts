@@ -224,6 +224,10 @@ export async function POST(request: NextRequest) {
       // Random assignment from available rooms
       const assignedRoom = freeRooms[Math.floor(Math.random() * freeRooms.length)];
 
+      // €50 Aufpreis pro Monat für 2 Personen
+      const couplesSurcharge = persons >= 2 ? 5000 : 0;
+      const rent = assignedRoom.monthlyRent + couplesSurcharge;
+
       return tx.booking.create({
         data: {
           locationId: location.id,
@@ -232,8 +236,8 @@ export async function POST(request: NextRequest) {
           persons,
           moveInDate: miDate,
           roomId: assignedRoom.id,
-          monthlyRent: assignedRoom.monthlyRent,
-          depositAmount: assignedRoom.monthlyRent * 2, // 2× Monatsmiete
+          monthlyRent: rent,
+          depositAmount: rent * 2, // 2× Monatsmiete
           firstName,
           lastName,
           email,
