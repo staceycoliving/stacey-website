@@ -83,7 +83,7 @@ lib/data.ts               → Alle Daten, Types, Helper-Funktionen
 ## Booking Rules
 
 - forCouples: NUR Jumbo, Jumbo Balcony, Studio
-- SHORT Stay: Alster, Downtown (Othmarschen unklar)
+- SHORT Stay: Alster, Downtown
 - LONG Stay: alle anderen
 - Min Stay SHORT: 5 Nächte
 - Min Stay LONG: 3 Monate

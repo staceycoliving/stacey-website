@@ -541,48 +541,6 @@ export const locations: Location[] = [
     },
   },
   {
-    slug: "othmarschen",
-    city: "hamburg",
-    name: "Othmarschen",
-    address: "Baurstraße 8d, 22605 Hamburg",
-    stayType: "SHORT",
-    priceFrom: 45,
-    tagline: "Peaceful living in Hamburg's green west side",
-    description:
-      "Othmarschen offers the perfect balance between city access and tranquility. Our location sits in the green west of Hamburg, ideal for shorter stays.",
-    neighborhoodDescription:
-      "Othmarschen is one of Hamburg's greenest neighborhoods. Jenischpark and the Elbe river are just a short walk away.",
-    communitySpaceDescription:
-      "Cozy community area with garden, kitchen and lounge.",
-    neighborhood: "Othmarschen",
-    roomiesPerApartment: "2 - 3",
-    // No local images yet — using downtown as placeholder
-    images: [
-      loc("downtown", "community", "006-community-dt.webp"),
-      loc("downtown", "community", "007-community-dt.webp"),
-      loc("downtown", "community", "008-community-dt.webp"),
-    ],
-    rooms: [
-      {
-        id: "othmarschen-premium",
-        name: "Premium",
-        priceMonthly: 995,
-        sizeSqm: 13,
-        forCouples: false,
-        description: "A peaceful suite in Hamburg's green west side.",
-        interior:
-          "Double bed, Nightstand, Desk, Chair, Wardrobe, Bedding",
-        image: loc("downtown", "premium", "002-premium-dt.webp"),
-      },
-    ],
-    nearbyLocationSlugs: ["eppendorf", "st-pauli"],
-    communityManager: {
-      name: "Bruno",
-      email: "booking@stacey.de",
-      image: "/images/community-manager.webp",
-    },
-  },
-  {
     slug: "eimsbuettel",
     city: "hamburg",
     name: "Eimsbüttel",

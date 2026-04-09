@@ -42,7 +42,7 @@ function mapCategory(name: string): RoomCategory {
 // Location config: slug, city, stayType, address
 const locationConfig: Record<string, { slug: string; city: string; stayType: StayType; address: string }> = {
   "Eimsbüttel": { slug: "eimsbuettel", city: "Hamburg", stayType: "LONG", address: "Bismarckstraße 13, 20259 Hamburg" },
-  "Othmarschen": { slug: "othmarschen", city: "Hamburg", stayType: "LONG", address: "Baurstraße 8d, 22605 Hamburg" },
+
   "Mühlenkamp": { slug: "muehlenkamp", city: "Hamburg", stayType: "LONG", address: "Dorotheenstraße 3-5, 22301 Hamburg" },
   "St. Pauli": { slug: "st-pauli", city: "Hamburg", stayType: "LONG", address: "Detlev-Bremer-Straße 2, 20359 Hamburg" },
   "Eppendorf": { slug: "eppendorf", city: "Hamburg", stayType: "LONG", address: "Eppendorfer Weg 270, 20251 Hamburg" },

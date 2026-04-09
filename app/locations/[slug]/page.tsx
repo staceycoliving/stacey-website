@@ -227,7 +227,7 @@ function LocationDetail({ location }: { location: Location }) {
     downtown: [10.0022, 53.5468],
     alster: [10.0103, 53.5553],
     "st-pauli": [9.9658, 53.5525],
-    othmarschen: [9.8987, 53.5510],
+
     eimsbuettel: [9.9603, 53.5745],
     mitte: [13.4050, 52.5115],
     vallendar: [7.6187, 50.3964],
