@@ -239,9 +239,11 @@ export async function getShortStayAvailability(
         minSellable = Math.min(minSellable, group.sellableCount);
       }
 
-      const available = Math.max(0, minSellable === Infinity ? 0 : minSellable);
+      const rawAvailable = Math.max(0, minSellable === Infinity ? 0 : minSellable);
 
       const price = priceMap.get(category);
+      // No bookable offer from apaleo → treat as unavailable (can't create reservation without offer)
+      const available = price ? rawAvailable : 0;
       return {
         category,
         total: physicalCount,
