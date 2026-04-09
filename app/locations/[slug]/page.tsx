@@ -646,7 +646,13 @@ function LocationDetail({ location }: { location: Location }) {
                                     const basePrice = cat ? basePrices[cat] : null;
                                     return price ? <>&euro;{price}/night</> : basePrice ? <>&euro;{basePrice}/night</> : <>Select dates</>;
                                   })()
-                                : <>&euro;{room.priceMonthly}/mo</>}
+                                : (() => {
+                                    const cat = ROOM_NAME_TO_CATEGORY[room.name];
+                                    const dbRent = cat ? availability[cat]?.monthlyRent : null;
+                                    const basePrice = dbRent ? Math.round(dbRent / 100) : room.priceMonthly;
+                                    const surcharge = (roomPersons[room.id] || 1) >= 2 ? 50 : 0;
+                                    return <>&euro;{basePrice + surcharge}/mo</>;
+                                  })()}
                             </span>
                           </div>
                         </div>
