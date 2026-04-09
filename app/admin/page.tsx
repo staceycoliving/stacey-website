@@ -8,10 +8,14 @@ export default async function AdminPage() {
 
   const [bookings, locations] = await Promise.all([
     prisma.booking.findMany({
+      where: { stayType: "LONG" },
       include: { location: true, room: true },
       orderBy: { createdAt: "desc" },
     }),
-    prisma.location.findMany({ orderBy: { name: "asc" } }),
+    prisma.location.findMany({
+      where: { stayType: "LONG" },
+      orderBy: { name: "asc" },
+    }),
   ]);
 
   return (

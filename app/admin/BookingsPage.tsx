@@ -78,14 +78,12 @@ export default function BookingsPage({
   const router = useRouter();
   const [filterLocation, setFilterLocation] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
-  const [filterType, setFilterType] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [updating, setUpdating] = useState<string | null>(null);
 
   const filtered = bookings.filter((b) => {
     if (filterLocation && b.locationId !== filterLocation) return false;
     if (filterStatus && b.status !== filterStatus) return false;
-    if (filterType && b.stayType !== filterType) return false;
     return true;
   });
 
@@ -152,15 +150,6 @@ export default function BookingsPage({
             <option key={s} value={s}>{s}</option>
           ))}
         </select>
-        <select
-          value={filterType}
-          onChange={(e) => setFilterType(e.target.value)}
-          className="px-3 py-2 border border-lightgray rounded-[5px] text-sm bg-white"
-        >
-          <option value="">SHORT & LONG</option>
-          <option value="SHORT">SHORT</option>
-          <option value="LONG">LONG</option>
-        </select>
       </div>
 
       {/* Table */}
@@ -172,9 +161,9 @@ export default function BookingsPage({
                 <th className="text-left px-4 py-3 font-semibold text-xs text-gray uppercase tracking-wide">Date</th>
                 <th className="text-left px-4 py-3 font-semibold text-xs text-gray uppercase tracking-wide">Guest</th>
                 <th className="text-left px-4 py-3 font-semibold text-xs text-gray uppercase tracking-wide">Location</th>
-                <th className="text-left px-4 py-3 font-semibold text-xs text-gray uppercase tracking-wide">Type</th>
+                <th className="text-left px-4 py-3 font-semibold text-xs text-gray uppercase tracking-wide">Room</th>
                 <th className="text-left px-4 py-3 font-semibold text-xs text-gray uppercase tracking-wide">Category</th>
-                <th className="text-left px-4 py-3 font-semibold text-xs text-gray uppercase tracking-wide">Dates</th>
+                <th className="text-left px-4 py-3 font-semibold text-xs text-gray uppercase tracking-wide">Move-in</th>
                 <th className="text-left px-4 py-3 font-semibold text-xs text-gray uppercase tracking-wide">Status</th>
               </tr>
             </thead>
@@ -198,19 +187,9 @@ export default function BookingsPage({
                         {b.firstName} {b.lastName}
                       </td>
                       <td className="px-4 py-3">{b.location.name}</td>
-                      <td className="px-4 py-3">
-                        <span className={`inline-block px-2 py-0.5 rounded-[5px] text-xs font-medium ${
-                          b.stayType === "SHORT" ? "bg-pink/30 text-black" : "bg-blue-100 text-blue-800"
-                        }`}>
-                          {b.stayType}
-                        </span>
-                      </td>
+                      <td className="px-4 py-3">{b.room ? `#${b.room.roomNumber}` : "—"}</td>
                       <td className="px-4 py-3">{formatCategory(b.category)}</td>
-                      <td className="px-4 py-3 text-gray">
-                        {b.stayType === "SHORT"
-                          ? `${formatDate(b.checkIn)} – ${formatDate(b.checkOut)}`
-                          : `Move-in: ${formatDate(b.moveInDate)}`}
-                      </td>
+                      <td className="px-4 py-3 text-gray">{formatDate(b.moveInDate)}</td>
                       <td className="px-4 py-3">
                         <span className={`inline-block px-2 py-0.5 rounded-[5px] text-xs font-semibold ${STATUS_COLORS[b.status] || ""}`}>
                           {b.status}
@@ -254,7 +233,7 @@ export default function BookingsPage({
                                   </button>
                                 ))}
                               </div>
-                              {b.stayType === "LONG" && b.street && (
+                              {b.street && (
                                 <div className="mt-3">
                                   <p className="text-xs text-gray uppercase tracking-wide mb-1">Address</p>
                                   <p>{b.street}, {b.zipCode} {b.addressCity}</p>
