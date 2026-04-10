@@ -258,11 +258,13 @@ export default function HomePage() {
     if (!checkIn || (checkIn && checkOut)) {
       setCheckIn(date);
       setCheckOut(null);
+      setShowResults(false); // hide stale results until a new range is picked
     } else if (date > checkIn) {
       setCheckOut(date);
     } else {
       setCheckIn(date);
       setCheckOut(null);
+      setShowResults(false);
     }
   };
 
