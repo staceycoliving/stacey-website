@@ -163,17 +163,21 @@ async function handleBookingFeePaid(bookingId: string, sessionId: string) {
   });
 
   // Send deposit payment email with signed lease attached
-  sendDepositPaymentLink({
-    firstName: booking.firstName,
-    email: booking.email,
-    locationName: booking.location.name,
-    roomCategory: booking.category,
-    monthlyRent: booking.monthlyRent || 0,
-    depositAmount,
-    depositPaymentUrl: depositSession.url!,
-    deadlineHours: DEPOSIT_DEADLINE_HOURS,
-    signedLeasePdf,
-  }).catch((err) => console.error("Deposit email error:", err));
+  try {
+    await sendDepositPaymentLink({
+      firstName: booking.firstName,
+      email: booking.email,
+      locationName: booking.location.name,
+      roomCategory: booking.category,
+      monthlyRent: booking.monthlyRent || 0,
+      depositAmount,
+      depositPaymentUrl: depositSession.url!,
+      deadlineHours: DEPOSIT_DEADLINE_HOURS,
+      signedLeasePdf,
+    });
+  } catch (err) {
+    console.error("Deposit email error:", err);
+  }
 
   console.log(`Booking ${bookingId}: fee paid, deposit link sent, deadline ${deadline.toISOString()}`);
 }
@@ -254,28 +258,35 @@ async function handleDepositPaid(bookingId: string) {
     ? booking.moveInDate.toISOString().split("T")[0]
     : "";
 
-  sendDepositConfirmation({
-    firstName: booking.firstName,
-    email: booking.email,
-    locationName: booking.location.name,
-    moveInDate: moveInStr,
-    depositAmount: booking.depositAmount || 0,
-    paymentSetupUrl,
-  }).catch((err) => console.error("Deposit confirmation email error:", err));
+  try {
+    await sendDepositConfirmation({
+      firstName: booking.firstName,
+      email: booking.email,
+      locationName: booking.location.name,
+      moveInDate: moveInStr,
+      depositAmount: booking.depositAmount || 0,
+      paymentSetupUrl,
+    });
+  } catch (err) {
+    console.error("Deposit confirmation email error:", err);
+  }
 
-  // Notify team
-  sendTeamNotification({
-    stayType: "LONG",
-    firstName: booking.firstName,
-    lastName: booking.lastName,
-    email: booking.email,
-    phone: booking.phone,
-    locationName: booking.location.name,
-    category: booking.category,
-    persons: booking.persons,
-    moveInDate: moveInStr,
-    bookingId: booking.id,
-  }).catch((err) => console.error("Team notification error:", err));
+  try {
+    await sendTeamNotification({
+      stayType: "LONG",
+      firstName: booking.firstName,
+      lastName: booking.lastName,
+      email: booking.email,
+      phone: booking.phone,
+      locationName: booking.location.name,
+      category: booking.category,
+      persons: booking.persons,
+      moveInDate: moveInStr,
+      bookingId: booking.id,
+    });
+  } catch (err) {
+    console.error("Team notification error:", err);
+  }
 
   console.log(`Booking ${bookingId}: deposit paid, tenant created, confirmed`);
 }
