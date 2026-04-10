@@ -141,7 +141,7 @@ async function handleBookingFeePaid(bookingId: string, sessionId: string) {
       type: "long_stay_deposit",
       bookingId: booking.id,
     },
-    success_url: `${process.env.NEXT_PUBLIC_BASE_URL || "https://stacey-website-one.vercel.app"}/move-in?deposit=success`,
+    success_url: `${process.env.NEXT_PUBLIC_BASE_URL || "https://stacey-website-one.vercel.app"}/move-in/deposit-success`,
     cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL || "https://stacey-website-one.vercel.app"}/move-in?deposit=cancelled`,
   });
 
