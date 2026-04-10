@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 const NAV_ITEMS = [
   { href: "/admin", label: "Bookings" },
@@ -14,6 +15,11 @@ const NAV_ITEMS = [
 export default function AdminShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const [testMode, setTestMode] = useState<{ enabled: boolean; whitelist: string[] } | null>(null);
+
+  useEffect(() => {
+    fetch("/api/admin/test-mode").then((r) => r.ok ? r.json() : null).then(setTestMode).catch(() => {});
+  }, []);
 
   async function handleLogout() {
     await fetch("/api/admin/auth", { method: "DELETE" });
@@ -23,6 +29,13 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
 
   return (
     <div className="min-h-screen bg-background-alt">
+      {/* Test mode banner */}
+      {testMode?.enabled && (
+        <div className="bg-yellow-100 border-b border-yellow-300 px-4 py-2 text-xs text-yellow-900 text-center">
+          <strong>⚠ TEST MODE active</strong> — emails are only sent to: <span className="font-mono">{testMode.whitelist.join(", ")}</span>. All other recipients are silently skipped.
+        </div>
+      )}
+
       {/* Top bar */}
       <header className="bg-white border-b border-lightgray sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
