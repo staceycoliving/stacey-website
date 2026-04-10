@@ -220,10 +220,35 @@ interface DepositConfirmationEmail {
   locationName: string;
   moveInDate: string;
   depositAmount: number; // in cents
+  paymentSetupUrl?: string; // Optional setup link for monthly rent
 }
 
 export async function sendDepositConfirmation(data: DepositConfirmationEmail) {
   const depositEur = (data.depositAmount / 100).toFixed(2);
+
+  const setupSection = data.paymentSetupUrl
+    ? `
+    <div style="margin-top:24px;padding:20px;background:#FFF5F7;border-left:4px solid #FCB0C0;border-radius:5px;">
+      <p style="margin:0 0 8px;font-size:15px;font-weight:600;">One last step: set up your monthly rent payment</p>
+      <p style="margin:0 0 16px;color:#555;font-size:14px;">
+        So we can automatically charge your rent each month, please set up your preferred payment method.
+        It only takes a minute.
+      </p>
+      <div style="text-align:center;">
+        <a href="${data.paymentSetupUrl}" style="background:#1A1A1A;color:#fff;padding:12px 28px;border-radius:5px;text-decoration:none;font-weight:600;font-size:14px;display:inline-block;">
+          Set up payment method
+        </a>
+      </div>
+      <p style="margin:12px 0 0;font-size:12px;color:#888;text-align:center;">
+        Card, SEPA Direct Debit, and other methods available based on your country.
+      </p>
+    </div>
+    `
+    : "";
+
+  const nextStepsText = data.paymentSetupUrl
+    ? "Set up your payment method (link above) and we'll send you a welcome email with check-in details 3 days before your move-in."
+    : "We'll send you a welcome email with check-in details 3 days before your move-in.";
 
   const html = layout(`
     <h2 style="margin:0 0 8px;font-size:20px;">Welcome to STACEY! 🎉</h2>
@@ -236,9 +261,10 @@ export async function sendDepositConfirmation(data: DepositConfirmationEmail) {
       ${detailRow("Move-in", formatDate(data.moveInDate))}
       ${detailRow("Deposit", `€${depositEur} ✓`)}
     </table>
-    <p style="font-size:14px;color:#555;">
+    ${setupSection}
+    <p style="font-size:14px;color:#555;margin-top:24px;">
       <strong>What happens next?</strong><br>
-      We'll send you a welcome email with check-in details 3 days before your move-in.
+      ${nextStepsText}
     </p>
     <p style="font-size:14px;color:#555;margin-top:16px;">
       Questions? Just reply to this email.

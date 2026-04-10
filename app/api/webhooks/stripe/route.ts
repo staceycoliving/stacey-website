@@ -5,7 +5,6 @@ import {
   sendDepositPaymentLink,
   sendDepositConfirmation,
   sendTeamNotification,
-  sendPaymentSetupLink,
 } from "@/lib/email";
 import { downloadSignedDocument } from "@/lib/yousign";
 
@@ -240,7 +239,17 @@ async function handleDepositPaid(bookingId: string) {
     createdTenantId = tenant.id;
   });
 
-  // Send confirmation email
+  // Generate payment setup link (so we can include it in the confirmation email)
+  let paymentSetupUrl: string | undefined;
+  if (createdTenantId) {
+    try {
+      paymentSetupUrl = await createPaymentSetupSession(createdTenantId);
+    } catch (err) {
+      console.error("Failed to create payment setup session:", err);
+    }
+  }
+
+  // Send single confirmation email (deposit + payment setup link)
   const moveInStr = booking.moveInDate
     ? booking.moveInDate.toISOString().split("T")[0]
     : "";
@@ -251,6 +260,7 @@ async function handleDepositPaid(bookingId: string) {
     locationName: booking.location.name,
     moveInDate: moveInStr,
     depositAmount: booking.depositAmount || 0,
+    paymentSetupUrl,
   }).catch((err) => console.error("Deposit confirmation email error:", err));
 
   // Notify team
@@ -267,24 +277,14 @@ async function handleDepositPaid(bookingId: string) {
     bookingId: booking.id,
   }).catch((err) => console.error("Team notification error:", err));
 
-  // Auto-send payment setup link
-  if (createdTenantId) {
-    sendPaymentSetupLinkToTenant(createdTenantId).catch((err) =>
-      console.error("Payment setup link error:", err)
-    );
-  }
-
   console.log(`Booking ${bookingId}: deposit paid, tenant created, confirmed`);
 }
 
-// ─── Send Payment Setup Link to Tenant ─────────────────────
+// ─── Create Payment Setup Session for Tenant ───────────────
 
-async function sendPaymentSetupLinkToTenant(tenantId: string) {
-  const tenant = await prisma.tenant.findUnique({
-    where: { id: tenantId },
-    include: { room: { include: { apartment: { include: { location: true } } } } },
-  });
-  if (!tenant) return;
+async function createPaymentSetupSession(tenantId: string): Promise<string> {
+  const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
+  if (!tenant) throw new Error("Tenant not found");
 
   // Create or reuse Stripe Customer
   let customerId = tenant.stripeCustomerId;
@@ -301,7 +301,6 @@ async function sendPaymentSetupLinkToTenant(tenantId: string) {
     });
   }
 
-  // Create Checkout Session in setup mode
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://stacey-website-one.vercel.app";
   const session = await stripe.checkout.sessions.create({
     mode: "setup",
@@ -315,14 +314,7 @@ async function sendPaymentSetupLinkToTenant(tenantId: string) {
     cancel_url: `${baseUrl}/move-in/payment-setup-success?cancelled=1`,
   });
 
-  await sendPaymentSetupLink({
-    firstName: tenant.firstName,
-    email: tenant.email,
-    locationName: tenant.room.apartment.location.name,
-    setupUrl: session.url!,
-  });
-
-  console.log(`Payment setup link sent to tenant ${tenantId}`);
+  return session.url!;
 }
 
 // ─── Payment Setup Completed → Save Default Payment Method ─
