@@ -400,9 +400,10 @@ function LocationDetail({ location }: { location: Location }) {
       const catData = cat ? availability[cat] : null;
       if (!catData) return false; // not in DB → hide
       if (isShort) return catData.available > 0;
-      // LONG: check if the selected moveInDate is actually bookable for this category
-      const roomDates = getRoomDates(r.name);
-      return roomDates.some((d) => d.value === moveInDate);
+      // LONG: a room is bookable on moveInDate if any earliest moveInDate is <= moveInDate.
+      // (Comparing exact-match against the expanded dropdown list would hide categories
+      // that became free weeks earlier than the picked date.)
+      return catData.moveInDates ? catData.moveInDates.some((d) => moveInDate! >= d) : false;
     });
   const nearby = getNearbyLocations(location);
   const cityLabel = location.city === "hamburg" ? "Hamburg" : location.city === "berlin" ? "Berlin" : "Vallendar";
