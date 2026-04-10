@@ -149,7 +149,10 @@ export async function GET(request: NextRequest) {
       });
     } catch (err) {
       console.error("apaleo availability error:", err);
-      return Response.json({ error: "Failed to fetch availability" }, { status: 502 });
+      return Response.json({
+        error: "Failed to fetch availability",
+        detail: err instanceof Error ? err.message : String(err),
+      }, { status: 502 });
     }
   }
 
