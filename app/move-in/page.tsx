@@ -410,29 +410,45 @@ function MoveInFlow() {
     return basePrices[locSlug]?.[cat] ?? null;
   };
 
-  // Fetch availability from DB
+  // Fetch availability from DB. Retries once on 5xx to ride out Vercel cold starts
+  // / transient Supabase pool issues that would otherwise leave the UI empty.
   const fetchAvailability = useCallback((locs: Location[], opts?: { ci?: string; co?: string }) => {
     setLoadingAvailability(true);
+    const fetchOnce = async (url: string) => {
+      const res = await fetch(url);
+      if (res.ok) return res.json();
+      if (res.status >= 500) throw new Error(`retry ${res.status}`);
+      return null;
+    };
     const fetches = locs.map(async (loc) => {
       const params = new URLSearchParams({ location: loc.slug, persons: String(persons) });
       if (loc.stayType === "SHORT" && opts?.ci && opts?.co) {
         params.set("checkIn", opts.ci);
         params.set("checkOut", opts.co);
       }
+      const url = `/api/availability?${params}`;
       try {
-        const res = await fetch(`/api/availability?${params}`);
-        if (!res.ok) return { slug: loc.slug, data: null };
-        return { slug: loc.slug, data: await res.json() };
-      } catch { return { slug: loc.slug, data: null }; }
+        return { slug: loc.slug, stayType: loc.stayType, data: await fetchOnce(url) };
+      } catch {
+        // Retry once after a short delay
+        await new Promise((r) => setTimeout(r, 600));
+        try {
+          return { slug: loc.slug, stayType: loc.stayType, data: await fetchOnce(url) };
+        } catch {
+          return { slug: loc.slug, stayType: loc.stayType, data: null };
+        }
+      }
     });
 
     Promise.all(fetches).then((results) => {
       const map: AvailabilityMap = {};
-      results.forEach(({ slug, data }) => {
-        // Always insert an entry, even on fetch failure, so the display logic knows
-        // we tried and doesn't fall back to 1-person basePrices.
+      results.forEach(({ slug, stayType: locStayType, data }) => {
         if (!data?.categories) {
-          map[slug] = {};
+          // SHORT failure → insert empty entry so the display shows "Sold out" instead
+          // of falling back to 1-person basePrices.
+          // LONG failure → leave the slot empty so the next fetch (e.g. on city change)
+          // can retry without a stale empty cache hiding the move-in date dropdown.
+          if (locStayType === "SHORT") map[slug] = {};
           return;
         }
         const catMap: Record<string, { available: number; total: number; moveInDates?: string[]; pricePerNight?: number | null; totalGross?: number | null; vatAmount?: number | null; vatPercent?: number | null; cityTaxTotal?: number | null; grandTotal?: number | null }> = {};

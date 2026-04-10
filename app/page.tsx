@@ -113,11 +113,21 @@ export default function HomePage() {
     setLongMoveIn("");
 
     const locs = locations.filter((l) => l.stayType === "LONG" && l.city === longCity);
-    const fetches = locs.map((loc) =>
-      fetch(`/api/availability?location=${loc.slug}&persons=${persons}`)
-        .then((r) => r.ok ? r.json() : null)
-        .catch(() => null)
-    );
+    const fetchOnce = async (url: string) => {
+      const res = await fetch(url);
+      if (res.ok) return res.json();
+      if (res.status >= 500) throw new Error(`retry ${res.status}`);
+      return null;
+    };
+    const fetches = locs.map(async (loc) => {
+      const url = `/api/availability?location=${loc.slug}&persons=${persons}`;
+      try {
+        return await fetchOnce(url);
+      } catch {
+        await new Promise((r) => setTimeout(r, 600));
+        try { return await fetchOnce(url); } catch { return null; }
+      }
+    });
 
     Promise.all(fetches).then((results) => {
       const now = new Date();
