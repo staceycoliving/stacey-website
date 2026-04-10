@@ -608,7 +608,11 @@ function MoveInFlow() {
     const validDates = catData.moveInDates;
     // A room is available on date X if X >= one of its moveInDates
     const isAvailable = validDates.some((d) => moveInDate >= d);
-    return isAvailable ? catData.available : 0;
+    if (!isAvailable) return 0;
+    // catData.available comes from `freeNow` (rooms free TODAY). When the user picks
+    // a future date that's in moveInDates, the category is bookable even if no room
+    // is free today, so signal availability with at least 1.
+    return Math.max(catData.available, 1);
   };
 
   const filteredLocations = stayType
