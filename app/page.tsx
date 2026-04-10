@@ -83,17 +83,23 @@ export default function HomePage() {
       fetch(`/api/availability?location=${loc.slug}&persons=${persons}&checkIn=${checkIn}&checkOut=${checkOut}`)
         .then((r) => r.ok ? r.json() : null)
         .catch(() => null)
+        .then((data) => ({ slug: loc.slug, data }))
     );
 
     Promise.all(fetches).then((results) => {
       const map: AvailMap = {};
-      for (const data of results) {
-        if (!data?.categories) continue;
+      for (const { slug, data } of results) {
+        // Always insert an entry for the location, even on fetch failure — that way
+        // the display logic knows we tried (and won't fall back to 1-person basePrices).
+        if (!data?.categories) {
+          map[slug] = {};
+          continue;
+        }
         const catMap: Record<string, { available: number; pricePerNight?: number | null }> = {};
         for (const cat of data.categories) {
           catMap[cat.category] = { available: cat.available ?? 0, pricePerNight: cat.pricePerNight ?? null };
         }
-        map[data.location] = catMap;
+        map[slug] = catMap;
       }
       setShortAvailability(map);
     });

@@ -421,15 +421,20 @@ function MoveInFlow() {
       }
       try {
         const res = await fetch(`/api/availability?${params}`);
-        if (!res.ok) return null;
-        return res.json();
-      } catch { return null; }
+        if (!res.ok) return { slug: loc.slug, data: null };
+        return { slug: loc.slug, data: await res.json() };
+      } catch { return { slug: loc.slug, data: null }; }
     });
 
     Promise.all(fetches).then((results) => {
       const map: AvailabilityMap = {};
-      results.forEach((data) => {
-        if (!data) return;
+      results.forEach(({ slug, data }) => {
+        // Always insert an entry, even on fetch failure, so the display logic knows
+        // we tried and doesn't fall back to 1-person basePrices.
+        if (!data?.categories) {
+          map[slug] = {};
+          return;
+        }
         const catMap: Record<string, { available: number; total: number; moveInDates?: string[]; pricePerNight?: number | null; totalGross?: number | null; vatAmount?: number | null; vatPercent?: number | null; cityTaxTotal?: number | null; grandTotal?: number | null }> = {};
         for (const cat of data.categories) {
           catMap[cat.category] = {
@@ -444,7 +449,7 @@ function MoveInFlow() {
             grandTotal: cat.grandTotal ?? null,
           };
         }
-        map[data.location] = catMap;
+        map[slug] = catMap;
       });
       setAvailability(map);
       setLoadingAvailability(false);
@@ -1500,15 +1505,23 @@ function MoveInFlow() {
                                   </div>
                                 );
                               }
-                              // No detailed pricing yet — show skeleton (the per-night fallback hid
-                              // the breakdown and showed a 1-person price from basePrices).
+                              if (pricingLoading) {
+                                return (
+                                  <div className="space-y-2">
+                                    <div className="h-4 w-3/4 animate-pulse rounded bg-white/10" />
+                                    <div className="h-3 w-1/2 animate-pulse rounded bg-white/10" />
+                                    <div className="h-3 w-2/3 animate-pulse rounded bg-white/10" />
+                                    <div className="mt-2 h-5 w-full animate-pulse rounded bg-white/10" />
+                                  </div>
+                                );
+                              }
+                              // Pricing fetch finished but returned no data (apaleo has no offers
+                              // for this date range). Tell the user instead of leaving them with
+                              // a stuck skeleton.
                               return (
-                                <div className="space-y-2">
-                                  <div className="h-4 w-3/4 animate-pulse rounded bg-white/10" />
-                                  <div className="h-3 w-1/2 animate-pulse rounded bg-white/10" />
-                                  <div className="h-3 w-2/3 animate-pulse rounded bg-white/10" />
-                                  <div className="mt-2 h-5 w-full animate-pulse rounded bg-white/10" />
-                                </div>
+                                <p className="text-sm text-white/60">
+                                  Pricing not available for these dates. Please try other dates.
+                                </p>
                               );
                             }
                             const rent = selectedRoom.priceMonthly + (persons === 2 ? 50 : 0);

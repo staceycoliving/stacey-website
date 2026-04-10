@@ -310,7 +310,10 @@ function LocationDetail({ location }: { location: Location }) {
   const localDate = (d: Date) =>
     `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
-  // Fetch availability on mount + when persons change
+  // Fetch availability on mount + when persons change.
+  // Track whether we've actually attempted a fetch (loadingAvail flips false even on
+  // failure) so the display can distinguish "not loaded yet" from "loaded, no data".
+  const [availFetched, setAvailFetched] = useState(false);
   useEffect(() => {
     const params = new URLSearchParams({ location: location.slug, persons: String(persons) });
     if (isShort && checkIn && checkOut) {
@@ -334,7 +337,10 @@ function LocationDetail({ location }: { location: Location }) {
         setAvailability(map);
       })
       .catch(() => setAvailability({}))
-      .finally(() => setLoadingAvail(false));
+      .finally(() => {
+        setLoadingAvail(false);
+        setAvailFetched(true);
+      });
   }, [location.slug, persons, isShort ? `${checkIn}-${checkOut}` : ""]);
 
   // Build LONG stay move-in dates — per category and combined for the booking card
@@ -640,14 +646,14 @@ function LocationDetail({ location }: { location: Location }) {
                               {isShort
                                 ? (() => {
                                     const cat = ROOM_NAME_TO_CATEGORY[room.name];
-                                    // Once live data is loaded, trust it — don't fall back to basePrices
-                                    // which are always fetched for 1 person from /api/prices.
-                                    const liveLoaded = Object.keys(availability).length > 0;
+                                    // Once we've actually fetched availability (success OR failure),
+                                    // trust the live data and never fall back to basePrices, which
+                                    // are always 1-person prices from /api/prices.
                                     const livePrice = cat ? availability[cat]?.pricePerNight : null;
                                     const basePrice = cat ? basePrices[cat] : null;
-                                    const displayPrice = liveLoaded ? livePrice : basePrice;
+                                    const displayPrice = availFetched ? livePrice : basePrice;
                                     if (displayPrice != null) return <>&euro;{displayPrice}/night</>;
-                                    return <>{liveLoaded ? "Sold out" : "Select dates"}</>;
+                                    return <>{availFetched ? "Sold out" : "Select dates"}</>;
                                   })()
                                 : (() => {
                                     const cat = ROOM_NAME_TO_CATEGORY[room.name];

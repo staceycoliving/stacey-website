@@ -162,14 +162,24 @@ export async function getShortStayAvailability(
   const propertyId = PROPERTY_MAP[slug];
   if (!propertyId) throw new Error(`Unknown SHORT stay property: ${slug}`);
 
-  // Fetch availability and offers in parallel
+  // Fetch availability and offers in parallel.
+  // apaleo sometimes returns an empty body for /booking/v1/offers when no rate plan
+  // is configured for the requested date range — treat that as "no offers" instead
+  // of an error (otherwise the whole availability call fails and the frontend has
+  // to fall back to stale 1-person base prices).
   const [availData, offersData] = await Promise.all([
     apiFetch(`/availability/v1/unit-groups?${new URLSearchParams({
       propertyId, from: checkIn, to: checkOut, adults: String(persons),
     })}`),
     apiFetch(`/booking/v1/offers?${new URLSearchParams({
       propertyId, arrival: checkIn, departure: checkOut, adults: String(persons),
-    })}`),
+    })}`).catch((err) => {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes("empty body") || msg.includes("invalid JSON")) {
+        return { offers: [] };
+      }
+      throw err;
+    }),
   ]);
 
   const timeSlices = availData.timeSlices;
