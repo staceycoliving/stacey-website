@@ -48,6 +48,7 @@ function formatEur(cents: number) {
 export default function RentPage({ rentPayments }: { rentPayments: RentPayment[] }) {
   const router = useRouter();
   const [updating, setUpdating] = useState<string | null>(null);
+  const [running, setRunning] = useState(false);
 
   // Get unique months
   const months = [...new Set(rentPayments.map((rp) => rp.month))].sort().reverse();
@@ -63,6 +64,25 @@ export default function RentPage({ rentPayments }: { rentPayments: RentPayment[]
     ),
     count: filtered.length,
   };
+
+  async function runMonthlyRent() {
+    if (!confirm("Run monthly rent collection now?\n\nThis will create RentPayment records for the current month and charge all tenants with a payment method set up.")) return;
+    setRunning(true);
+    try {
+      const res = await fetch("/api/admin/run-monthly-rent", { method: "POST" });
+      const data = await res.json();
+      if (res.ok) {
+        alert(`Done!\n\nMonth: ${data.month}\nTotal tenants: ${data.total}\nCreated: ${data.created}\nCharged: ${data.charged}\nSkipped: ${data.skipped}${data.errors.length > 0 ? `\n\nErrors:\n${data.errors.join("\n")}` : ""}`);
+        router.refresh();
+      } else {
+        alert(`Failed: ${data.error}`);
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Failed to run rent collection");
+    }
+    setRunning(false);
+  }
 
   async function markPaid(rentPaymentId: string) {
     setUpdating(rentPaymentId);
@@ -88,7 +108,16 @@ export default function RentPage({ rentPayments }: { rentPayments: RentPayment[]
 
   return (
     <div>
-      <h1 className="text-lg font-bold mb-4">Rent Overview</h1>
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="text-lg font-bold">Rent Overview</h1>
+        <button
+          onClick={runMonthlyRent}
+          disabled={running}
+          className="px-4 py-2 bg-black text-white rounded-[5px] text-sm font-semibold hover:bg-black/90 disabled:opacity-50"
+        >
+          {running ? "Running..." : "Run rent collection now"}
+        </button>
+      </div>
 
       {/* Stats */}
       <div className="grid grid-cols-4 gap-4 mb-6">
