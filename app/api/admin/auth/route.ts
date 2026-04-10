@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     maxAge: SESSION_MAX_AGE,
-    path: "/admin",
+    path: "/",
   });
 
   return Response.json({ ok: true });
