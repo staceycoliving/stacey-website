@@ -16,6 +16,9 @@ export async function POST(request: NextRequest) {
   const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
   const daysInMonth = monthEnd.getDate();
 
+  // Manual button: only charge tenants who actually have payment method set up.
+  // This avoids creating empty RentPayment records for legacy tenants without
+  // Stripe customer setup. The real monthly cron processes ALL active tenants.
   const tenants = await prisma.tenant.findMany({
     where: {
       OR: [
@@ -23,6 +26,8 @@ export async function POST(request: NextRequest) {
         { moveOut: { gt: monthStart } },
       ],
       moveIn: { lte: monthEnd },
+      stripeCustomerId: { not: null },
+      sepaMandateId: { not: null },
     },
   });
 
