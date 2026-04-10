@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
 
 const NAV_ITEMS = [
   { href: "/admin", label: "Bookings" },
@@ -12,14 +11,15 @@ const NAV_ITEMS = [
   { href: "/admin/deposits", label: "Deposits" },
 ];
 
-export default function AdminShell({ children }: { children: React.ReactNode }) {
+export default function AdminShell({
+  children,
+  testMode,
+}: {
+  children: React.ReactNode;
+  testMode?: { enabled: boolean; whitelist: string[] };
+}) {
   const pathname = usePathname();
   const router = useRouter();
-  const [testMode, setTestMode] = useState<{ enabled: boolean; whitelist: string[] } | null>(null);
-
-  useEffect(() => {
-    fetch("/api/admin/test-mode").then((r) => r.ok ? r.json() : null).then(setTestMode).catch(() => {});
-  }, []);
 
   async function handleLogout() {
     await fetch("/api/admin/auth", { method: "DELETE" });
