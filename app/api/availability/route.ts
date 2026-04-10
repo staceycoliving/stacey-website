@@ -110,12 +110,8 @@ export async function GET(request: NextRequest) {
     return Response.json({ error: "location parameter required" }, { status: 400 });
   }
 
-  const location = await prisma.location.findUnique({ where: { slug } });
-  if (!location) {
-    return Response.json({ error: `Location "${slug}" not found` }, { status: 404 });
-  }
-
-  if (location.stayType === "SHORT") {
+  // SHORT stay (apaleo) — these slugs are NOT in the DB, they live only in apaleo
+  if (isApaleoProperty(slug)) {
     const checkInStr = params.get("checkIn");
     const checkOutStr = params.get("checkOut");
 
@@ -140,30 +136,29 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Use apaleo for SHORT stay availability
-    if (isApaleoProperty(slug)) {
-      try {
-        const categories = await getApaleoAvailability(slug, checkInStr, checkOutStr, persons);
-        return Response.json({
-          location: slug,
-          stayType: "SHORT",
-          checkIn: checkInStr,
-          checkOut: checkOutStr,
-          persons,
-          nights,
-          categories,
-        });
-      } catch (err) {
-        console.error("apaleo availability error:", err);
-        return Response.json({ error: "Failed to fetch availability" }, { status: 502 });
-      }
+    try {
+      const categories = await getApaleoAvailability(slug, checkInStr, checkOutStr, persons);
+      return Response.json({
+        location: slug,
+        stayType: "SHORT",
+        checkIn: checkInStr,
+        checkOut: checkOutStr,
+        persons,
+        nights,
+        categories,
+      });
+    } catch (err) {
+      console.error("apaleo availability error:", err);
+      return Response.json({ error: "Failed to fetch availability" }, { status: 502 });
     }
-
-    // SHORT Stay ohne apaleo — nicht unterstützt
-    return Response.json({ error: "SHORT stay availability requires apaleo" }, { status: 400 });
   }
 
-  // LONG stay
+  // LONG stay — lookup in DB
+  const location = await prisma.location.findUnique({ where: { slug } });
+  if (!location) {
+    return Response.json({ error: `Location "${slug}" not found` }, { status: 404 });
+  }
+
   const categories = await getLongStayAvailability(location.id, persons);
 
   return Response.json({

@@ -6,6 +6,7 @@ import {
   sendTeamNotification,
 } from "@/lib/email";
 import { isApaleoProperty, createShortStayBooking } from "@/lib/apaleo";
+import { getLocationBySlug } from "@/lib/data";
 
 const COUPLE_CATEGORIES: RoomCategory[] = [
   "JUMBO",
@@ -69,14 +70,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const location = await prisma.location.findUnique({ where: { slug } });
-    if (!location) {
-      return Response.json({ error: `Location "${slug}" not found` }, { status: 404 });
-    }
+    // ─── SHORT Stay Booking (apaleo, not in DB) ─────────────
 
-    // ─── SHORT Stay Booking ─────────────────────────────────
-
-    if (location.stayType === "SHORT") {
+    if (isApaleoProperty(slug)) {
       if (!checkIn || !checkOut) {
         return Response.json(
           { error: "checkIn and checkOut required for SHORT stay" },
@@ -92,81 +88,83 @@ export async function POST(request: NextRequest) {
         return Response.json({ error: "Minimum stay is 5 nights" }, { status: 400 });
       }
 
-      // Use apaleo for SHORT stay bookings
-      if (isApaleoProperty(slug)) {
-        try {
-          const apaleoBooking = await createShortStayBooking({
-            slug,
-            category,
-            persons,
-            checkIn,
-            checkOut,
-            firstName,
-            lastName,
-            email,
-            phone: phone || "",
-            message,
-          });
+      const staticLoc = getLocationBySlug(slug);
+      const locationName = staticLoc?.name ?? slug;
 
-          // Send confirmation emails (fire & forget)
-          sendShortStayConfirmation({
-            firstName,
-            lastName,
-            email,
-            locationName: location.name,
-            category,
-            persons,
-            checkIn,
-            checkOut,
-            nights,
-            bookingId: apaleoBooking.id,
-          }).catch((err) => console.error("Email error (guest):", err));
+      try {
+        const apaleoBooking = await createShortStayBooking({
+          slug,
+          category,
+          persons,
+          checkIn,
+          checkOut,
+          firstName,
+          lastName,
+          email,
+          phone: phone || "",
+          message,
+        });
 
-          sendTeamNotification({
-            stayType: "SHORT",
-            firstName,
-            lastName,
-            email,
-            phone,
-            locationName: location.name,
-            category,
-            persons,
-            checkIn,
-            checkOut,
-            nights,
-            bookingId: apaleoBooking.id,
-          }).catch((err) => console.error("Email error (team):", err));
+        // Send confirmation emails (fire & forget)
+        sendShortStayConfirmation({
+          firstName,
+          lastName,
+          email,
+          locationName,
+          category,
+          persons,
+          checkIn,
+          checkOut,
+          nights,
+          bookingId: apaleoBooking.id,
+        }).catch((err) => console.error("Email error (guest):", err));
 
-          return Response.json({
-            id: apaleoBooking.id,
-            stayType: "SHORT",
-            location: slug,
-            category,
-            checkIn,
-            checkOut,
-            nights,
-            status: "PENDING",
-          });
-        } catch (err: any) {
-          if (err.message === "NOT_AVAILABLE") {
-            return Response.json(
-              { error: "No availability for the selected category and dates" },
-              { status: 409 }
-            );
-          }
-          console.error("apaleo booking error:", err);
+        sendTeamNotification({
+          stayType: "SHORT",
+          firstName,
+          lastName,
+          email,
+          phone,
+          locationName,
+          category,
+          persons,
+          checkIn,
+          checkOut,
+          nights,
+          bookingId: apaleoBooking.id,
+        }).catch((err) => console.error("Email error (team):", err));
+
+        return Response.json({
+          id: apaleoBooking.id,
+          stayType: "SHORT",
+          location: slug,
+          category,
+          checkIn,
+          checkOut,
+          nights,
+          status: "PENDING",
+        });
+      } catch (err: any) {
+        if (err.message === "NOT_AVAILABLE") {
           return Response.json(
-            { error: "Failed to create booking" },
-            { status: 502 }
+            { error: "No availability for the selected category and dates" },
+            { status: 409 }
           );
         }
+        console.error("apaleo booking error:", err);
+        return Response.json(
+          { error: "Failed to create booking" },
+          { status: 502 }
+        );
       }
-
-      // SHORT Stay ohne apaleo — nicht unterstützt
-      return Response.json({ error: "SHORT stay booking requires apaleo" }, { status: 400 });
     }
 
     // ─── LONG Stay Booking ──────────────────────────────────
+
+    const location = await prisma.location.findUnique({ where: { slug } });
+    if (!location) {
+      return Response.json({ error: `Location "${slug}" not found` }, { status: 404 });
+    }
 
     if (!moveInDate) {
       return Response.json(
