@@ -828,6 +828,25 @@ export function getLocationByRoomId(roomId: string): Location | undefined {
   return locations.find((loc) => loc.rooms.some((r) => r.id === roomId));
 }
 
+/**
+ * Format a YYYY-MM-DD date string for move-in dropdown labels.
+ * Returns "Today" for today, "Mon, Apr 20" for current year,
+ * "Mon, Feb 15, 2027" for future years (to disambiguate).
+ */
+export function formatMoveInLabel(dateStr: string): string {
+  const now = new Date();
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  if (dateStr === todayStr) return "Today";
+  const d = new Date(dateStr + "T12:00:00");
+  const sameYear = d.getFullYear() === now.getFullYear();
+  return d.toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    ...(sameYear ? {} : { year: "numeric" }),
+  });
+}
+
 export function getAvailableMoveInDates(): { value: string; label: string }[] {
   const dates: { value: string; label: string }[] = [];
   const now = new Date();

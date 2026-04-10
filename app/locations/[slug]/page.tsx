@@ -9,7 +9,7 @@ import FadeIn from "@/components/ui/FadeIn";
 import { useParams } from "next/navigation";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
-import { getLocationBySlug, getNearbyLocations, locations, ROOM_NAME_TO_CATEGORY } from "@/lib/data";
+import { getLocationBySlug, getNearbyLocations, locations, ROOM_NAME_TO_CATEGORY, formatMoveInLabel } from "@/lib/data";
 import type { Location } from "@/lib/data";
 
 export default function LocationPage() {
@@ -362,9 +362,7 @@ function LocationDetail({ location }: { location: Location }) {
     const sorted = [...bookableDays].filter((d) => d >= today).sort();
     return sorted.map((d) => ({
       value: d,
-      label: d === today
-        ? "Today"
-        : new Date(d + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }),
+      label: formatMoveInLabel(d),
     }));
   };
 

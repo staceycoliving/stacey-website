@@ -25,6 +25,7 @@ import {
   getLocationByRoomId,
   getRoomById,
   ROOM_NAME_TO_CATEGORY,
+  formatMoveInLabel,
 } from "@/lib/data";
 import type { Location, Room, StayType } from "@/lib/data";
 
@@ -508,11 +509,7 @@ function MoveInFlow() {
     const sorted = [...bookableDays].filter((d) => d >= today).sort();
     return sorted.map((d) => ({
       value: d,
-      label: d === today
-        ? "Today"
-        : new Date(d + "T12:00:00").toLocaleDateString("en-US", {
-            weekday: "short", month: "short", day: "numeric",
-          }),
+      label: formatMoveInLabel(d),
     }));
   })();
 

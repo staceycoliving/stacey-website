@@ -24,7 +24,7 @@ import FadeIn from "@/components/ui/FadeIn";
 import dynamic from "next/dynamic";
 
 const LocationMap = dynamic(() => import("@/components/ui/LocationMap"), { ssr: false });
-import { locations, memberStories, ROOM_NAME_TO_CATEGORY } from "@/lib/data";
+import { locations, memberStories, ROOM_NAME_TO_CATEGORY, formatMoveInLabel } from "@/lib/data";
 
 
 export default function HomePage() {
@@ -161,9 +161,7 @@ export default function HomePage() {
       const sorted = [...bookableDays].filter((d) => d >= today).sort();
       setLongStayDates(sorted.map((d) => ({
         value: d,
-        label: d === today
-          ? "Today"
-          : new Date(d + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }),
+        label: formatMoveInLabel(d),
       })));
       setLoadingLongDates(false);
     });
