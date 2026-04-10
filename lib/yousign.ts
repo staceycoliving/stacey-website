@@ -26,7 +26,7 @@ export async function createSignatureRequest(name: string) {
     method: "POST",
     body: JSON.stringify({
       name,
-      delivery_mode: "none",
+      delivery_mode: "none", // No emails from Yousign — we send the signed doc ourselves
       timezone: "Europe/Berlin",
     }),
   });

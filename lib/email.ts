@@ -164,16 +164,21 @@ interface DepositPaymentEmail {
   depositAmount: number; // in cents
   depositPaymentUrl: string;
   deadlineHours: number;
+  signedLeasePdf?: Buffer; // Optional signed lease document
 }
 
 export async function sendDepositPaymentLink(data: DepositPaymentEmail) {
   const rentEur = (data.monthlyRent / 100).toFixed(2);
   const depositEur = (data.depositAmount / 100).toFixed(2);
 
+  const leaseNote = data.signedLeasePdf
+    ? `<p style="font-size:13px;color:#555;margin-top:16px;">📎 Your signed lease agreement is attached to this email.</p>`
+    : "";
+
   const html = layout(`
-    <h2 style="margin:0 0 8px;font-size:20px;">Almost there — deposit payment</h2>
+    <h2 style="margin:0 0 8px;font-size:20px;">Booking confirmed — deposit payment</h2>
     <p style="margin:0 0 24px;color:#555;font-size:15px;">
-      Hi ${data.firstName}, your lease is signed and booking fee received. One last step:
+      Hi ${data.firstName}, your lease is signed and your booking fee has been received. One last step to secure your room:
     </p>
     <table style="width:100%;border-collapse:collapse;margin-bottom:24px;background:#FAFAFA;border-radius:5px;padding:4px;">
       ${detailRow("Location", `STACEY ${data.locationName}`)}
@@ -189,6 +194,7 @@ export async function sendDepositPaymentLink(data: DepositPaymentEmail) {
         Pay deposit — €${depositEur}
       </a>
     </div>
+    ${leaseNote}
     <p style="font-size:13px;color:#888;margin-top:16px;">
       If the deposit is not received within ${data.deadlineHours} hours, your room reservation will be released.
       The booking fee (€195) is non-refundable.
@@ -198,8 +204,11 @@ export async function sendDepositPaymentLink(data: DepositPaymentEmail) {
   return resend.emails.send({
     from: FROM,
     to: data.email,
-    subject: `STACEY ${data.locationName} — Deposit payment (${data.deadlineHours}h deadline)`,
+    subject: `STACEY ${data.locationName} — Booking confirmed, deposit due`,
     html,
+    attachments: data.signedLeasePdf
+      ? [{ filename: "lease-agreement.pdf", content: data.signedLeasePdf }]
+      : undefined,
   });
 }
 

@@ -6,6 +6,7 @@ import {
   sendDepositConfirmation,
   sendTeamNotification,
 } from "@/lib/email";
+import { downloadSignedDocument } from "@/lib/yousign";
 
 const DEPOSIT_DEADLINE_HOURS = 48;
 
@@ -82,8 +83,14 @@ async function handleBookingFeePaid(bookingId: string, sessionId: string) {
     include: { location: true, room: true },
   });
 
-  if (!booking || booking.status !== "SIGNED") {
-    console.warn(`Booking ${bookingId} not found or not in SIGNED status`);
+  if (!booking) {
+    console.warn(`Booking ${bookingId} not found`);
+    return;
+  }
+
+  // Allow PENDING (Yousign webhook may not have fired yet) or SIGNED
+  if (booking.status !== "SIGNED" && booking.status !== "PENDING") {
+    console.warn(`Booking ${bookingId} in unexpected status: ${booking.status}`);
     return;
   }
 
@@ -91,6 +98,21 @@ async function handleBookingFeePaid(bookingId: string, sessionId: string) {
   if (depositAmount <= 0) {
     console.error(`Booking ${bookingId} has no deposit amount`);
     return;
+  }
+
+  // Try to download the signed lease from Yousign (best effort)
+  let signedLeasePdf: Buffer | undefined;
+  if (booking.signatureRequestId && booking.signatureDocumentId) {
+    try {
+      const arrayBuffer = await downloadSignedDocument(
+        booking.signatureRequestId,
+        booking.signatureDocumentId
+      );
+      signedLeasePdf = Buffer.from(arrayBuffer);
+      console.log(`Downloaded signed lease for booking ${bookingId}: ${signedLeasePdf.length} bytes`);
+    } catch (err) {
+      console.error(`Failed to download signed lease for booking ${bookingId}:`, err);
+    }
   }
 
   // Create Stripe Checkout Session for deposit payment
@@ -133,7 +155,7 @@ async function handleBookingFeePaid(bookingId: string, sessionId: string) {
     },
   });
 
-  // Send deposit payment email
+  // Send deposit payment email with signed lease attached
   sendDepositPaymentLink({
     firstName: booking.firstName,
     email: booking.email,
@@ -143,6 +165,7 @@ async function handleBookingFeePaid(bookingId: string, sessionId: string) {
     depositAmount,
     depositPaymentUrl: depositSession.url!,
     deadlineHours: DEPOSIT_DEADLINE_HOURS,
+    signedLeasePdf,
   }).catch((err) => console.error("Deposit email error:", err));
 
   console.log(`Booking ${bookingId}: fee paid, deposit link sent, deadline ${deadline.toISOString()}`);
