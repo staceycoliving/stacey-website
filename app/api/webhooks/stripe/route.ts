@@ -176,7 +176,7 @@ async function handleBookingFeePaid(bookingId: string, sessionId: string) {
 async function handleDepositPaid(bookingId: string) {
   const booking = await prisma.booking.findUnique({
     where: { id: bookingId },
-    include: { location: true, room: true },
+    include: { location: true, room: { include: { tenant: true } } },
   });
 
   if (!booking || booking.status !== "DEPOSIT_PENDING") {
@@ -189,8 +189,15 @@ async function handleDepositPaid(bookingId: string) {
     return;
   }
 
-  // Transaction: update booking + create tenant
+  // Transaction: delete old tenant if moved out, update booking, create new tenant
   await prisma.$transaction(async (tx: any) => {
+    // Remove old tenant if their moveOut is on/before the new moveIn
+    const oldTenant = booking.room?.tenant;
+    if (oldTenant && oldTenant.moveOut && new Date(oldTenant.moveOut) <= booking.moveInDate!) {
+      await tx.tenant.delete({ where: { id: oldTenant.id } });
+      console.log(`Deleted old tenant ${oldTenant.firstName} ${oldTenant.lastName} from room ${booking.room?.roomNumber}`);
+    }
+
     // Update booking to CONFIRMED
     await tx.booking.update({
       where: { id: bookingId },
