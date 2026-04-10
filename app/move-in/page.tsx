@@ -399,11 +399,15 @@ function MoveInFlow() {
     fetch("/api/prices").then(r => r.ok ? r.json() : {}).then(setBasePrices).catch(() => {});
   }, []);
 
-  // Helper: get nightly price for a room (live > base > null)
+  // Helper: get nightly price for a room.
+  // Once live availability has loaded for the location, only use the live (persons-aware)
+  // price — basePrices are always fetched for 1 person and would lie for couples.
   const getNightlyPrice = (roomName: string, locSlug: string): number | null => {
     const cat = ROOM_NAME_TO_CATEGORY[roomName];
     if (!cat) return null;
-    return availability[locSlug]?.[cat]?.pricePerNight || basePrices[locSlug]?.[cat] || null;
+    const liveLoaded = availability[locSlug] !== undefined;
+    if (liveLoaded) return availability[locSlug]?.[cat]?.pricePerNight ?? null;
+    return basePrices[locSlug]?.[cat] ?? null;
   };
 
   // Fetch availability from DB
@@ -1496,25 +1500,16 @@ function MoveInFlow() {
                                   </div>
                                 );
                               }
-                              if (pricingLoading) {
-                                return (
-                                  <div className="space-y-2">
-                                    <div className="h-4 w-3/4 animate-pulse rounded bg-white/10" />
-                                    <div className="h-3 w-1/2 animate-pulse rounded bg-white/10" />
-                                    <div className="h-3 w-2/3 animate-pulse rounded bg-white/10" />
-                                    <div className="mt-2 h-5 w-full animate-pulse rounded bg-white/10" />
-                                  </div>
-                                );
-                              }
-                              const perNight = getNightlyPrice(selectedRoom.name, selectedLocation.slug);
-                              if (perNight) {
-                                return (
-                                  <div className="flex items-center justify-between">
-                                    <p className="text-sm text-white/60">Per night</p>
-                                    <p className="text-2xl font-extrabold">€{perNight}<span className="text-sm font-normal text-white/60">/night</span></p>
-                                  </div>
-                                );
-                              }
+                              // No detailed pricing yet — show skeleton (the per-night fallback hid
+                              // the breakdown and showed a 1-person price from basePrices).
+                              return (
+                                <div className="space-y-2">
+                                  <div className="h-4 w-3/4 animate-pulse rounded bg-white/10" />
+                                  <div className="h-3 w-1/2 animate-pulse rounded bg-white/10" />
+                                  <div className="h-3 w-2/3 animate-pulse rounded bg-white/10" />
+                                  <div className="mt-2 h-5 w-full animate-pulse rounded bg-white/10" />
+                                </div>
+                              );
                             }
                             const rent = selectedRoom.priceMonthly + (persons === 2 ? 50 : 0);
                             return (

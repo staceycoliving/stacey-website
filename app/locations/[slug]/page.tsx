@@ -640,9 +640,14 @@ function LocationDetail({ location }: { location: Location }) {
                               {isShort
                                 ? (() => {
                                     const cat = ROOM_NAME_TO_CATEGORY[room.name];
-                                    const price = cat ? availability[cat]?.pricePerNight : null;
+                                    // Once live data is loaded, trust it — don't fall back to basePrices
+                                    // which are always fetched for 1 person from /api/prices.
+                                    const liveLoaded = Object.keys(availability).length > 0;
+                                    const livePrice = cat ? availability[cat]?.pricePerNight : null;
                                     const basePrice = cat ? basePrices[cat] : null;
-                                    return price ? <>&euro;{price}/night</> : basePrice ? <>&euro;{basePrice}/night</> : <>Select dates</>;
+                                    const displayPrice = liveLoaded ? livePrice : basePrice;
+                                    if (displayPrice != null) return <>&euro;{displayPrice}/night</>;
+                                    return <>{liveLoaded ? "Sold out" : "Select dates"}</>;
                                   })()
                                 : (() => {
                                     const cat = ROOM_NAME_TO_CATEGORY[room.name];

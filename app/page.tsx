@@ -609,12 +609,16 @@ export default function HomePage() {
                             <p className="mt-1 text-xl font-extrabold">
                               {loc.stayType === "SHORT" ? (() => {
                                 const cat = ROOM_NAME_TO_CATEGORY[room.name];
-                                const price = cat ? shortAvailability[loc.slug]?.[cat]?.pricePerNight : null;
+                                // Once live data is loaded for this location, trust it — don't fall
+                                // back to basePrices, which are always fetched for 1 person.
+                                const liveLoaded = shortAvailability[loc.slug] !== undefined;
+                                const livePrice = cat ? shortAvailability[loc.slug]?.[cat]?.pricePerNight : null;
                                 const basePrice = cat ? basePrices[loc.slug]?.[cat] : null;
-                                const displayPrice = price || basePrice;
-                                return displayPrice
-                                  ? <>&euro;{displayPrice}<span className="text-xs font-normal text-gray">/night</span></>
-                                  : <><span className="text-xs font-normal text-gray">Select dates for pricing</span></>;
+                                const displayPrice = liveLoaded ? livePrice : basePrice;
+                                if (displayPrice != null) {
+                                  return <>&euro;{displayPrice}<span className="text-xs font-normal text-gray">/night</span></>;
+                                }
+                                return <span className="text-xs font-normal text-gray">{liveLoaded ? "Sold out" : "Select dates for pricing"}</span>;
                               })() : (
                                 <>&euro;{room.priceMonthly}<span className="text-xs font-normal text-gray">/mo</span></>
                               )}
