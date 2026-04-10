@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { isAuthenticated } from "@/lib/admin-auth";
 import { prisma } from "@/lib/db";
+import { sendDepositReturnNotification } from "@/lib/email";
 
 export async function PATCH(request: NextRequest) {
   if (!(await isAuthenticated())) {
@@ -18,6 +19,9 @@ export async function PATCH(request: NextRequest) {
     include: {
       rentPayments: {
         where: { status: { in: ["PENDING", "FAILED"] } },
+      },
+      room: {
+        include: { apartment: { include: { location: true } } },
       },
     },
   });
@@ -82,6 +86,21 @@ export async function PATCH(request: NextRequest) {
         depositReturnedAt: new Date(),
       },
     });
+
+    // Send deposit settlement email to tenant
+    if (tenant.depositRefundIban && tenant.depositRefundAmount !== null) {
+      sendDepositReturnNotification({
+        firstName: tenant.firstName,
+        email: tenant.email,
+        locationName: tenant.room.apartment.location.name,
+        depositAmount: tenant.depositAmount || 0,
+        damagesAmount: tenant.damagesAmount,
+        arrearsAmount: tenant.arrearsAmount,
+        refundAmount: tenant.depositRefundAmount,
+        iban: tenant.depositRefundIban,
+      }).catch((err) => console.error("Deposit return email error:", err));
+    }
+
     return Response.json({ id: updated.id, depositStatus: updated.depositStatus });
   }
 
