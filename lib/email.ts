@@ -283,6 +283,51 @@ export async function sendDepositTimeoutNotification(data: DepositTimeoutEmail) 
   });
 }
 
+// ─── Payment Setup Link ─────────────────────────────────────
+
+interface PaymentSetupEmail {
+  firstName: string;
+  email: string;
+  locationName: string;
+  setupUrl: string;
+}
+
+export async function sendPaymentSetupLink(data: PaymentSetupEmail) {
+  const html = layout(`
+    <h2 style="margin:0 0 8px;font-size:20px;">Set up your monthly rent payment</h2>
+    <p style="margin:0 0 24px;color:#555;font-size:15px;">
+      Hi ${data.firstName}, welcome to STACEY ${data.locationName}!
+    </p>
+    <p style="font-size:14px;color:#555;margin-bottom:16px;">
+      To make sure your monthly rent is paid automatically, please set up your preferred payment method:
+    </p>
+    <div style="text-align:center;margin:24px 0;">
+      <a href="${data.setupUrl}" style="background:#1A1A1A;color:#fff;padding:14px 32px;border-radius:5px;text-decoration:none;font-weight:600;font-size:15px;display:inline-block;">
+        Set up payment method
+      </a>
+    </div>
+    <p style="font-size:13px;color:#888;margin-top:16px;">
+      You can choose between:
+    </p>
+    <ul style="font-size:13px;color:#888;margin:8px 0;padding-left:20px;">
+      <li>Credit/debit card (works worldwide)</li>
+      <li>SEPA Direct Debit (EU bank accounts)</li>
+      <li>Other payment methods available in your country</li>
+    </ul>
+    <p style="font-size:13px;color:#888;margin-top:16px;">
+      After setup, your monthly rent will be automatically charged on the 1st of each month.
+      You can update your payment method anytime through the same link.
+    </p>
+  `);
+
+  return resend.emails.send({
+    from: FROM,
+    to: data.email,
+    subject: `Set up your monthly rent payment — STACEY ${data.locationName}`,
+    html,
+  });
+}
+
 // ─── Rent Reminder (Day 3) ──────────────────────────────────
 
 interface RentReminderData {

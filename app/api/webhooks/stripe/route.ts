@@ -5,6 +5,7 @@ import {
   sendDepositPaymentLink,
   sendDepositConfirmation,
   sendTeamNotification,
+  sendPaymentSetupLink,
 } from "@/lib/email";
 import { downloadSignedDocument } from "@/lib/yousign";
 
@@ -40,6 +41,8 @@ export async function POST(request: NextRequest) {
           await handleBookingFeePaid(metadata.bookingId, session.id);
         } else if (metadata.type === "long_stay_deposit") {
           await handleDepositPaid(metadata.bookingId);
+        } else if (metadata.type === "long_stay_payment_setup") {
+          await handlePaymentSetupCompleted(metadata.tenantId, session);
         }
         break;
       }
@@ -195,6 +198,7 @@ async function handleDepositPaid(bookingId: string) {
   }
 
   // Transaction: delete old tenant if moved out, update booking, create new tenant
+  let createdTenantId: string | null = null;
   await prisma.$transaction(async (tx: any) => {
     // Remove old tenant if their moveOut is on/before the new moveIn
     const oldTenant = booking.room?.tenant;
@@ -214,7 +218,7 @@ async function handleDepositPaid(bookingId: string) {
     });
 
     // Create tenant record
-    await tx.tenant.create({
+    const tenant = await tx.tenant.create({
       data: {
         roomId: booking.roomId!,
         bookingId: booking.id,
@@ -233,6 +237,7 @@ async function handleDepositPaid(bookingId: string) {
         depositStatus: "RECEIVED",
       },
     });
+    createdTenantId = tenant.id;
   });
 
   // Send confirmation email
@@ -262,7 +267,100 @@ async function handleDepositPaid(bookingId: string) {
     bookingId: booking.id,
   }).catch((err) => console.error("Team notification error:", err));
 
+  // Auto-send payment setup link
+  if (createdTenantId) {
+    sendPaymentSetupLinkToTenant(createdTenantId).catch((err) =>
+      console.error("Payment setup link error:", err)
+    );
+  }
+
   console.log(`Booking ${bookingId}: deposit paid, tenant created, confirmed`);
+}
+
+// ─── Send Payment Setup Link to Tenant ─────────────────────
+
+async function sendPaymentSetupLinkToTenant(tenantId: string) {
+  const tenant = await prisma.tenant.findUnique({
+    where: { id: tenantId },
+    include: { room: { include: { apartment: { include: { location: true } } } } },
+  });
+  if (!tenant) return;
+
+  // Create or reuse Stripe Customer
+  let customerId = tenant.stripeCustomerId;
+  if (!customerId) {
+    const customer = await stripe.customers.create({
+      name: `${tenant.firstName} ${tenant.lastName}`,
+      email: tenant.email,
+      metadata: { tenantId: tenant.id },
+    });
+    customerId = customer.id;
+    await prisma.tenant.update({
+      where: { id: tenantId },
+      data: { stripeCustomerId: customerId },
+    });
+  }
+
+  // Create Checkout Session in setup mode
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://stacey-website-one.vercel.app";
+  const session = await stripe.checkout.sessions.create({
+    mode: "setup",
+    customer: customerId,
+    payment_method_types: ["card", "sepa_debit"],
+    metadata: {
+      type: "long_stay_payment_setup",
+      tenantId: tenant.id,
+    },
+    success_url: `${baseUrl}/move-in/payment-setup-success`,
+    cancel_url: `${baseUrl}/move-in/payment-setup-success?cancelled=1`,
+  });
+
+  await sendPaymentSetupLink({
+    firstName: tenant.firstName,
+    email: tenant.email,
+    locationName: tenant.room.apartment.location.name,
+    setupUrl: session.url!,
+  });
+
+  console.log(`Payment setup link sent to tenant ${tenantId}`);
+}
+
+// ─── Payment Setup Completed → Save Default Payment Method ─
+
+async function handlePaymentSetupCompleted(tenantId: string, session: any) {
+  // Get the SetupIntent from the session
+  const setupIntentId = session.setup_intent;
+  if (!setupIntentId) {
+    console.error("No setup_intent in session");
+    return;
+  }
+
+  const setupIntent = await stripe.setupIntents.retrieve(setupIntentId);
+  const paymentMethodId = setupIntent.payment_method as string;
+
+  if (!paymentMethodId) {
+    console.error("No payment method in setup intent");
+    return;
+  }
+
+  // Set as default payment method on Stripe Customer
+  const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
+  if (!tenant?.stripeCustomerId) {
+    console.error(`Tenant ${tenantId} has no stripeCustomerId`);
+    return;
+  }
+
+  await stripe.customers.update(tenant.stripeCustomerId, {
+    invoice_settings: { default_payment_method: paymentMethodId },
+  });
+
+  // Save on tenant (we reuse sepaMandateId field for any payment method)
+  await prisma.tenant.update({
+    where: { id: tenantId },
+    data: { sepaMandateId: paymentMethodId },
+  });
+
+  console.log(`Tenant ${tenantId}: payment method ${paymentMethodId} saved`);
 }
 
 // ─── Rent Payment Succeeded (SEPA) ─────────────────────────

@@ -76,9 +76,7 @@ export default function TenantsPage({
   const [saving, setSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [terminatingId, setTerminatingId] = useState<string | null>(null);
-  const [sepaModalTenant, setSepaModalTenant] = useState<Tenant | null>(null);
-  const [sepaIban, setSepaIban] = useState("");
-  const [sepaHolder, setSepaHolder] = useState("");
+  const [sendingSetupId, setSendingSetupId] = useState<string | null>(null);
 
   const filtered = tenants.filter((t) => {
     if (filterLocation && t.room.apartment.location.id !== filterLocation) return false;
@@ -127,37 +125,25 @@ export default function TenantsPage({
     setSaving(false);
   }
 
-  function openSepaModal(t: Tenant) {
-    setSepaModalTenant(t);
-    setSepaIban("");
-    setSepaHolder(`${t.firstName} ${t.lastName}`);
-  }
-
-  async function saveSepa() {
-    if (!sepaModalTenant || !sepaIban) return;
-    setSaving(true);
+  async function sendSetupLink(tenantId: string) {
+    setSendingSetupId(tenantId);
     try {
       const res = await fetch("/api/admin/tenants/sepa", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          tenantId: sepaModalTenant.id,
-          iban: sepaIban.replace(/\s/g, ""),
-          accountHolder: sepaHolder,
-        }),
+        body: JSON.stringify({ tenantId }),
       });
       if (res.ok) {
-        setSepaModalTenant(null);
-        router.refresh();
+        alert("Payment setup link sent to tenant!");
       } else {
         const data = await res.json();
-        alert(`SEPA setup failed: ${data.details || data.error}`);
+        alert(`Failed: ${data.details || data.error}`);
       }
     } catch (err) {
-      console.error("SEPA setup failed:", err);
-      alert("SEPA setup failed");
+      console.error("Send setup link failed:", err);
+      alert("Failed to send setup link");
     }
-    setSaving(false);
+    setSendingSetupId(null);
   }
 
   async function saveRent(tenantId: string) {
@@ -273,7 +259,7 @@ export default function TenantsPage({
                 <th className="text-left px-4 py-3 font-semibold text-xs text-gray uppercase tracking-wide">Location</th>
                 <th className="text-left px-4 py-3 font-semibold text-xs text-gray uppercase tracking-wide">Room</th>
                 <th className="text-left px-4 py-3 font-semibold text-xs text-gray uppercase tracking-wide">Rent</th>
-                <th className="text-left px-4 py-3 font-semibold text-xs text-gray uppercase tracking-wide">SEPA</th>
+                <th className="text-left px-4 py-3 font-semibold text-xs text-gray uppercase tracking-wide">Payment</th>
                 <th className="text-left px-4 py-3 font-semibold text-xs text-gray uppercase tracking-wide">Move-in</th>
                 <th className="text-left px-4 py-3 font-semibold text-xs text-gray uppercase tracking-wide">Move-out</th>
                 <th className="text-left px-4 py-3 font-semibold text-xs text-gray uppercase tracking-wide">Actions</th>
@@ -319,13 +305,23 @@ export default function TenantsPage({
                     </td>
                     <td className="px-4 py-3">
                       {t.sepaMandateId ? (
-                        <span className="text-xs font-medium text-green-600">Active</span>
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-xs font-medium text-green-600">Active</span>
+                          <button
+                            onClick={() => sendSetupLink(t.id)}
+                            disabled={sendingSetupId === t.id}
+                            className="text-[10px] text-gray hover:text-black hover:underline"
+                          >
+                            {sendingSetupId === t.id ? "..." : "Resend link"}
+                          </button>
+                        </div>
                       ) : (
                         <button
-                          onClick={() => openSepaModal(t)}
-                          className="text-xs font-medium text-blue-600 hover:underline"
+                          onClick={() => sendSetupLink(t.id)}
+                          disabled={sendingSetupId === t.id}
+                          className="text-xs font-medium text-blue-600 hover:underline disabled:opacity-50"
                         >
-                          Setup
+                          {sendingSetupId === t.id ? "Sending..." : "Send setup link"}
                         </button>
                       )}
                     </td>
@@ -426,54 +422,6 @@ export default function TenantsPage({
         </div>
       </div>
 
-      {/* SEPA Setup Modal */}
-      {sepaModalTenant && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-md rounded-[5px] bg-white p-6">
-            <h2 className="text-lg font-bold">Setup SEPA Direct Debit</h2>
-            <p className="mt-1 text-sm text-gray">
-              For {sepaModalTenant.firstName} {sepaModalTenant.lastName}
-            </p>
-            <div className="mt-4 space-y-3">
-              <div>
-                <label className="text-xs font-medium text-gray uppercase tracking-wide">Account Holder</label>
-                <input
-                  type="text"
-                  value={sepaHolder}
-                  onChange={(e) => setSepaHolder(e.target.value)}
-                  className="mt-1 w-full px-3 py-2 border border-lightgray rounded-[5px] text-sm"
-                />
-              </div>
-              <div>
-                <label className="text-xs font-medium text-gray uppercase tracking-wide">IBAN</label>
-                <input
-                  type="text"
-                  value={sepaIban}
-                  onChange={(e) => setSepaIban(e.target.value)}
-                  placeholder="DE89 3704 0044 0532 0130 00"
-                  className="mt-1 w-full px-3 py-2 border border-lightgray rounded-[5px] text-sm font-mono"
-                />
-              </div>
-            </div>
-            <div className="mt-6 flex gap-2 justify-end">
-              <button
-                onClick={() => setSepaModalTenant(null)}
-                disabled={saving}
-                className="px-4 py-2 border border-lightgray rounded-[5px] text-sm hover:bg-background-alt disabled:opacity-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={saveSepa}
-                disabled={saving || !sepaIban}
-                className="px-4 py-2 bg-black text-white rounded-[5px] text-sm font-semibold hover:bg-black/90 disabled:opacity-50"
-              >
-                {saving ? "Setting up..." : "Save SEPA"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

@@ -87,7 +87,7 @@ export async function GET(request: NextRequest) {
     });
     created++;
 
-    // If SEPA is set up, charge automatically
+    // If payment method is set up, charge automatically (off-session)
     if (tenant.stripeCustomerId && tenant.sepaMandateId) {
       try {
         const pi = await stripe.paymentIntents.create({
@@ -95,7 +95,6 @@ export async function GET(request: NextRequest) {
           currency: "eur",
           customer: tenant.stripeCustomerId,
           payment_method: tenant.sepaMandateId,
-          payment_method_types: ["sepa_debit"],
           off_session: true,
           confirm: true,
           metadata: {
