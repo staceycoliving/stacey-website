@@ -385,6 +385,7 @@ function MoveInFlow() {
   const aboutRef = useRef<HTMLDivElement>(null);
   const paymentProcessedRef = useRef(false);
   const leaseRef = useRef<HTMLDivElement>(null);
+  const initialResetDoneRef = useRef(false);
 
   // ─── Availability from DB ───
   type AvailabilityMap = Record<string, Record<string, { available: number; total: number; moveInDates?: string[]; pricePerNight?: number | null; totalGross?: number | null; vatAmount?: number | null; vatPercent?: number | null; cityTaxTotal?: number | null; grandTotal?: number | null }>>;
@@ -716,8 +717,9 @@ function MoveInFlow() {
     const paramPersons = searchParams.get("persons");
     const paymentStatus = searchParams.get("payment");
 
-    // No URL params → fresh visit, reset everything (but not after payment processing)
-    if (!paramRoom && !paymentStatus && !paymentProcessedRef.current) {
+    // No URL params → fresh visit, reset everything (only on initial mount)
+    if (!paramRoom && !paymentStatus && !paymentProcessedRef.current && !initialResetDoneRef.current) {
+      initialResetDoneRef.current = true;
       setStayType(null);
       setPersons(1);
       setCity("");
