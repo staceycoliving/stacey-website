@@ -472,9 +472,9 @@ function MoveInFlow() {
 
   // ─── LONG stay: build move-in options from API data ───
   // Expand earliest-available dates into all bookable days:
-  // - Free now (today) → every day from today to today+30
-  // - Free within 30 days (e.g. April 21) → every day from April 21 to today+30
-  // - Free in >30 days (e.g. June 16) → only June 16
+  // - Free now (today) → every day from today to today+14
+  // - Free within 14 days (e.g. April 21) → every day from April 21 to today+14
+  // - Free in >14 days (e.g. June 16) → only June 16
   const moveInOptions: { value: string; label: string }[] = (() => {
     if (stayType !== "LONG" || !city) return [];
     const now = new Date();
@@ -482,7 +482,7 @@ function MoveInFlow() {
       `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
     const today = localDate(now);
     const limit = new Date(now);
-    limit.setDate(limit.getDate() + 30);
+    limit.setDate(limit.getDate() + 14);
     const limitStr = localDate(limit);
 
     // Collect earliest moveInDates from API
@@ -502,10 +502,10 @@ function MoveInFlow() {
     for (const earliest of earliestDates) {
       if (earliest < today) continue; // skip past dates
       if (earliest > limitStr) {
-        // >30 days out → only that specific date
+        // >14 days out → only that specific date
         bookableDays.add(earliest);
       } else {
-        // Within 30 days (or today) → every day from earliest to today+30
+        // Within 14 days (or today) → every day from earliest to today+14
         const start = new Date(earliest + "T12:00:00"); // noon to avoid timezone shifts
         const d = new Date(start);
         while (localDate(d) <= limitStr) {

@@ -125,7 +125,7 @@ export default function HomePage() {
         `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
       const today = localDate(now);
       const limit = new Date(now);
-      limit.setDate(limit.getDate() + 30);
+      limit.setDate(limit.getDate() + 14);
       const limitStr = localDate(limit);
 
       // Store raw availability for filtering results
