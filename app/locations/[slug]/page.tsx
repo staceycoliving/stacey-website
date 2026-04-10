@@ -400,10 +400,11 @@ function LocationDetail({ location }: { location: Location }) {
       const catData = cat ? availability[cat] : null;
       if (!catData) return false; // not in DB → hide
       if (isShort) return catData.available > 0;
-      // LONG: a room is bookable on moveInDate if any earliest moveInDate is <= moveInDate.
-      // (Comparing exact-match against the expanded dropdown list would hide categories
-      // that became free weeks earlier than the picked date.)
-      return catData.moveInDates ? catData.moveInDates.some((d) => moveInDate! >= d) : false;
+      // LONG rule: rooms freeing within 14 days are flexible (any day until today+14);
+      // rooms freeing later can only be booked on the exact freeing date (Auszugstag+1).
+      // expandDates encodes both — match the picked date against the expanded list.
+      const roomDates = getRoomDates(r.name);
+      return roomDates.some((d) => d.value === moveInDate);
     });
   const nearby = getNearbyLocations(location);
   const cityLabel = location.city === "hamburg" ? "Hamburg" : location.city === "berlin" ? "Berlin" : "Vallendar";

@@ -619,15 +619,21 @@ function MoveInFlow() {
     // SHORT stay: just return available count
     if (!catData.moveInDates) return catData.available;
 
-    // LONG stay: check if the selected move-in date is valid for this category
+    // LONG stay rule: rooms freeing within 14 days are flexible (any day until today+14);
+    // rooms freeing later can only be booked on the exact freeing date (Auszugstag+1).
     if (!moveInDate) return catData.available;
-    const validDates = catData.moveInDates;
-    // A room is available on date X if X >= one of its moveInDates
-    const isAvailable = validDates.some((d) => moveInDate >= d);
+    const now = new Date();
+    const limit = new Date(now);
+    limit.setDate(limit.getDate() + 14);
+    const fmt = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    const limitStr = fmt(limit);
+    const isAvailable = catData.moveInDates.some((earliest) => {
+      if (earliest > limitStr) return moveInDate === earliest; // outside 14d → exact only
+      return moveInDate >= earliest && moveInDate <= limitStr; // inside 14d → any day in window
+    });
     if (!isAvailable) return 0;
-    // catData.available comes from `freeNow` (rooms free TODAY). When the user picks
-    // a future date that's in moveInDates, the category is bookable even if no room
-    // is free today, so signal availability with at least 1.
+    // catData.available is `freeNow` (rooms free TODAY); for a future moveInDate that
+    // matches an earliest date, the category is bookable even if nothing is free today.
     return Math.max(catData.available, 1);
   };
 
