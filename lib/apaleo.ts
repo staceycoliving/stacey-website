@@ -51,12 +51,18 @@ async function apiFetch(path: string, options?: RequestInit) {
     },
   });
 
+  const text = await res.text();
   if (!res.ok) {
-    const body = await res.text();
-    throw new Error(`apaleo API ${res.status}: ${body}`);
+    throw new Error(`apaleo API ${res.status} ${path}: ${text.slice(0, 300)}`);
   }
-
-  return res.json();
+  if (!text) {
+    throw new Error(`apaleo API empty body ${path}`);
+  }
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new Error(`apaleo API invalid JSON ${path}: ${text.slice(0, 200)}`);
+  }
 }
 
 // ─── Slug → Property ID mapping ─────────────────────────────
