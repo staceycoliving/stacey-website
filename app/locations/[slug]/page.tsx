@@ -672,7 +672,7 @@ function LocationDetail({ location }: { location: Location }) {
                                   {" · "}{nights} nights
                                 </p>
                                 <Link
-                                  href={`/move-in?room=${room.id}&checkin=${checkIn}&checkout=${checkOut}`}
+                                  href={`/move-in?room=${room.id}&checkin=${checkIn}&checkout=${checkOut}&persons=${persons}`}
                                   className="flex items-center justify-center gap-2 rounded-[5px] bg-black px-6 py-3 text-sm font-semibold text-white transition-all duration-200 hover:opacity-80"
                                 >
                                   Book · {nights} nights <ArrowRight size={14} />

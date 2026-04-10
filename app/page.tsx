@@ -630,8 +630,8 @@ export default function HomePage() {
                             </p>
                             <Link
                               href={stayType === "SHORT"
-                                ? `/move-in?room=${room.id}&checkin=${checkIn}&checkout=${checkOut}&type=short`
-                                : `/move-in?room=${room.id}&date=${longMoveIn}&type=long`}
+                                ? `/move-in?room=${room.id}&checkin=${checkIn}&checkout=${checkOut}&persons=${persons ?? 1}&type=short`
+                                : `/move-in?room=${room.id}&date=${longMoveIn}&persons=${persons ?? 1}&type=long`}
                               className="mt-4 flex items-center justify-center gap-2 rounded-[5px] bg-black px-6 py-3 text-sm font-semibold text-white transition-all duration-200 hover:opacity-80"
                             >
                               Book this room <ArrowRight size={14} />
