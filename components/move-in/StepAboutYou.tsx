@@ -188,40 +188,6 @@ export default function StepAboutYou({
           </div>
         </div>
 
-        {/* Move-in reason (SHORT + LONG) */}
-        <div>
-          <label className="mb-1.5 block text-sm font-medium">{isLong ? "Why are you moving?" : "What brings you to Hamburg?"}</label>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            {reasons.map((r) => (
-              <button
-                key={r.value}
-                onClick={() => setMoveInReason?.(r.value)}
-                className={clsx(
-                  "rounded-[5px] px-4 py-2.5 text-sm font-medium transition-all duration-200",
-                  moveInReason === r.value
-                    ? "bg-black text-white"
-                    : "bg-[#F5F5F5] text-gray hover:bg-[#E8E6E0]"
-                )}
-              >
-                {r.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Message */}
-        <div>
-          <label className="mb-1.5 block text-sm font-medium">
-            Anything else? <span className="font-normal text-gray">(optional)</span>
-          </label>
-          <textarea
-            value={message || ""}
-            onChange={(e) => setMessage?.(e.target.value)}
-            placeholder="Tell us anything you'd like us to know..."
-            rows={3}
-            className="w-full resize-none rounded-[5px] border border-[#E8E6E0] px-4 py-3 text-sm outline-none transition-colors placeholder:text-[#C0C0C0] focus:border-black"
-          />
-        </div>
       </div>
     </div>
   );

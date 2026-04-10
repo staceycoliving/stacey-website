@@ -377,6 +377,7 @@ function MoveInFlow() {
   const [showLease, setShowLease] = useState(false);
   const [signingUrl, setSigningUrl] = useState<string | null>(null);
   const [signatureRequestId, setSignatureRequestId] = useState<string | null>(null);
+  const [bookingId, setBookingId] = useState<string | null>(null);
   const [leaseDevMode, setLeaseDevMode] = useState(false);
 
   // Refs
@@ -911,11 +912,14 @@ function MoveInFlow() {
           throw new Error(bookingData.error || "Booking failed");
         }
 
+        setBookingId(bookingData.id);
+
         // 2. Generate lease
         const res = await fetch("/api/lease", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
+            bookingId: bookingData.id,
             firstName,
             lastName,
             dateOfBirth,
@@ -1006,6 +1010,7 @@ function MoveInFlow() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          bookingId,
           locationName: selectedLocation.name,
           roomName: selectedRoom.name,
           monthlyRent: selectedRoom.priceMonthly,
@@ -1512,11 +1517,25 @@ function MoveInFlow() {
                                 );
                               }
                             }
+                            const rent = selectedRoom.priceMonthly + (persons === 2 ? 50 : 0);
                             return (
-                              <div className="flex items-center justify-between">
-                                <p className="text-sm text-white/60">Starting from</p>
-                                <p className="text-2xl font-extrabold">€{selectedRoom.priceMonthly}<span className="text-sm font-normal text-white/60">/mo</span></p>
-                              </div>
+                              <>
+                                <div className="flex items-center justify-between">
+                                  <p className="text-sm text-white/60">Monthly rent</p>
+                                  <p className="text-2xl font-extrabold">€{rent}<span className="text-sm font-normal text-white/60">/mo</span></p>
+                                </div>
+                                <div className="mt-3 flex items-center justify-between text-sm text-white/60">
+                                  <p>Security deposit</p>
+                                  <p>€{rent * 2} <span className="text-xs">(2× rent)</span></p>
+                                </div>
+                                <div className="mt-3 flex items-center justify-between border-t border-white/10 pt-3">
+                                  <p className="text-sm text-white/80 font-semibold">Due now (booking fee)</p>
+                                  <p className="text-base font-bold text-pink">€195</p>
+                                </div>
+                                <p className="mt-2 text-[11px] text-white/40">
+                                  Only the €195 booking fee is charged today. The €{rent * 2} deposit is due within 48h after booking, via a separate payment link sent to your email.
+                                </p>
+                              </>
                             );
                           })()}
                         </div>
@@ -1595,16 +1614,34 @@ function MoveInFlow() {
                           </p>
                         </div>
                         <div className="mt-4 border-t border-white/10 pt-4">
-                          <div className="flex items-center justify-between">
-                            <p className="text-sm text-white/60">Starting from</p>
-                            <p className="text-2xl font-extrabold">{(() => {
-                              if (stayType === "SHORT" && selectedLocation) {
-                                const price = getNightlyPrice(selectedRoom.name, selectedLocation.slug);
-                                if (price) return <>€{price}<span className="text-sm font-normal text-white/60">/night</span></>;
-                              }
-                              return <>€{selectedRoom.priceMonthly}<span className="text-sm font-normal text-white/60">/mo</span></>;
-                            })()}</p>
-                          </div>
+                          {(() => {
+                            if (stayType === "SHORT" && selectedLocation) {
+                              const price = getNightlyPrice(selectedRoom.name, selectedLocation.slug);
+                              return (
+                                <div className="flex items-center justify-between">
+                                  <p className="text-sm text-white/60">Per night</p>
+                                  <p className="text-2xl font-extrabold">€{price}<span className="text-sm font-normal text-white/60">/night</span></p>
+                                </div>
+                              );
+                            }
+                            const rent = selectedRoom.priceMonthly + (persons === 2 ? 50 : 0);
+                            return (
+                              <>
+                                <div className="flex items-center justify-between">
+                                  <p className="text-sm text-white/60">Monthly rent</p>
+                                  <p className="text-2xl font-extrabold">€{rent}<span className="text-sm font-normal text-white/60">/mo</span></p>
+                                </div>
+                                <div className="mt-3 flex items-center justify-between text-sm text-white/60">
+                                  <p>Security deposit</p>
+                                  <p>€{rent * 2} <span className="text-xs">(2× rent)</span></p>
+                                </div>
+                                <div className="mt-3 flex items-center justify-between border-t border-white/10 pt-3">
+                                  <p className="text-sm text-white/80 font-semibold">Due now (booking fee)</p>
+                                  <p className="text-base font-bold text-pink">€195</p>
+                                </div>
+                              </>
+                            );
+                          })()}
                         </div>
                         <div className="mt-4 space-y-2 border-t border-white/10 pt-4">
                           <p className="text-xs font-bold uppercase tracking-wide text-white/40">Tenant</p>

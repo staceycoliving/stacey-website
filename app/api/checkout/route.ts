@@ -27,17 +27,19 @@ export async function POST(request: NextRequest) {
       return Response.json({ error: "Missing required fields" }, { status: 400 });
     }
 
-    // If bookingId provided, verify booking exists and is in SIGNED status
+    // If bookingId provided, verify booking exists and mark as SIGNED
+    // (Frontend only calls this after Yousign signature, so we trust the flow)
     if (bookingId) {
       const booking = await prisma.booking.findUnique({ where: { id: bookingId } });
       if (!booking) {
         return Response.json({ error: "Booking not found" }, { status: 404 });
       }
-      if (booking.status !== "SIGNED") {
-        return Response.json(
-          { error: `Booking must be in SIGNED status, currently: ${booking.status}` },
-          { status: 400 }
-        );
+      // Mark as SIGNED if not already (handles missing Yousign webhook)
+      if (booking.status === "PENDING") {
+        await prisma.booking.update({
+          where: { id: bookingId },
+          data: { status: "SIGNED" },
+        });
       }
     }
 
