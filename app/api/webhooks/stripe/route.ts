@@ -67,9 +67,14 @@ export async function POST(request: NextRequest) {
         break;
       }
     }
-  } catch (err) {
+  } catch (err: any) {
     console.error("Stripe webhook handler error:", err);
-    return Response.json({ error: "Handler error" }, { status: 500 });
+    console.error("Error stack:", err?.stack);
+    return Response.json({
+      error: "Handler error",
+      message: err?.message || String(err),
+      eventType: event.type,
+    }, { status: 500 });
   }
 
   return Response.json({ received: true });
