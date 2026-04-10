@@ -5,6 +5,7 @@ import {
   sendDepositPaymentLink,
   sendDepositConfirmation,
   sendTeamNotification,
+  sendPaymentSetupConfirmation,
 } from "@/lib/email";
 import { downloadSignedDocument } from "@/lib/yousign";
 
@@ -347,7 +348,10 @@ async function handlePaymentSetupCompleted(tenantId: string, session: any) {
   }
 
   // Set as default payment method on Stripe Customer
-  const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
+  const tenant = await prisma.tenant.findUnique({
+    where: { id: tenantId },
+    include: { room: { include: { apartment: { include: { location: true } } } } },
+  });
   if (!tenant?.stripeCustomerId) {
     console.error(`Tenant ${tenantId} has no stripeCustomerId`);
     return;
@@ -363,7 +367,35 @@ async function handlePaymentSetupCompleted(tenantId: string, session: any) {
     data: { sepaMandateId: paymentMethodId },
   });
 
-  console.log(`Tenant ${tenantId}: payment method ${paymentMethodId} saved`);
+  // Determine payment method label for the email
+  let methodLabel = "Payment method";
+  try {
+    const pm = await stripe.paymentMethods.retrieve(paymentMethodId);
+    if (pm.type === "card" && pm.card) {
+      methodLabel = `${pm.card.brand.toUpperCase()} ****${pm.card.last4}`;
+    } else if (pm.type === "sepa_debit" && pm.sepa_debit) {
+      methodLabel = `SEPA Direct Debit (****${pm.sepa_debit.last4})`;
+    } else {
+      methodLabel = pm.type.replace(/_/g, " ");
+    }
+  } catch (err) {
+    console.error("Failed to retrieve payment method details:", err);
+  }
+
+  // Send confirmation email
+  try {
+    await sendPaymentSetupConfirmation({
+      firstName: tenant.firstName,
+      email: tenant.email,
+      locationName: tenant.room.apartment.location.name,
+      monthlyRent: tenant.monthlyRent,
+      paymentMethodLabel: methodLabel,
+    });
+  } catch (err) {
+    console.error("Payment setup confirmation email error:", err);
+  }
+
+  console.log(`Tenant ${tenantId}: payment method ${paymentMethodId} (${methodLabel}) saved`);
 }
 
 // ─── Rent Payment Succeeded (SEPA) ─────────────────────────

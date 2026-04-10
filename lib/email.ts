@@ -354,6 +354,46 @@ export async function sendPaymentSetupLink(data: PaymentSetupEmail) {
   });
 }
 
+// ─── Payment Setup Confirmation ────────────────────────────
+
+interface PaymentSetupConfirmationEmail {
+  firstName: string;
+  email: string;
+  locationName: string;
+  monthlyRent: number; // in cents
+  paymentMethodLabel: string; // e.g. "Visa ****4242" or "SEPA Direct Debit"
+}
+
+export async function sendPaymentSetupConfirmation(data: PaymentSetupConfirmationEmail) {
+  const rentEur = (data.monthlyRent / 100).toFixed(2);
+
+  const html = layout(`
+    <h2 style="margin:0 0 8px;font-size:20px;">Payment method confirmed ✓</h2>
+    <p style="margin:0 0 24px;color:#555;font-size:15px;">
+      Hi ${data.firstName}, your payment method for STACEY ${data.locationName} is now set up.
+    </p>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:24px;background:#FAFAFA;border-radius:5px;padding:4px;">
+      ${detailRow("Payment method", data.paymentMethodLabel)}
+      ${detailRow("Monthly rent", `€${rentEur}`)}
+      ${detailRow("Charged on", "1st of each month")}
+    </table>
+    <p style="font-size:14px;color:#555;">
+      <strong>What happens next?</strong><br>
+      Your rent will be automatically charged on the 1st of each month. The first charge will be pro-rata for your move-in month.
+    </p>
+    <p style="font-size:14px;color:#555;margin-top:16px;">
+      If you ever need to update your payment method or have questions, just reply to this email.
+    </p>
+  `);
+
+  return resend.emails.send({
+    from: FROM,
+    to: data.email,
+    subject: `Payment method confirmed — STACEY ${data.locationName}`,
+    html,
+  });
+}
+
 // ─── Payment Setup Reminder ────────────────────────────────
 
 interface PaymentSetupReminderEmail {
