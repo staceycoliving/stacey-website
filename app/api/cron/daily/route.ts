@@ -11,10 +11,25 @@ import {
   sendPaymentFinalWarning,
 } from "@/lib/email";
 import { stripe } from "@/lib/stripe";
+import { canSendEmail, logSkipped } from "@/lib/test-mode";
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const resendClient = new Resend(process.env.RESEND_API_KEY);
 const FROM = "STACEY Coliving <booking@stacey.de>";
+
+// Test-mode wrapper
+const resend = {
+  emails: {
+    send: async (params: Parameters<typeof resendClient.emails.send>[0]) => {
+      const to = Array.isArray(params.to) ? params.to[0] : params.to;
+      if (!canSendEmail(to as string)) {
+        logSkipped(to as string, params.subject || "(no subject)");
+        return { data: { id: "test-mode-skipped" }, error: null };
+      }
+      return resendClient.emails.send(params);
+    },
+  },
+};
 
 // Reminder schedule (days after tenant creation)
 const SETUP_REMINDER_DAYS = [1, 3, 7, 14];

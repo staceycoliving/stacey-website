@@ -1,9 +1,24 @@
 import { Resend } from "resend";
+import { canSendEmail, logSkipped } from "@/lib/test-mode";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const resendClient = new Resend(process.env.RESEND_API_KEY);
 
 const FROM = "STACEY Coliving <booking@stacey.de>";
 const TEAM_EMAIL = "booking@stacey.de";
+
+// Wrapper that respects TEST_MODE_EMAILS whitelist
+const resend = {
+  emails: {
+    send: async (params: Parameters<typeof resendClient.emails.send>[0]) => {
+      const to = Array.isArray(params.to) ? params.to[0] : params.to;
+      if (!canSendEmail(to as string)) {
+        logSkipped(to as string, params.subject || "(no subject)");
+        return { data: { id: "test-mode-skipped" }, error: null };
+      }
+      return resendClient.emails.send(params);
+    },
+  },
+};
 
 // Category enum → human-readable name
 const CATEGORY_NAMES: Record<string, string> = {
