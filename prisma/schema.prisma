@@ -118,7 +118,9 @@ model Tenant {
   depositReturnedAt   DateTime?
 
   // Emails
-  welcomeEmailSentAt DateTime?
+  welcomeEmailSentAt           DateTime?
+  paymentSetupRemindersSent    Int       @default(0) // Counter: 0..4
+  paymentFinalWarningSentAt    DateTime?
 
   rentPayments RentPayment[]
 

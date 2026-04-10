@@ -7,11 +7,56 @@ import {
   sendMahnung1,
   sendMahnung2,
   sendTerminationNotice,
+  sendPaymentSetupReminder,
+  sendPaymentFinalWarning,
 } from "@/lib/email";
+import { stripe } from "@/lib/stripe";
 import { Resend } from "resend";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM = "STACEY Coliving <booking@stacey.de>";
+
+// Reminder schedule (days after tenant creation)
+const SETUP_REMINDER_DAYS = [1, 3, 7, 14];
+
+// ─── Helper: create Stripe Checkout session in setup mode ──
+
+async function createSetupSessionForTenant(tenant: {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  stripeCustomerId: string | null;
+}): Promise<string> {
+  let customerId = tenant.stripeCustomerId;
+  if (!customerId) {
+    const customer = await stripe.customers.create({
+      name: `${tenant.firstName} ${tenant.lastName}`,
+      email: tenant.email,
+      metadata: { tenantId: tenant.id },
+    });
+    customerId = customer.id;
+    await prisma.tenant.update({
+      where: { id: tenant.id },
+      data: { stripeCustomerId: customerId },
+    });
+  }
+
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://stacey-website-one.vercel.app";
+  const session = await stripe.checkout.sessions.create({
+    mode: "setup",
+    customer: customerId,
+    payment_method_types: ["card", "sepa_debit"],
+    metadata: {
+      type: "long_stay_payment_setup",
+      tenantId: tenant.id,
+    },
+    success_url: `${baseUrl}/move-in/payment-setup-success`,
+    cancel_url: `${baseUrl}/move-in/payment-setup-success?cancelled=1`,
+  });
+
+  return session.url!;
+}
 
 export async function GET(request: NextRequest) {
   // Verify cron secret
@@ -22,6 +67,7 @@ export async function GET(request: NextRequest) {
 
   const results = {
     depositTimeout: await handleDepositTimeouts(),
+    paymentSetupReminders: await handlePaymentSetupReminders(),
     welcomeEmails: await handleWelcomeEmails(),
     rentReminders: await handleRentReminders(),
   };
@@ -73,54 +119,148 @@ async function handleDepositTimeouts() {
   return { cancelled };
 }
 
-// ─── 2. Welcome Emails (3 days before move-in) ─────────────
+// ─── 2a. Payment Setup Reminders (Day 1, 3, 7, 14) ─────────
 
-async function handleWelcomeEmails() {
-  const targetDate = new Date();
-  targetDate.setDate(targetDate.getDate() + 3);
-  targetDate.setHours(0, 0, 0, 0);
-  const nextDay = new Date(targetDate);
-  nextDay.setDate(nextDay.getDate() + 1);
+async function handlePaymentSetupReminders() {
+  const now = new Date();
+  // Only send reminders if move-in is more than 3 days away
+  // (otherwise the welcome/final-warning logic takes over)
+  const threeDaysFromNow = new Date(now);
+  threeDaysFromNow.setDate(threeDaysFromNow.getDate() + 3);
 
   const tenants = await prisma.tenant.findMany({
     where: {
-      moveIn: { gte: targetDate, lt: nextDay },
-      welcomeEmailSentAt: null,
+      sepaMandateId: null, // No payment method set up
+      moveIn: { gt: threeDaysFromNow },
       moveOut: null,
+      paymentSetupRemindersSent: { lt: SETUP_REMINDER_DAYS.length },
     },
     include: {
-      room: {
-        include: { apartment: { include: { location: true } } },
-      },
+      room: { include: { apartment: { include: { location: true } } } },
     },
   });
 
   let sent = 0;
+  for (const tenant of tenants) {
+    const daysSinceCreation = Math.floor(
+      (now.getTime() - tenant.createdAt.getTime()) / (1000 * 60 * 60 * 24)
+    );
+    const nextReminderIndex = tenant.paymentSetupRemindersSent;
+    const dueDay = SETUP_REMINDER_DAYS[nextReminderIndex];
+
+    if (daysSinceCreation < dueDay) continue;
+
+    try {
+      const setupUrl = await createSetupSessionForTenant(tenant);
+      await sendPaymentSetupReminder({
+        firstName: tenant.firstName,
+        email: tenant.email,
+        locationName: tenant.room.apartment.location.name,
+        setupUrl,
+        reminderNumber: nextReminderIndex + 1,
+      });
+
+      await prisma.tenant.update({
+        where: { id: tenant.id },
+        data: { paymentSetupRemindersSent: nextReminderIndex + 1 },
+      });
+      sent++;
+    } catch (err) {
+      console.error(`Setup reminder failed for tenant ${tenant.id}:`, err);
+    }
+  }
+
+  return { sent };
+}
+
+// ─── 2b. Welcome Email or Final Warning (3 days before move-in) ─
+
+async function handleWelcomeEmails() {
+  const now = new Date();
+  // Find tenants moving in within next 3 days (incl. last-minute / past-due cases)
+  const targetEnd = new Date(now);
+  targetEnd.setDate(targetEnd.getDate() + 3);
+  targetEnd.setHours(23, 59, 59, 999);
+
+  const tenants = await prisma.tenant.findMany({
+    where: {
+      moveIn: { lte: targetEnd },
+      welcomeEmailSentAt: null,
+      moveOut: null,
+    },
+    include: {
+      room: { include: { apartment: { include: { location: true } } } },
+    },
+  });
+
+  let welcomeSent = 0;
+  let finalWarningSent = 0;
+
   for (const tenant of tenants) {
     const location = tenant.room.apartment.location;
     const moveInFormatted = tenant.moveIn.toLocaleDateString("en-GB", {
       day: "2-digit", month: "long", year: "numeric",
     });
 
-    try {
-      await resend.emails.send({
-        from: FROM,
-        to: tenant.email,
-        subject: `See you in 3 days! — STACEY ${location.name}`,
-        html: welcomeEmailHtml(tenant, location, moveInFormatted),
-      });
+    if (tenant.sepaMandateId) {
+      // Payment is set up → send Welcome Email
+      try {
+        await resend.emails.send({
+          from: FROM,
+          to: tenant.email,
+          subject: `Welcome to STACEY ${location.name}!`,
+          html: welcomeEmailHtml(tenant, location, moveInFormatted),
+        });
 
-      await prisma.tenant.update({
-        where: { id: tenant.id },
-        data: { welcomeEmailSentAt: new Date() },
-      });
-      sent++;
-    } catch (err) {
-      console.error(`Welcome email failed for ${tenant.email}:`, err);
+        await prisma.tenant.update({
+          where: { id: tenant.id },
+          data: { welcomeEmailSentAt: new Date() },
+        });
+        welcomeSent++;
+      } catch (err) {
+        console.error(`Welcome email failed for ${tenant.email}:`, err);
+      }
+    } else {
+      // No payment method → send Final Warning (only once)
+      if (tenant.paymentFinalWarningSentAt) continue;
+
+      try {
+        const setupUrl = await createSetupSessionForTenant(tenant);
+        await sendPaymentFinalWarning({
+          firstName: tenant.firstName,
+          email: tenant.email,
+          locationName: location.name,
+          moveInDate: tenant.moveIn.toISOString().split("T")[0],
+          setupUrl,
+        });
+
+        await prisma.tenant.update({
+          where: { id: tenant.id },
+          data: { paymentFinalWarningSentAt: new Date() },
+        });
+
+        // Notify team
+        sendTeamNotification({
+          stayType: "LONG",
+          firstName: tenant.firstName,
+          lastName: tenant.lastName,
+          email: tenant.email,
+          phone: tenant.phone || "",
+          locationName: location.name,
+          category: tenant.room.category,
+          persons: 1,
+          moveInDate: tenant.moveIn.toISOString().split("T")[0],
+          bookingId: `Final warning sent — payment not set up`,
+        }).catch((err) => console.error("Team notif error:", err));
+
+        finalWarningSent++;
+      } catch (err) {
+        console.error(`Final warning failed for ${tenant.email}:`, err);
+      }
     }
   }
 
-  return { sent };
+  return { welcomeSent, finalWarningSent };
 }
 
 function welcomeEmailHtml(
