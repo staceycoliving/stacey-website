@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { stripe } from "@/lib/stripe";
 import { prisma } from "@/lib/db";
 import { env } from "@/lib/env";
-import { reportError } from "@/lib/observability";
+import { reportError, logEvent, logWarn } from "@/lib/observability";
 import {
   sendDepositPaymentLink,
   sendDepositConfirmation,
@@ -114,25 +114,33 @@ export async function POST(request: NextRequest) {
 // ─── Booking Fee Paid → Create Deposit Link ────────────────
 
 async function handleBookingFeePaid(bookingId: string, sessionId: string) {
+  logEvent({ scope: "stripe-webhook", tags: { handler: "booking-fee-paid", bookingId, sessionId } }, "start");
+
   const booking = await prisma.booking.findUnique({
     where: { id: bookingId },
     include: { location: true, room: true },
   });
 
   if (!booking) {
-    console.warn(`Booking ${bookingId} not found`);
+    logWarn({ scope: "stripe-webhook", tags: { bookingId } }, "booking not found");
     return;
   }
 
   // Allow PENDING (Yousign webhook may not have fired yet) or SIGNED
   if (booking.status !== "SIGNED" && booking.status !== "PENDING") {
-    console.warn(`Booking ${bookingId} in unexpected status: ${booking.status}`);
+    logWarn(
+      { scope: "stripe-webhook", tags: { bookingId, status: booking.status } },
+      "unexpected booking status, skipping",
+    );
     return;
   }
 
   const depositAmount = booking.depositAmount || 0;
   if (depositAmount <= 0) {
-    console.error(`Booking ${bookingId} has no deposit amount`);
+    reportError(new Error("Booking has no deposit amount"), {
+      scope: "stripe-webhook",
+      tags: { bookingId },
+    });
     return;
   }
 
@@ -145,9 +153,15 @@ async function handleBookingFeePaid(bookingId: string, sessionId: string) {
         booking.signatureDocumentId
       );
       signedLeasePdf = Buffer.from(arrayBuffer);
-      console.log(`Downloaded signed lease for booking ${bookingId}: ${signedLeasePdf.length} bytes`);
+      logEvent(
+        { scope: "stripe-webhook", tags: { bookingId, sizeBytes: signedLeasePdf.length } },
+        "downloaded signed lease from yousign",
+      );
     } catch (err) {
-      console.error(`Failed to download signed lease for booking ${bookingId}:`, err);
+      reportError(err, {
+        scope: "stripe-webhook",
+        tags: { stage: "yousign-download", bookingId },
+      });
     }
   }
 
@@ -205,27 +219,41 @@ async function handleBookingFeePaid(bookingId: string, sessionId: string) {
       signedLeasePdf,
     });
   } catch (err) {
-    console.error("Deposit email error:", err);
+    reportError(err, {
+      scope: "stripe-webhook",
+      tags: { stage: "deposit-email", bookingId, email: booking.email },
+    });
   }
 
-  console.log(`Booking ${bookingId}: fee paid, deposit link sent, deadline ${deadline.toISOString()}`);
+  logEvent(
+    { scope: "stripe-webhook", tags: { bookingId, deadline: deadline.toISOString() } },
+    "booking fee paid, deposit link sent",
+  );
 }
 
 // ─── Deposit Paid → Confirm Booking + Create Tenant ────────
 
 async function handleDepositPaid(bookingId: string) {
+  logEvent({ scope: "stripe-webhook", tags: { handler: "deposit-paid", bookingId } }, "start");
+
   const booking = await prisma.booking.findUnique({
     where: { id: bookingId },
     include: { location: true, room: { include: { tenant: true } } },
   });
 
   if (!booking || booking.status !== "DEPOSIT_PENDING") {
-    console.warn(`Booking ${bookingId} not found or not in DEPOSIT_PENDING status`);
+    logWarn(
+      { scope: "stripe-webhook", tags: { bookingId, status: booking?.status ?? "missing" } },
+      "booking not found or not in DEPOSIT_PENDING — skipping (likely replay)",
+    );
     return;
   }
 
   if (!booking.roomId) {
-    console.error(`Booking ${bookingId} has no room assigned`);
+    reportError(new Error("Booking has no room assigned"), {
+      scope: "stripe-webhook",
+      tags: { bookingId },
+    });
     return;
   }
 
@@ -236,7 +264,10 @@ async function handleDepositPaid(bookingId: string) {
     const oldTenant = booking.room?.tenant;
     if (oldTenant && oldTenant.moveOut && new Date(oldTenant.moveOut) <= booking.moveInDate!) {
       await tx.tenant.delete({ where: { id: oldTenant.id } });
-      console.log(`Deleted old tenant ${oldTenant.firstName} ${oldTenant.lastName} from room ${booking.room?.roomNumber}`);
+      logEvent(
+        { scope: "stripe-webhook", tags: { bookingId, deletedTenantId: oldTenant.id, room: booking.room?.roomNumber } },
+        "deleted old tenant whose moveOut is on or before new moveIn",
+      );
     }
 
     // Update booking to CONFIRMED
@@ -278,7 +309,10 @@ async function handleDepositPaid(bookingId: string) {
     try {
       paymentSetupUrl = await createPaymentSetupSession(createdTenantId);
     } catch (err) {
-      console.error("Failed to create payment setup session:", err);
+      reportError(err, {
+        scope: "stripe-webhook",
+        tags: { stage: "payment-setup-session", bookingId, tenantId: createdTenantId },
+      });
     }
   }
 
@@ -297,7 +331,10 @@ async function handleDepositPaid(bookingId: string) {
       paymentSetupUrl,
     });
   } catch (err) {
-    console.error("Deposit confirmation email error:", err);
+    reportError(err, {
+      scope: "stripe-webhook",
+      tags: { stage: "deposit-confirmation-email", bookingId, email: booking.email },
+    });
   }
 
   try {
@@ -314,10 +351,16 @@ async function handleDepositPaid(bookingId: string) {
       bookingId: booking.id,
     });
   } catch (err) {
-    console.error("Team notification error:", err);
+    reportError(err, {
+      scope: "stripe-webhook",
+      tags: { stage: "team-notification", bookingId },
+    });
   }
 
-  console.log(`Booking ${bookingId}: deposit paid, tenant created, confirmed`);
+  logEvent(
+    { scope: "stripe-webhook", tags: { bookingId, tenantId: createdTenantId, moveInDate: moveInStr } },
+    "deposit paid, tenant created, booking confirmed",
+  );
 }
 
 // ─── Create Payment Setup Session for Tenant ───────────────
@@ -359,10 +402,15 @@ async function createPaymentSetupSession(tenantId: string): Promise<string> {
 // ─── Payment Setup Completed → Save Default Payment Method ─
 
 async function handlePaymentSetupCompleted(tenantId: string, session: any) {
+  logEvent({ scope: "stripe-webhook", tags: { handler: "payment-setup-completed", tenantId } }, "start");
+
   // Get the SetupIntent from the session
   const setupIntentId = session.setup_intent;
   if (!setupIntentId) {
-    console.error("No setup_intent in session");
+    reportError(new Error("Stripe session has no setup_intent"), {
+      scope: "stripe-webhook",
+      tags: { tenantId, sessionId: session.id },
+    });
     return;
   }
 
@@ -370,7 +418,10 @@ async function handlePaymentSetupCompleted(tenantId: string, session: any) {
   const paymentMethodId = setupIntent.payment_method as string;
 
   if (!paymentMethodId) {
-    console.error("No payment method in setup intent");
+    reportError(new Error("SetupIntent has no payment_method"), {
+      scope: "stripe-webhook",
+      tags: { tenantId, setupIntentId },
+    });
     return;
   }
 
@@ -380,7 +431,10 @@ async function handlePaymentSetupCompleted(tenantId: string, session: any) {
     include: { room: { include: { apartment: { include: { location: true } } } } },
   });
   if (!tenant?.stripeCustomerId) {
-    console.error(`Tenant ${tenantId} has no stripeCustomerId`);
+    reportError(new Error("Tenant has no stripeCustomerId"), {
+      scope: "stripe-webhook",
+      tags: { tenantId },
+    });
     return;
   }
 
@@ -388,7 +442,10 @@ async function handlePaymentSetupCompleted(tenantId: string, session: any) {
   // the tenant, the webhook is a replay — skip the update + the email so
   // the customer doesn't get a second "method confirmed" notification.
   if (tenant.sepaMandateId === paymentMethodId) {
-    console.log(`Tenant ${tenantId}: payment method ${paymentMethodId} already saved, skipping replay`);
+    logWarn(
+      { scope: "stripe-webhook", tags: { tenantId, paymentMethodId } },
+      "payment method already saved, skipping replay",
+    );
     return;
   }
 
@@ -414,7 +471,10 @@ async function handlePaymentSetupCompleted(tenantId: string, session: any) {
       methodLabel = pm.type.replace(/_/g, " ");
     }
   } catch (err) {
-    console.error("Failed to retrieve payment method details:", err);
+    reportError(err, {
+      scope: "stripe-webhook",
+      tags: { stage: "payment-method-retrieve", tenantId, paymentMethodId },
+    });
   }
 
   // Send confirmation email
@@ -427,10 +487,16 @@ async function handlePaymentSetupCompleted(tenantId: string, session: any) {
       paymentMethodLabel: methodLabel,
     });
   } catch (err) {
-    console.error("Payment setup confirmation email error:", err);
+    reportError(err, {
+      scope: "stripe-webhook",
+      tags: { stage: "payment-setup-confirmation-email", tenantId, email: tenant.email },
+    });
   }
 
-  console.log(`Tenant ${tenantId}: payment method ${paymentMethodId} (${methodLabel}) saved`);
+  logEvent(
+    { scope: "stripe-webhook", tags: { tenantId, paymentMethodId, methodLabel } },
+    "payment method saved + confirmation sent",
+  );
 }
 
 // ─── Rent Payment Succeeded (SEPA) ─────────────────────────
@@ -449,7 +515,10 @@ async function handleRentPaymentSucceeded(
       stripePaymentIntentId: paymentIntentId,
     },
   });
-  console.log(`RentPayment ${rentPaymentId}: paid €${(amountReceived / 100).toFixed(2)}`);
+  logEvent(
+    { scope: "stripe-webhook", tags: { handler: "rent-paid", rentPaymentId, amountEur: (amountReceived / 100).toFixed(2) } },
+    "rent payment marked as PAID",
+  );
 }
 
 // ─── Rent Payment Failed (SEPA) ────────────────────────────
@@ -466,5 +535,8 @@ async function handleRentPaymentFailed(
       failureReason: reason,
     },
   });
-  console.log(`RentPayment ${rentPaymentId}: failed — ${reason}`);
+  logWarn(
+    { scope: "stripe-webhook", tags: { handler: "rent-failed", rentPaymentId, reason } },
+    "rent payment marked as FAILED",
+  );
 }
