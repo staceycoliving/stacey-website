@@ -44,6 +44,12 @@ const serverSchema = z.object({
 
   // Optional: comma-separated whitelist for outgoing emails (test mode)
   TEST_MODE_EMAILS: z.string().optional().default(""),
+
+  // Optional: Sentry server-side DSN (errors only sent if set)
+  SENTRY_DSN: z.string().url().optional(),
+
+  // Force-enable Sentry in non-production (for debugging)
+  SENTRY_FORCE: z.string().optional(),
 });
 
 // Client-safe schema. These vars are bundled into the browser.

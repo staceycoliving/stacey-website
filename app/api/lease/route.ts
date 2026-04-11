@@ -7,6 +7,7 @@ import {
   isYousignConfigured,
 } from "@/lib/yousign";
 import { prisma } from "@/lib/db";
+import { reportError } from "@/lib/observability";
 
 // German month names for the contract date format
 const GERMAN_MONTHS = [
@@ -182,7 +183,7 @@ export async function POST(request: NextRequest) {
       message: "Yousign not configured. Set YOUSIGN_API_KEY env var.",
     });
   } catch (err) {
-    console.error(`Lease generation error at step "${step}":`, err);
+    reportError(err, { scope: "lease-generate", tags: { step } });
     return Response.json(
       { error: "Failed to generate lease", step, details: String(err) },
       { status: 500 }

@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { stripe } from "@/lib/stripe";
 import { prisma } from "@/lib/db";
 import { env } from "@/lib/env";
+import { reportError } from "@/lib/observability";
 import {
   sendDepositPaymentLink,
   sendDepositConfirmation,
@@ -24,7 +25,7 @@ export async function POST(request: NextRequest) {
   try {
     event = stripe.webhooks.constructEvent(body, sig, env.STRIPE_WEBHOOK_SECRET);
   } catch (err) {
-    console.error("Stripe webhook signature verification failed:", err);
+    reportError(err, { scope: "stripe-webhook", tags: { stage: "signature-verify" } });
     return Response.json({ error: "Invalid signature" }, { status: 400 });
   }
 
@@ -68,8 +69,10 @@ export async function POST(request: NextRequest) {
       }
     }
   } catch (err: any) {
-    console.error("Stripe webhook handler error:", err);
-    console.error("Error stack:", err?.stack);
+    reportError(err, {
+      scope: "stripe-webhook",
+      tags: { stage: "handler", eventType: event.type, eventId: event.id },
+    });
     return Response.json({
       error: "Handler error",
       message: err?.message || String(err),

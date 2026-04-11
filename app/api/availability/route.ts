@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
 import { RoomCategory, BookingStatus } from "@/lib/generated/prisma/client";
 import { isApaleoProperty, getShortStayAvailability as getApaleoAvailability } from "@/lib/apaleo";
+import { reportError } from "@/lib/observability";
 
 // Categories that allow 2 persons (from Zimmerübersicht photos)
 const COUPLE_CATEGORIES: RoomCategory[] = [
@@ -148,7 +149,10 @@ export async function GET(request: NextRequest) {
         categories,
       });
     } catch (err) {
-      console.error("apaleo availability error:", err);
+      reportError(err, {
+        scope: "availability-apaleo",
+        tags: { slug, persons, checkIn: checkInStr, checkOut: checkOutStr },
+      });
       return Response.json({
         error: "Failed to fetch availability",
         detail: err instanceof Error ? err.message : String(err),

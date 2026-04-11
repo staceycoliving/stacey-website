@@ -7,6 +7,7 @@ import {
 } from "@/lib/email";
 import { isApaleoProperty, createShortStayBooking } from "@/lib/apaleo";
 import { getLocationBySlug } from "@/lib/data";
+import { reportError } from "@/lib/observability";
 
 const COUPLE_CATEGORIES: RoomCategory[] = [
   "JUMBO",
@@ -151,7 +152,10 @@ export async function POST(request: NextRequest) {
             { status: 409 }
           );
         }
-        console.error("apaleo booking error:", err);
+        reportError(err, {
+          scope: "booking-short",
+          tags: { slug, category, persons, email, checkIn, checkOut },
+        });
         return Response.json(
           { error: "Failed to create booking" },
           { status: 502 }
@@ -284,7 +288,7 @@ export async function POST(request: NextRequest) {
         { status: 409 }
       );
     }
-    console.error("Booking error:", err);
+    reportError(err, { scope: "booking-long" });
     return Response.json(
       { error: "Failed to create booking", details: String(err) },
       { status: 500 }

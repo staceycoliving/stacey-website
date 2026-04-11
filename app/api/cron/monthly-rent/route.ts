@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
 import { stripe } from "@/lib/stripe";
 import { env } from "@/lib/env";
+import { reportError } from "@/lib/observability";
 
 export async function GET(request: NextRequest) {
   // Verify cron secret
@@ -115,7 +116,15 @@ export async function GET(request: NextRequest) {
         });
         charged++;
       } catch (err: any) {
-        console.error(`SEPA charge failed for tenant ${tenant.id}:`, err.message);
+        reportError(err, {
+          scope: "cron-monthly-rent",
+          tags: {
+            tenantId: tenant.id,
+            tenantName: `${tenant.firstName} ${tenant.lastName}`,
+            rentPaymentId: rentPayment.id,
+            amount,
+          },
+        });
         await prisma.rentPayment.update({
           where: { id: rentPayment.id },
           data: {

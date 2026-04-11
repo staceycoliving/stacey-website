@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { isApaleoProperty, getShortStayAvailability } from "@/lib/apaleo";
 import { stripe } from "@/lib/stripe";
+import { reportError } from "@/lib/observability";
 
 export async function POST(request: NextRequest) {
   try {
@@ -123,7 +124,7 @@ export async function POST(request: NextRequest) {
 
     return Response.json({ url: session.url });
   } catch (err) {
-    console.error("SHORT stay checkout error:", err);
+    reportError(err, { scope: "checkout-short" });
     return Response.json(
       { error: "Failed to create checkout session", details: String(err) },
       { status: 500 }

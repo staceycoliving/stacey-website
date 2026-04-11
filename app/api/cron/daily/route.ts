@@ -13,6 +13,7 @@ import {
 import { stripe } from "@/lib/stripe";
 import { canSendEmail, logSkipped } from "@/lib/test-mode";
 import { env } from "@/lib/env";
+import { reportError } from "@/lib/observability";
 import { Resend } from "resend";
 
 const resendClient = new Resend(env.RESEND_API_KEY);
@@ -80,11 +81,22 @@ export async function GET(request: NextRequest) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  // Run each task isolated — one failing task should never block the others
+  // and every failure must end up in Sentry tagged with which step broke.
+  const runStep = async <T>(name: string, fn: () => Promise<T>) => {
+    try {
+      return { ok: true as const, value: await fn() };
+    } catch (err) {
+      reportError(err, { scope: "cron-daily", tags: { step: name } });
+      return { ok: false as const, error: err instanceof Error ? err.message : String(err) };
+    }
+  };
+
   const results = {
-    depositTimeout: await handleDepositTimeouts(),
-    paymentSetupReminders: await handlePaymentSetupReminders(),
-    welcomeEmails: await handleWelcomeEmails(),
-    rentReminders: await handleRentReminders(),
+    depositTimeout: await runStep("depositTimeout", handleDepositTimeouts),
+    paymentSetupReminders: await runStep("paymentSetupReminders", handlePaymentSetupReminders),
+    welcomeEmails: await runStep("welcomeEmails", handleWelcomeEmails),
+    rentReminders: await runStep("rentReminders", handleRentReminders),
   };
 
   return Response.json(results);

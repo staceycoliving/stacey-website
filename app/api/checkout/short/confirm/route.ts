@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { createPaidShortStayBooking } from "@/lib/apaleo";
 import { sendShortStayConfirmation, sendTeamNotification } from "@/lib/email";
 import { stripe } from "@/lib/stripe";
+import { reportError } from "@/lib/observability";
 
 export async function POST(request: NextRequest) {
   try {
@@ -89,7 +90,7 @@ export async function POST(request: NextRequest) {
       slug: m.slug,
     });
   } catch (err) {
-    console.error("SHORT stay confirm error:", err);
+    reportError(err, { scope: "checkout-short-confirm" });
     return Response.json(
       { error: "Failed to confirm booking", details: String(err) },
       { status: 500 }
