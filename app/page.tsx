@@ -4,23 +4,17 @@ import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import {
-  ChevronDown,
-  ArrowRight,
-  Sofa,
-  CreditCard,
-  Users,
-  ArrowLeftRight,
-  Wifi,
-  Sparkles,
-  WashingMachine,
-  Wrench,
-} from "lucide-react";
+import { ChevronDown, ArrowRight } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import LocationCard from "@/components/ui/LocationCard";
 import DualCalendar from "@/components/ui/DualCalendar";
 import FadeIn from "@/components/ui/FadeIn";
+import FeaturesSection from "@/components/home/FeaturesSection";
+import VideoSection from "@/components/home/VideoSection";
+import HowItWorksSection from "@/components/home/HowItWorksSection";
+import TestimonialsSection from "@/components/home/TestimonialsSection";
+import AboutSection from "@/components/home/AboutSection";
 import dynamic from "next/dynamic";
 
 const LocationMap = dynamic(() => import("@/components/ui/LocationMap"), { ssr: false });
@@ -36,9 +30,6 @@ export default function HomePage() {
   const [checkOut, setCheckOut] = useState<string | null>(null);
   const [longCity, setLongCity] = useState("");
   const [longMoveIn, setLongMoveIn] = useState("");
-  const [videoPlaying, setVideoPlaying] = useState(false);
-  const [spotlightIndex, setSpotlightIndex] = useState(2); // Jihane starts in spotlight
-  const [spotlightPlaying, setSpotlightPlaying] = useState<number | null>(null);
   const [showResults, setShowResults] = useState(false);
   const [locView, setLocView] = useState<"list" | "map">("list");
   const [expandedRoom, setExpandedRoom] = useState<string | null>(null);
@@ -202,14 +193,6 @@ export default function HomePage() {
   })();
 
   const totalRooms = searchResults.reduce((acc, r) => acc + r.rooms.length, 0);
-
-  const testimonials = [
-    { name: "Daniel", desc: "First time in Hamburg for studies", video: "/images/interview-1.mp4", thumb: "/images/interview-1-thumb.webp" },
-    { name: "Christian", desc: "Relocated to Hamburg for work", video: "/images/interview-2.mp4", thumb: "/images/interview-2-thumb.webp" },
-    { name: "Jihane", desc: "Moved from Lebanon to Berlin", video: "/images/interview-3.mp4", thumb: "/images/interview-3-thumb.webp", quote: "Strangers became neighbors and neighbors became family." },
-  ];
-  const spotlightMember = testimonials[spotlightIndex];
-  const smallMembers = testimonials.filter((_, i) => i !== spotlightIndex);
 
   // Pre-compute values used in step 2
   const nights = checkIn && checkOut
@@ -763,270 +746,11 @@ export default function HomePage() {
         </FadeIn>
       </section>
 
-      {/* ── FEATURES — What's included ────────── */}
-      <section className="bg-[#FAFAFA] py-20">
-        <FadeIn>
-        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 items-center gap-10 sm:grid-cols-2">
-            <div>
-              <h2 className="text-3xl font-extrabold tracking-tight sm:text-4xl">
-                Almost everything<br /><span className="italic font-light">included.</span>
-              </h2>
-              <p className="mt-4 text-sm leading-relaxed text-gray">
-                One price. No surprises. Move in with just a suitcase.
-              </p>
-              <Link
-                href="/move-in"
-                className="mt-6 inline-flex items-center gap-2 rounded-[5px] bg-black px-6 py-3 text-sm font-semibold text-white transition-all duration-200 hover:opacity-80"
-              >
-                Find your room <ArrowRight size={14} />
-              </Link>
-            </div>
-            <div className="space-y-2.5">
-              {[
-                { icon: <Sofa size={18} />, text: "Fully furnished private suite" },
-                { icon: <CreditCard size={18} />, text: "Utilities included" },
-                { icon: <Wifi size={18} />, text: "Internet included" },
-                { icon: <Sparkles size={18} />, text: "Weekly professional cleaning" },
-                { icon: <Users size={18} />, text: "Community events & shared spaces" },
-                { icon: <ArrowLeftRight size={18} />, text: "Transfer between locations" },
-                { icon: <Wrench size={18} />, text: "Maintenance & repair service" },
-              ].map((f) => (
-                <div key={f.text} className="flex items-center gap-3 rounded-[5px] bg-white px-4 py-3">
-                  <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-pink/20 text-black">{f.icon}</span>
-                  <p className="text-sm font-medium">{f.text}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-        </FadeIn>
-      </section>
-
-
-      {/* ── VIDEO ─────────────────────────────── */}
-      <section className="bg-white py-20">
-        <FadeIn>
-        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 items-center gap-10 sm:grid-cols-2">
-            {/* Video left */}
-            <div id="stacey-video" className="relative aspect-video overflow-hidden rounded-[5px]">
-              {!videoPlaying ? (
-                <>
-                  <img
-                    src="/images/video-thumbnail.webp"
-                    alt="Life at STACEY"
-                    className="absolute inset-0 h-full w-full object-cover"
-                  />
-                  <div className="absolute inset-0 bg-black/15" />
-                  <button
-                    onClick={() => setVideoPlaying(true)}
-                    className="absolute inset-0 flex items-center justify-center"
-                  >
-                    <div className="relative flex h-14 w-14 items-center justify-center rounded-full bg-white shadow-xl transition-transform hover:scale-110 sm:h-16 sm:w-16">
-                      <div className="absolute inset-0 animate-ping rounded-full bg-white/40" />
-                      <svg viewBox="0 0 24 24" fill="currentColor" className="relative ml-1 h-6 w-6 text-black"><polygon points="5,3 19,12 5,21" /></svg>
-                    </div>
-                  </button>
-                </>
-              ) : (
-                <video
-                  autoPlay
-                  controls
-                  playsInline
-                  className="absolute inset-0 h-full w-full"
-                >
-                  <source src="/images/life-at-stacey.mp4" type="video/mp4" />
-                </video>
-              )}
-            </div>
-
-            {/* Text right */}
-            <div>
-              <h2 className="text-3xl font-extrabold tracking-tight sm:text-4xl">
-                More than a place<br />to <span className="italic font-light">sleep.</span>
-              </h2>
-              <p className="mt-4 text-sm leading-relaxed text-gray">
-                Community events, shared dinners, coworking spaces, and friendships
-                that last. This is what coliving at STACEY feels like.
-              </p>
-            </div>
-          </div>
-        </div>
-        </FadeIn>
-      </section>
-
-      {/* ── HOW IT WORKS — Boarding Pass ────── */}
-      <section className="bg-[#FAFAFA] py-20">
-        <FadeIn>
-        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-          <h2 className="text-center text-2xl font-extrabold tracking-tight sm:text-3xl">
-            Your journey to <span className="italic font-light">home.</span>
-          </h2>
-          <div className="mt-12 grid grid-cols-1 gap-4 sm:grid-cols-3">
-            {[
-              { num: "01", title: "Start exploring", desc: "Explore our coliving locations and sign up online to begin the booking process." },
-              { num: "02", title: "Choose your Suite", desc: "We'll reach out and give you access to our booking platform. Pick your favorite suite." },
-              { num: "03", title: "Make memories", desc: "You are now a member! Attend events, connect with other members and enjoy your time." },
-            ].map((s) => (
-              <div key={s.num} className="relative overflow-hidden rounded-[5px] border-2 border-dashed border-[#D9D9D9] bg-white p-6">
-                <div className="absolute -right-3 top-1/2 h-6 w-6 -translate-y-1/2 rounded-full bg-[#FAFAFA]" />
-                <div className="absolute -left-3 top-1/2 h-6 w-6 -translate-y-1/2 rounded-full bg-[#FAFAFA]" />
-                <p className="text-[10px] font-bold uppercase tracking-widest text-pink">Boarding Pass</p>
-                <p className="mt-3 text-4xl font-black text-black/[0.07]">{s.num}</p>
-                <h3 className="mt-2 text-base font-bold">{s.title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-gray">{s.desc}</p>
-              </div>
-            ))}
-          </div>
-          <div className="mt-10 text-center">
-            <Link
-              href="/move-in"
-              className="inline-flex items-center gap-2 rounded-[5px] bg-black px-8 py-3.5 text-sm font-semibold text-white transition-all duration-200 hover:opacity-80"
-            >
-              Get Started <ArrowRight size={15} />
-            </Link>
-          </div>
-        </div>
-        </FadeIn>
-      </section>
-
-      {/* ── TESTIMONIALS — Spotlight ─────────── */}
-      <section className="bg-white py-20">
-        <FadeIn>
-        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-          <h2 className="text-center text-2xl font-extrabold tracking-tight sm:text-3xl">
-            Hear from our <span className="italic font-light">members</span>
-          </h2>
-          <div className="mt-10 grid grid-cols-1 gap-5 sm:grid-cols-3">
-            {/* Spotlight */}
-            <div className="sm:col-span-2 sm:row-span-2">
-              {(() => {
-                const isPlaying = spotlightPlaying === spotlightIndex;
-                return (
-                  <div className="relative h-full overflow-hidden rounded-[5px]">
-                    {!isPlaying ? (
-                      <>
-                        <Image
-                          src={spotlightMember.thumb}
-                          alt={spotlightMember.name}
-                          fill
-                          className="object-cover"
-                          sizes="(max-width: 768px) 100vw, 60vw"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent" />
-                        <button
-                          onClick={() => setSpotlightPlaying(spotlightIndex)}
-                          className="absolute inset-0 flex items-center justify-center"
-                        >
-                          <div className="relative flex h-14 w-14 items-center justify-center rounded-full bg-white shadow-xl transition-transform hover:scale-110 sm:h-16 sm:w-16">
-                            <div className="absolute inset-0 animate-ping rounded-full bg-white/40" />
-                            <svg viewBox="0 0 24 24" fill="currentColor" className="relative ml-1 h-6 w-6 text-black"><polygon points="5,3 19,12 5,21" /></svg>
-                          </div>
-                        </button>
-                        <div className="pointer-events-none absolute bottom-0 left-0 right-0 p-5" style={{ textShadow: "0 1px 4px rgba(0,0,0,0.5)" }}>
-                          <p className="text-xl font-extrabold text-white sm:text-2xl">{spotlightMember.name}</p>
-                          <p className="mt-1 text-sm text-white/80 sm:text-base">{spotlightMember.desc}</p>
-                          {spotlightMember.quote && (
-                            <p className="mt-2 text-sm italic leading-relaxed text-white/90">
-                              &ldquo;{spotlightMember.quote}&rdquo;
-                            </p>
-                          )}
-                        </div>
-                      </>
-                    ) : (
-                      <video
-                        key={spotlightMember.video}
-                        autoPlay
-                        controls
-                        playsInline
-                        className="absolute inset-0 h-full w-full rounded-[5px]"
-                      >
-                        <source src={spotlightMember.video} type="video/mp4" />
-                      </video>
-                    )}
-                  </div>
-                );
-              })()}
-            </div>
-            {/* Small cards */}
-            {smallMembers.map((t) => {
-              const originalIndex = testimonials.indexOf(t);
-              return (
-                <button
-                  key={t.name}
-                  onClick={() => { setSpotlightIndex(originalIndex); setSpotlightPlaying(null); }}
-                  className="group relative overflow-hidden rounded-[5px] text-left transition-all"
-                >
-                  <div className="relative aspect-video">
-                    <Image
-                      src={t.thumb}
-                      alt={t.name}
-                      fill
-                      className="object-cover transition-transform duration-300 group-hover:scale-105"
-                      sizes="300px"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/90 shadow-md transition-transform group-hover:scale-110">
-                        <svg viewBox="0 0 24 24" fill="currentColor" className="ml-0.5 h-4 w-4 text-black"><polygon points="5,3 19,12 5,21" /></svg>
-                      </div>
-                    </div>
-                    <div className="pointer-events-none absolute bottom-0 left-0 right-0 p-3" style={{ textShadow: "0 1px 4px rgba(0,0,0,0.5)" }}>
-                      <p className="text-sm font-bold text-white">{t.name}</p>
-                      <p className="text-[11px] text-white/80">{t.desc}</p>
-                    </div>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-        </FadeIn>
-      </section>
-
-      {/* ── ABOUT / STORY ──────────────────── */}
-      <section className="bg-[#FAFAFA] py-20">
-        <FadeIn>
-        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 items-center gap-10 sm:grid-cols-2">
-            {/* Photo left */}
-            <div className="relative aspect-[4/3] overflow-hidden rounded-[5px]">
-              <Image
-                src="/images/stacey-team.webp"
-                alt="The STACEY Team"
-                fill
-                className="object-cover"
-                sizes="(max-width: 768px) 100vw, 50vw"
-              />
-            </div>
-
-            {/* Text right */}
-            <div>
-              <h2 className="text-3xl font-extrabold tracking-tight sm:text-4xl">
-                The story behind <span className="italic font-light">STACEY.</span>
-              </h2>
-              <p className="mt-4 text-sm leading-relaxed text-gray">
-                Founded in Hamburg in 2019 with a simple mission: make city living
-                better. We believe that home is more than four walls — it&apos;s the
-                people you share it with.
-              </p>
-              <p className="mt-3 text-sm leading-relaxed text-gray">
-                From our first apartment in Winterhude to locations across Germany,
-                we&apos;re building a community of like-minded people who value
-                connection, convenience and beautiful spaces.
-              </p>
-              <Link
-                href="/why-stacey"
-                className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-black transition-all duration-200 hover:opacity-60"
-              >
-                Learn more about us <ArrowRight size={14} />
-              </Link>
-            </div>
-          </div>
-        </div>
-        </FadeIn>
-      </section>
+      <FeaturesSection />
+      <VideoSection />
+      <HowItWorksSection />
+      <TestimonialsSection />
+      <AboutSection />
 
       <Footer />
     </>
