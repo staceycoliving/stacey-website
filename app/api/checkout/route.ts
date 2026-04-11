@@ -1,10 +1,14 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
 import { stripe } from "@/lib/stripe";
+import { bookingLimiter, checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
 
 const BOOKING_FEE = 19500; // €195.00 in cents
 
 export async function POST(request: NextRequest) {
+  const limit = await checkRateLimit(bookingLimiter, request);
+  if (!limit.success) return rateLimitResponse(limit);
+
   try {
     const body = await request.json();
 

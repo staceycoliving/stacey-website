@@ -8,6 +8,7 @@ import {
 } from "@/lib/yousign";
 import { prisma } from "@/lib/db";
 import { reportError } from "@/lib/observability";
+import { leaseLimiter, checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
 
 // German month names for the contract date format
 const GERMAN_MONTHS = [
@@ -95,6 +96,9 @@ async function fillDocxTemplate(
 }
 
 export async function POST(request: NextRequest) {
+  const limit = await checkRateLimit(leaseLimiter, request);
+  if (!limit.success) return rateLimitResponse(limit);
+
   let step = "init";
   try {
     step = "parse body";

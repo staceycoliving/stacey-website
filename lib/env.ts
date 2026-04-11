@@ -50,6 +50,10 @@ const serverSchema = z.object({
 
   // Force-enable Sentry in non-production (for debugging)
   SENTRY_FORCE: z.string().optional(),
+
+  // Optional: Upstash Redis for rate limiting (allows all requests if not set)
+  UPSTASH_REDIS_REST_URL: z.string().url().optional(),
+  UPSTASH_REDIS_REST_TOKEN: z.string().optional(),
 });
 
 // Client-safe schema. These vars are bundled into the browser.

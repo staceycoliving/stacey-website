@@ -13,6 +13,8 @@
     "@prisma/adapter-pg": "^7.7.0",
     "@prisma/client": "^7.7.0",
     "@sentry/nextjs": "^10.48.0",
+    "@upstash/ratelimit": "^2.0.8",
+    "@upstash/redis": "^1.37.0",
     "clsx": "^2.1.1",
     "docx-templates": "^4.15.0",
     "dotenv": "^17.4.1",

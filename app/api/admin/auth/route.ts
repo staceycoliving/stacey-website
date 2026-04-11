@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { cookies } from "next/headers";
 import crypto from "crypto";
 import { env } from "@/lib/env";
+import { adminAuthLimiter, checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
 
 const ADMIN_PASSWORD = env.ADMIN_PASSWORD;
 const SESSION_COOKIE = "admin_session";
@@ -15,6 +16,9 @@ function createToken(password: string): string {
 }
 
 export async function POST(request: NextRequest) {
+  const limit = await checkRateLimit(adminAuthLimiter, request);
+  if (!limit.success) return rateLimitResponse(limit);
+
   const body = await request.json();
   const { password } = body;
 

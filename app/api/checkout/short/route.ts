@@ -2,8 +2,12 @@ import { NextRequest } from "next/server";
 import { isApaleoProperty, getShortStayAvailability } from "@/lib/apaleo";
 import { stripe } from "@/lib/stripe";
 import { reportError } from "@/lib/observability";
+import { bookingLimiter, checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
 
 export async function POST(request: NextRequest) {
+  const limit = await checkRateLimit(bookingLimiter, request);
+  if (!limit.success) return rateLimitResponse(limit);
+
   try {
     const body = await request.json();
 

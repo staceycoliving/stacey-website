@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { RoomCategory, BookingStatus } from "@/lib/generated/prisma/client";
 import { isApaleoProperty, getShortStayAvailability as getApaleoAvailability } from "@/lib/apaleo";
 import { reportError } from "@/lib/observability";
+import { readLimiter, checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
 
 // Categories that allow 2 persons (from Zimmerübersicht photos)
 const COUPLE_CATEGORIES: RoomCategory[] = [
@@ -103,6 +104,9 @@ async function getLongStayAvailability(
 // ─── Route Handler ──────────────────────────────────────────
 
 export async function GET(request: NextRequest) {
+  const limit = await checkRateLimit(readLimiter, request);
+  if (!limit.success) return rateLimitResponse(limit);
+
   const params = request.nextUrl.searchParams;
   const slug = params.get("location");
   const persons = Number(params.get("persons")) || 1;

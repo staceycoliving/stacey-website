@@ -8,6 +8,7 @@ import {
 import { isApaleoProperty, createShortStayBooking } from "@/lib/apaleo";
 import { getLocationBySlug } from "@/lib/data";
 import { reportError } from "@/lib/observability";
+import { bookingLimiter, checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
 
 const COUPLE_CATEGORIES: RoomCategory[] = [
   "JUMBO",
@@ -23,6 +24,9 @@ const VALID_CATEGORIES = new Set<string>([
 ]);
 
 export async function POST(request: NextRequest) {
+  const limit = await checkRateLimit(bookingLimiter, request);
+  if (!limit.success) return rateLimitResponse(limit);
+
   try {
     const body = await request.json();
 
