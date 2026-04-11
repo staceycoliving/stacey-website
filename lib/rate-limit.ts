@@ -12,9 +12,12 @@
 //   - adminAuthLimiter for /api/admin/auth — brute-force password protection.
 //                      Very tight, per-IP.
 //
-// If UPSTASH_REDIS_REST_URL is not set, every limiter is a no-op (allows the
-// request through). This way the app keeps running locally and on Preview
-// deploys without needing the env var.
+// We accept both naming conventions:
+//   - UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN  (Upstash standard)
+//   - KV_REST_API_URL        / KV_REST_API_TOKEN         (Vercel marketplace integration)
+// If neither is set, every limiter is a no-op (allows the request through).
+// This way the app keeps running locally and on Preview deploys without
+// needing any of these env vars.
 //
 // Usage in a route:
 //
@@ -27,11 +30,13 @@ import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
 import type { NextRequest } from "next/server";
 
-const UPSTASH_URL = process.env.UPSTASH_REDIS_REST_URL;
-const UPSTASH_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
+const REDIS_URL =
+  process.env.UPSTASH_REDIS_REST_URL ?? process.env.KV_REST_API_URL;
+const REDIS_TOKEN =
+  process.env.UPSTASH_REDIS_REST_TOKEN ?? process.env.KV_REST_API_TOKEN;
 
-const redis = UPSTASH_URL && UPSTASH_TOKEN
-  ? new Redis({ url: UPSTASH_URL, token: UPSTASH_TOKEN })
+const redis = REDIS_URL && REDIS_TOKEN
+  ? new Redis({ url: REDIS_URL, token: REDIS_TOKEN })
   : null;
 
 function makeLimiter(prefix: string, requests: number, window: `${number} ${"s" | "m" | "h"}`) {

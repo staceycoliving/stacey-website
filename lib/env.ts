@@ -51,9 +51,14 @@ const serverSchema = z.object({
   // Force-enable Sentry in non-production (for debugging)
   SENTRY_FORCE: z.string().optional(),
 
-  // Optional: Upstash Redis for rate limiting (allows all requests if not set)
+  // Optional: Upstash Redis for rate limiting. lib/rate-limit.ts accepts either
+  // the Upstash naming or the Vercel KV marketplace integration naming
+  // (KV_REST_API_URL / KV_REST_API_TOKEN). If neither is set, limiters are
+  // no-ops and every request is allowed through.
   UPSTASH_REDIS_REST_URL: z.string().url().optional(),
   UPSTASH_REDIS_REST_TOKEN: z.string().optional(),
+  KV_REST_API_URL: z.string().url().optional(),
+  KV_REST_API_TOKEN: z.string().optional(),
 });
 
 // Client-safe schema. These vars are bundled into the browser.
