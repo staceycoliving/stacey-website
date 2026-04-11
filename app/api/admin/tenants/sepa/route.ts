@@ -3,6 +3,7 @@ import { isAuthenticated } from "@/lib/admin-auth";
 import { prisma } from "@/lib/db";
 import { stripe } from "@/lib/stripe";
 import { sendPaymentSetupLink } from "@/lib/email";
+import { env } from "@/lib/env";
 
 // POST /api/admin/tenants/sepa
 // Sends (or resends) the payment setup link to a tenant.
@@ -42,7 +43,6 @@ export async function POST(request: NextRequest) {
     }
 
     // Create Checkout Session in setup mode
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://stacey-website-one.vercel.app";
     const session = await stripe.checkout.sessions.create({
       mode: "setup",
       customer: customerId,
@@ -51,8 +51,8 @@ export async function POST(request: NextRequest) {
         type: "long_stay_payment_setup",
         tenantId: tenant.id,
       },
-      success_url: `${baseUrl}/move-in/payment-setup-success`,
-      cancel_url: `${baseUrl}/move-in/payment-setup-success?cancelled=1`,
+      success_url: `${env.NEXT_PUBLIC_BASE_URL}/move-in/payment-setup-success`,
+      cancel_url: `${env.NEXT_PUBLIC_BASE_URL}/move-in/payment-setup-success?cancelled=1`,
     });
 
     // Send the email

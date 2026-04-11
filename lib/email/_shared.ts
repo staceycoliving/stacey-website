@@ -4,8 +4,9 @@
 
 import { Resend } from "resend";
 import { canSendEmail, logSkipped } from "@/lib/test-mode";
+import { env } from "@/lib/env";
 
-const resendClient = new Resend(process.env.RESEND_API_KEY);
+const resendClient = new Resend(env.RESEND_API_KEY);
 
 export const FROM = "STACEY Coliving <booking@stacey.de>";
 export const TEAM_EMAIL = "booking@stacey.de";

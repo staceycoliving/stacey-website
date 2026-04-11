@@ -5,8 +5,10 @@
 const IDENTITY_URL = "https://identity.apaleo.com/connect/token";
 const API_URL = "https://api.apaleo.com";
 
-const CLIENT_ID = process.env.APALEO_CLIENT_ID!;
-const CLIENT_SECRET = process.env.APALEO_CLIENT_SECRET!;
+import { env } from "./env";
+
+const CLIENT_ID = env.APALEO_CLIENT_ID;
+const CLIENT_SECRET = env.APALEO_CLIENT_SECRET;
 
 // ─── Token Cache ────────────────────────────────────────────
 

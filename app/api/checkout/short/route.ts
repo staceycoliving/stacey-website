@@ -1,10 +1,6 @@
 import { NextRequest } from "next/server";
-import Stripe from "stripe";
 import { isApaleoProperty, getShortStayAvailability } from "@/lib/apaleo";
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2025-03-31.basil",
-});
+import { stripe } from "@/lib/stripe";
 
 export async function POST(request: NextRequest) {
   try {

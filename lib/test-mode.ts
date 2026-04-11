@@ -7,8 +7,9 @@
  * To disable test mode (production): unset TEST_MODE_EMAILS in Vercel.
  */
 
-const RAW = process.env.TEST_MODE_EMAILS || "";
-const WHITELIST = RAW.split(",").map((e) => e.trim().toLowerCase()).filter(Boolean);
+import { env } from "./env";
+
+const WHITELIST = env.TEST_MODE_EMAILS.split(",").map((e) => e.trim().toLowerCase()).filter(Boolean);
 const ENABLED = WHITELIST.length > 0;
 
 export function isTestMode(): boolean {

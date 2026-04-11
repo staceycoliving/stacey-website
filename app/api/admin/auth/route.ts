@@ -1,8 +1,9 @@
 import { NextRequest } from "next/server";
 import { cookies } from "next/headers";
 import crypto from "crypto";
+import { env } from "@/lib/env";
 
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "stacey-admin-2026";
+const ADMIN_PASSWORD = env.ADMIN_PASSWORD;
 const SESSION_COOKIE = "admin_session";
 const SESSION_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
 
@@ -25,7 +26,7 @@ export async function POST(request: NextRequest) {
   const cookieStore = await cookies();
   cookieStore.set(SESSION_COOKIE, token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: env.NODE_ENV === "production",
     sameSite: "lax",
     maxAge: SESSION_MAX_AGE,
     path: "/",

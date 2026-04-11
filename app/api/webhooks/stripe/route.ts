@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { stripe } from "@/lib/stripe";
 import { prisma } from "@/lib/db";
+import { env } from "@/lib/env";
 import {
   sendDepositPaymentLink,
   sendDepositConfirmation,
@@ -21,11 +22,7 @@ export async function POST(request: NextRequest) {
 
   let event;
   try {
-    event = stripe.webhooks.constructEvent(
-      body,
-      sig,
-      process.env.STRIPE_WEBHOOK_SECRET!
-    );
+    event = stripe.webhooks.constructEvent(body, sig, env.STRIPE_WEBHOOK_SECRET);
   } catch (err) {
     console.error("Stripe webhook signature verification failed:", err);
     return Response.json({ error: "Invalid signature" }, { status: 400 });
@@ -144,8 +141,8 @@ async function handleBookingFeePaid(bookingId: string, sessionId: string) {
       type: "long_stay_deposit",
       bookingId: booking.id,
     },
-    success_url: `${process.env.NEXT_PUBLIC_BASE_URL || "https://stacey-website-one.vercel.app"}/move-in/deposit-success`,
-    cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL || "https://stacey-website-one.vercel.app"}/move-in?deposit=cancelled`,
+    success_url: `${env.NEXT_PUBLIC_BASE_URL}/move-in/deposit-success`,
+    cancel_url: `${env.NEXT_PUBLIC_BASE_URL}/move-in?deposit=cancelled`,
   });
 
   const deadline = new Date();
@@ -313,7 +310,6 @@ async function createPaymentSetupSession(tenantId: string): Promise<string> {
     });
   }
 
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://stacey-website-one.vercel.app";
   const session = await stripe.checkout.sessions.create({
     mode: "setup",
     customer: customerId,
@@ -322,8 +318,8 @@ async function createPaymentSetupSession(tenantId: string): Promise<string> {
       type: "long_stay_payment_setup",
       tenantId: tenant.id,
     },
-    success_url: `${baseUrl}/move-in/payment-setup-success`,
-    cancel_url: `${baseUrl}/move-in/payment-setup-success?cancelled=1`,
+    success_url: `${env.NEXT_PUBLIC_BASE_URL}/move-in/payment-setup-success`,
+    cancel_url: `${env.NEXT_PUBLIC_BASE_URL}/move-in/payment-setup-success?cancelled=1`,
   });
 
   return session.url!;

@@ -1,7 +1,8 @@
 import { NextRequest } from "next/server";
+import { env } from "@/lib/env";
 
-const YOUSIGN_API_KEY = process.env.YOUSIGN_API_KEY || "";
-const YOUSIGN_BASE_URL = process.env.YOUSIGN_BASE_URL || "https://api-sandbox.yousign.app/v3";
+const YOUSIGN_API_KEY = env.YOUSIGN_API_KEY;
+const YOUSIGN_BASE_URL = env.YOUSIGN_BASE_URL;
 
 export async function GET(request: NextRequest) {
   const id = request.nextUrl.searchParams.get("id");

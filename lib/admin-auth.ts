@@ -1,7 +1,8 @@
 import { cookies } from "next/headers";
 import crypto from "crypto";
+import { env } from "./env";
 
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "stacey-admin-2026";
+const ADMIN_PASSWORD = env.ADMIN_PASSWORD;
 const SESSION_COOKIE = "admin_session";
 
 function createToken(password: string): string {

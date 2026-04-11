@@ -1,11 +1,12 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
 import { stripe } from "@/lib/stripe";
+import { env } from "@/lib/env";
 
 export async function GET(request: NextRequest) {
   // Verify cron secret
   const authHeader = request.headers.get("authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (authHeader !== `Bearer ${env.CRON_SECRET}`) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 

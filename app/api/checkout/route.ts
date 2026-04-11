@@ -1,10 +1,6 @@
 import { NextRequest } from "next/server";
-import Stripe from "stripe";
 import { prisma } from "@/lib/db";
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2025-03-31.basil",
-});
+import { stripe } from "@/lib/stripe";
 
 const BOOKING_FEE = 19500; // €195.00 in cents
 

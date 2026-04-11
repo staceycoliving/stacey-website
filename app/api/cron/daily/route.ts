@@ -12,9 +12,10 @@ import {
 } from "@/lib/email";
 import { stripe } from "@/lib/stripe";
 import { canSendEmail, logSkipped } from "@/lib/test-mode";
+import { env } from "@/lib/env";
 import { Resend } from "resend";
 
-const resendClient = new Resend(process.env.RESEND_API_KEY);
+const resendClient = new Resend(env.RESEND_API_KEY);
 const FROM = "STACEY Coliving <booking@stacey.de>";
 
 // Test-mode wrapper
@@ -57,7 +58,6 @@ async function createSetupSessionForTenant(tenant: {
     });
   }
 
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://stacey-website-one.vercel.app";
   const session = await stripe.checkout.sessions.create({
     mode: "setup",
     customer: customerId,
@@ -66,8 +66,8 @@ async function createSetupSessionForTenant(tenant: {
       type: "long_stay_payment_setup",
       tenantId: tenant.id,
     },
-    success_url: `${baseUrl}/move-in/payment-setup-success`,
-    cancel_url: `${baseUrl}/move-in/payment-setup-success?cancelled=1`,
+    success_url: `${env.NEXT_PUBLIC_BASE_URL}/move-in/payment-setup-success`,
+    cancel_url: `${env.NEXT_PUBLIC_BASE_URL}/move-in/payment-setup-success?cancelled=1`,
   });
 
   return session.url!;
@@ -76,7 +76,7 @@ async function createSetupSessionForTenant(tenant: {
 export async function GET(request: NextRequest) {
   // Verify cron secret
   const authHeader = request.headers.get("authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (authHeader !== `Bearer ${env.CRON_SECRET}`) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 
