@@ -249,3 +249,19 @@ enum RentPaymentStatus {
   FAILED      // Fehlgeschlagen
   PARTIAL     // Teilweise bezahlt (manuelle Anpassung)
 }
+
+// Idempotency log for incoming webhooks (Stripe + Yousign + …).
+// On every webhook, we try to insert the provider-supplied event ID. The
+// `@unique` constraint guarantees a duplicate insert fails fast, so the
+// handler can short-circuit before doing anything observable (creating
+// tenants, sending emails, hitting Stripe again).
+model WebhookEvent {
+  id          String   @id @default(cuid())
+  provider    String   // "stripe" | "yousign" | …
+  eventId     String   // The provider's event ID, e.g. evt_1AbCdEf…
+  eventType   String?  // Cosmetic, useful for inspection
+  receivedAt  DateTime @default(now())
+
+  @@unique([provider, eventId])
+  @@index([receivedAt])
+}

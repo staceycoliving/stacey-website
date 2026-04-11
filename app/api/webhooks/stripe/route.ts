@@ -29,6 +29,34 @@ export async function POST(request: NextRequest) {
     return Response.json({ error: "Invalid signature" }, { status: 400 });
   }
 
+  // ─── Idempotency: drop replayed events ────────────────────
+  // Stripe occasionally retries the same webhook (network blip, our 5xx, etc.).
+  // Replaying creates double tenants, double Stripe sessions and double emails,
+  // so we record every event ID and refuse to process it twice. The unique
+  // index on (provider, eventId) is the source of truth — if the insert
+  // raises P2002, the event has already been seen and we acknowledge it
+  // with 200 so Stripe stops retrying.
+  try {
+    await prisma.webhookEvent.create({
+      data: {
+        provider: "stripe",
+        eventId: event.id,
+        eventType: event.type,
+      },
+    });
+  } catch (err: any) {
+    if (err?.code === "P2002") {
+      // Already processed — acknowledge silently so Stripe stops retrying
+      return Response.json({ received: true, duplicate: true });
+    }
+    reportError(err, {
+      scope: "stripe-webhook",
+      tags: { stage: "idempotency-insert", eventType: event.type, eventId: event.id },
+    });
+    // Don't fail — try to process the event anyway. Worse to drop a real
+    // payment event than to risk a double-process if the dedup table is down.
+  }
+
   try {
     switch (event.type) {
       case "checkout.session.completed": {
@@ -353,6 +381,14 @@ async function handlePaymentSetupCompleted(tenantId: string, session: any) {
   });
   if (!tenant?.stripeCustomerId) {
     console.error(`Tenant ${tenantId} has no stripeCustomerId`);
+    return;
+  }
+
+  // Defensive idempotency: if this exact payment method is already set on
+  // the tenant, the webhook is a replay — skip the update + the email so
+  // the customer doesn't get a second "method confirmed" notification.
+  if (tenant.sepaMandateId === paymentMethodId) {
+    console.log(`Tenant ${tenantId}: payment method ${paymentMethodId} already saved, skipping replay`);
     return;
   }
 
