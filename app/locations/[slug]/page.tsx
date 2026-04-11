@@ -154,9 +154,15 @@ function LocationDetail({ location }: { location: Location }) {
   const [basePrices, setBasePrices] = useState<Record<string, number>>({});
   useEffect(() => {
     if (!isShort) return;
-    fetch("/api/prices").then(r => r.ok ? r.json() : {}).then((data: Record<string, Record<string, number>>) => {
-      setBasePrices(data[location.slug] || {});
-    }).catch(() => {});
+    fetch("/api/prices")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((res) => {
+        if (res?.ok) {
+          const all = res.data as Record<string, Record<string, number>>;
+          setBasePrices(all[location.slug] || {});
+        }
+      })
+      .catch(() => {});
   }, [location.slug, isShort]);
 
   // Fetch availability on mount + when persons change.
@@ -171,8 +177,9 @@ function LocationDetail({ location }: { location: Location }) {
     }
     setLoadingAvail(true);
     fetch(`/api/availability?${params}`)
-      .then((r) => r.ok ? r.json() : null)
-      .then((data) => {
+      .then((r) => (r.ok ? r.json() : null))
+      .then((res) => {
+        const data = res?.ok ? res.data : null;
         if (!data?.categories) { setAvailability({}); return; }
         const map: Record<string, CatAvail> = {};
         for (const cat of data.categories) {

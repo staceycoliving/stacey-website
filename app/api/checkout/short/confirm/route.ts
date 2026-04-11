@@ -3,20 +3,19 @@ import { createPaidShortStayBooking } from "@/lib/apaleo";
 import { sendShortStayConfirmation, sendTeamNotification } from "@/lib/email";
 import { stripe } from "@/lib/stripe";
 import { reportError } from "@/lib/observability";
+import { apiOk, apiBadRequest, apiServerError } from "@/lib/api-response";
 
 export async function POST(request: NextRequest) {
   try {
     const { sessionId } = await request.json();
 
-    if (!sessionId) {
-      return Response.json({ error: "sessionId required" }, { status: 400 });
-    }
+    if (!sessionId) return apiBadRequest("sessionId required");
 
     // Retrieve the Stripe session
     const session = await stripe.checkout.sessions.retrieve(sessionId);
 
     if (session.payment_status !== "paid") {
-      return Response.json({ error: "Payment not completed" }, { status: 400 });
+      return apiBadRequest("Payment not completed");
     }
 
     const m = session.metadata!;
@@ -76,9 +75,9 @@ export async function POST(request: NextRequest) {
       bookingId: booking.id,
     }).catch((err) => console.error("Email error (team):", err));
 
-    return Response.json({
+    return apiOk({
       bookingId: booking.id,
-      status: "confirmed",
+      status: "confirmed" as const,
       locationName: m.locationName,
       roomName: m.roomName,
       category: m.category,
@@ -91,9 +90,6 @@ export async function POST(request: NextRequest) {
     });
   } catch (err) {
     reportError(err, { scope: "checkout-short-confirm" });
-    return Response.json(
-      { error: "Failed to confirm booking", details: String(err) },
-      { status: 500 }
-    );
+    return apiServerError("Failed to confirm booking", String(err));
   }
 }

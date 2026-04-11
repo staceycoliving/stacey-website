@@ -9,6 +9,7 @@ import {
 import { prisma } from "@/lib/db";
 import { reportError } from "@/lib/observability";
 import { leaseLimiter, checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
+import { apiOk, apiBadRequest, apiServerError } from "@/lib/api-response";
 
 // German month names for the contract date format
 const GERMAN_MONTHS = [
@@ -123,7 +124,7 @@ export async function POST(request: NextRequest) {
 
     // Validate required fields
     if (!firstName || !lastName || !email || !locationName || !roomCategory || !monthlyRent || !moveInDate) {
-      return Response.json({ error: "Missing required fields" }, { status: 400 });
+      return apiBadRequest("Missing required fields");
     }
 
     // ─── 1. Read template ───
@@ -172,25 +173,25 @@ export async function POST(request: NextRequest) {
         });
       }
 
-      return Response.json({
+      return apiOk({
         signingUrl: session.signingUrl,
         signatureRequestId: session.signatureRequestId,
         documentId: session.documentId,
+        devMode: false as const,
       });
     }
 
     // ─── Fallback: dev mode ───
-    return Response.json({
+    return apiOk({
       signingUrl: null,
-      devMode: true,
+      signatureRequestId: null,
+      documentId: null,
+      devMode: true as const,
       documentBase64: docBuffer.toString("base64"),
       message: "Yousign not configured. Set YOUSIGN_API_KEY env var.",
     });
   } catch (err) {
     reportError(err, { scope: "lease-generate", tags: { step } });
-    return Response.json(
-      { error: "Failed to generate lease", step, details: String(err) },
-      { status: 500 }
-    );
+    return apiServerError(`Failed to generate lease at step "${step}"`, String(err));
   }
 }

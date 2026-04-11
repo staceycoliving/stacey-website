@@ -4,6 +4,7 @@ import { RoomCategory, BookingStatus } from "@/lib/generated/prisma/client";
 import { isApaleoProperty, getShortStayAvailability as getApaleoAvailability } from "@/lib/apaleo";
 import { reportError } from "@/lib/observability";
 import { readLimiter, checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
+import { apiOk, apiBadRequest, apiNotFound, apiBadGateway } from "@/lib/api-response";
 
 // Categories that allow 2 persons (from Zimmerübersicht photos)
 const COUPLE_CATEGORIES: RoomCategory[] = [
@@ -111,9 +112,7 @@ export async function GET(request: NextRequest) {
   const slug = params.get("location");
   const persons = Number(params.get("persons")) || 1;
 
-  if (!slug) {
-    return Response.json({ error: "location parameter required" }, { status: 400 });
-  }
+  if (!slug) return apiBadRequest("location parameter required");
 
   // SHORT stay (apaleo) — these slugs are NOT in the DB, they live only in apaleo
   if (isApaleoProperty(slug)) {
@@ -121,10 +120,7 @@ export async function GET(request: NextRequest) {
     const checkOutStr = params.get("checkOut");
 
     if (!checkInStr || !checkOutStr) {
-      return Response.json(
-        { error: "checkIn and checkOut required for SHORT stay" },
-        { status: 400 }
-      );
+      return apiBadRequest("checkIn and checkOut required for SHORT stay");
     }
 
     const checkIn = new Date(checkInStr);
@@ -135,17 +131,14 @@ export async function GET(request: NextRequest) {
       (checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24)
     );
     if (nights < 5) {
-      return Response.json(
-        { error: "Minimum stay is 5 nights", nights },
-        { status: 400 }
-      );
+      return apiBadRequest("Minimum stay is 5 nights", { nights });
     }
 
     try {
       const categories = await getApaleoAvailability(slug, checkInStr, checkOutStr, persons);
-      return Response.json({
+      return apiOk({
         location: slug,
-        stayType: "SHORT",
+        stayType: "SHORT" as const,
         checkIn: checkInStr,
         checkOut: checkOutStr,
         persons,
@@ -157,24 +150,22 @@ export async function GET(request: NextRequest) {
         scope: "availability-apaleo",
         tags: { slug, persons, checkIn: checkInStr, checkOut: checkOutStr },
       });
-      return Response.json({
-        error: "Failed to fetch availability",
-        detail: err instanceof Error ? err.message : String(err),
-      }, { status: 502 });
+      return apiBadGateway(
+        "Failed to fetch availability",
+        err instanceof Error ? err.message : String(err),
+      );
     }
   }
 
   // LONG stay — lookup in DB
   const location = await prisma.location.findUnique({ where: { slug } });
-  if (!location) {
-    return Response.json({ error: `Location "${slug}" not found` }, { status: 404 });
-  }
+  if (!location) return apiNotFound(`Location "${slug}" not found`);
 
   const categories = await getLongStayAvailability(location.id, persons);
 
-  return Response.json({
+  return apiOk({
     location: slug,
-    stayType: "LONG",
+    stayType: "LONG" as const,
     persons,
     categories,
   });

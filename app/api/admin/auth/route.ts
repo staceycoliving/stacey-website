@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import crypto from "crypto";
 import { env } from "@/lib/env";
 import { adminAuthLimiter, checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
+import { apiOk, apiUnauthorized } from "@/lib/api-response";
 
 const ADMIN_PASSWORD = env.ADMIN_PASSWORD;
 const SESSION_COOKIE = "admin_session";
@@ -23,7 +24,7 @@ export async function POST(request: NextRequest) {
   const { password } = body;
 
   if (!password || password !== ADMIN_PASSWORD) {
-    return Response.json({ error: "Wrong password" }, { status: 401 });
+    return apiUnauthorized("Wrong password");
   }
 
   const token = createToken(ADMIN_PASSWORD);
@@ -36,11 +37,11 @@ export async function POST(request: NextRequest) {
     path: "/",
   });
 
-  return Response.json({ ok: true });
+  return apiOk({ authenticated: true as const });
 }
 
 export async function DELETE() {
   const cookieStore = await cookies();
   cookieStore.delete(SESSION_COOKIE);
-  return Response.json({ ok: true });
+  return apiOk({ authenticated: false as const });
 }

@@ -26,8 +26,9 @@ export default function StepLease({
     const interval = setInterval(async () => {
       try {
         const res = await fetch(`/api/lease/status?id=${signatureRequestId}`);
-        const data = await res.json();
-        if (data.status === "done" || data.status === "signed" || data.status === "completed") {
+        const body = await res.json();
+        const status = body?.ok ? body.data.status : null;
+        if (status === "done" || status === "signed" || status === "completed") {
           setSigned(true);
           setPolling(false);
           clearInterval(interval);

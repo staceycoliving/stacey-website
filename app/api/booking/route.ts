@@ -9,6 +9,7 @@ import { isApaleoProperty, createShortStayBooking } from "@/lib/apaleo";
 import { getLocationBySlug } from "@/lib/data";
 import { reportError } from "@/lib/observability";
 import { bookingLimiter, checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
+import { apiOk, apiBadRequest, apiNotFound, apiConflict, apiBadGateway, apiServerError } from "@/lib/api-response";
 
 const COUPLE_CATEGORIES: RoomCategory[] = [
   "JUMBO",
@@ -57,32 +58,23 @@ export async function POST(request: NextRequest) {
     // ─── Validate required fields ───────────────────────────
 
     if (!slug || !category || !firstName || !lastName || !email) {
-      return Response.json(
-        { error: "Missing required fields: location, category, firstName, lastName, email" },
-        { status: 400 }
-      );
+      return apiBadRequest("Missing required fields: location, category, firstName, lastName, email");
     }
 
     if (!VALID_CATEGORIES.has(category)) {
-      return Response.json({ error: `Invalid category: ${category}` }, { status: 400 });
+      return apiBadRequest(`Invalid category: ${category}`);
     }
 
     // Couple check
     if (persons >= 2 && !COUPLE_CATEGORIES.includes(category as RoomCategory)) {
-      return Response.json(
-        { error: `Category ${category} does not support 2 persons` },
-        { status: 400 }
-      );
+      return apiBadRequest(`Category ${category} does not support 2 persons`);
     }
 
     // ─── SHORT Stay Booking (apaleo, not in DB) ─────────────
 
     if (isApaleoProperty(slug)) {
       if (!checkIn || !checkOut) {
-        return Response.json(
-          { error: "checkIn and checkOut required for SHORT stay" },
-          { status: 400 }
-        );
+        return apiBadRequest("checkIn and checkOut required for SHORT stay");
       }
 
       const ciDate = new Date(checkIn);
@@ -90,7 +82,7 @@ export async function POST(request: NextRequest) {
       const nights = Math.round((coDate.getTime() - ciDate.getTime()) / 86400000);
 
       if (nights < 5) {
-        return Response.json({ error: "Minimum stay is 5 nights" }, { status: 400 });
+        return apiBadRequest("Minimum stay is 5 nights");
       }
 
       const staticLoc = getLocationBySlug(slug);
@@ -139,46 +131,35 @@ export async function POST(request: NextRequest) {
           bookingId: apaleoBooking.id,
         }).catch((err) => console.error("Email error (team):", err));
 
-        return Response.json({
+        return apiOk({
           id: apaleoBooking.id,
-          stayType: "SHORT",
+          stayType: "SHORT" as const,
           location: slug,
           category,
           checkIn,
           checkOut,
           nights,
-          status: "PENDING",
+          status: "PENDING" as const,
         });
       } catch (err: any) {
         if (err.message === "NOT_AVAILABLE") {
-          return Response.json(
-            { error: "No availability for the selected category and dates" },
-            { status: 409 }
-          );
+          return apiConflict("NOT_AVAILABLE", "No availability for the selected category and dates");
         }
         reportError(err, {
           scope: "booking-short",
           tags: { slug, category, persons, email, checkIn, checkOut },
         });
-        return Response.json(
-          { error: "Failed to create booking" },
-          { status: 502 }
-        );
+        return apiBadGateway("Failed to create booking");
       }
     }
 
     // ─── LONG Stay Booking ──────────────────────────────────
 
     const location = await prisma.location.findUnique({ where: { slug } });
-    if (!location) {
-      return Response.json({ error: `Location "${slug}" not found` }, { status: 404 });
-    }
+    if (!location) return apiNotFound(`Location "${slug}" not found`);
 
     if (!moveInDate) {
-      return Response.json(
-        { error: "moveInDate required for LONG stay" },
-        { status: 400 }
-      );
+      return apiBadRequest("moveInDate required for LONG stay");
     }
 
     const miDate = new Date(moveInDate);
@@ -274,9 +255,9 @@ export async function POST(request: NextRequest) {
       bookingId: booking.id,
     }).catch((err) => console.error("Email error (team):", err));
 
-    return Response.json({
+    return apiOk({
       id: booking.id,
-      stayType: "LONG",
+      stayType: "LONG" as const,
       location: slug,
       category,
       moveInDate,
@@ -287,16 +268,10 @@ export async function POST(request: NextRequest) {
     });
   } catch (err: any) {
     if (err.message === "NOT_AVAILABLE") {
-      return Response.json(
-        { error: "No availability for the selected category and dates" },
-        { status: 409 }
-      );
+      return apiConflict("NOT_AVAILABLE", "No availability for the selected category and dates");
     }
     reportError(err, { scope: "booking-long" });
-    return Response.json(
-      { error: "Failed to create booking", details: String(err) },
-      { status: 500 }
-    );
+    return apiServerError("Failed to create booking", String(err));
   }
 }
 
@@ -304,20 +279,16 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   const id = request.nextUrl.searchParams.get("id");
-  if (!id) {
-    return Response.json({ error: "id parameter required" }, { status: 400 });
-  }
+  if (!id) return apiBadRequest("id parameter required");
 
   const booking = await prisma.booking.findUnique({
     where: { id },
     include: { location: true, room: true },
   });
 
-  if (!booking) {
-    return Response.json({ error: "Booking not found" }, { status: 404 });
-  }
+  if (!booking) return apiNotFound("Booking not found");
 
-  return Response.json({
+  return apiOk({
     id: booking.id,
     stayType: booking.stayType,
     location: booking.location.slug,

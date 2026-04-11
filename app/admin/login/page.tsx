@@ -21,8 +21,10 @@ export default function AdminLogin() {
         body: JSON.stringify({ password }),
       });
 
-      if (!res.ok) {
-        setError("Wrong password");
+      const body = await res.json().catch(() => null);
+      if (!res.ok || !body?.ok) {
+        // Surface server error message (could be "Wrong password" or "Too many requests")
+        setError(body?.error?.message ?? body?.error ?? "Wrong password");
         setLoading(false);
         return;
       }

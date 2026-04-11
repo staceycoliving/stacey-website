@@ -38,7 +38,12 @@ export default function Navbar({
 
   // Fetch dynamic prices for SHORT stay locations
   useEffect(() => {
-    fetch("/api/prices").then(r => r.ok ? r.json() : {}).then(setBasePrices).catch(() => {});
+    fetch("/api/prices")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((res) => {
+        if (res?.ok) setBasePrices(res.data);
+      })
+      .catch(() => {});
   }, []);
 
   useEffect(() => {

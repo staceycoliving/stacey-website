@@ -2,6 +2,8 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
 import { stripe } from "@/lib/stripe";
 import { bookingLimiter, checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
+import { reportError } from "@/lib/observability";
+import { apiOk, apiBadRequest, apiNotFound, apiServerError } from "@/lib/api-response";
 
 const BOOKING_FEE = 19500; // €195.00 in cents
 
@@ -24,16 +26,14 @@ export async function POST(request: NextRequest) {
     } = body;
 
     if (!locationName || !roomName || !email) {
-      return Response.json({ error: "Missing required fields" }, { status: 400 });
+      return apiBadRequest("Missing required fields");
     }
 
     // If bookingId provided, verify booking exists and mark as SIGNED
     // (Frontend only calls this after Yousign signature, so we trust the flow)
     if (bookingId) {
       const booking = await prisma.booking.findUnique({ where: { id: bookingId } });
-      if (!booking) {
-        return Response.json({ error: "Booking not found" }, { status: 404 });
-      }
+      if (!booking) return apiNotFound("Booking not found");
       // Mark as SIGNED if not already (handles missing Yousign webhook)
       if (booking.status === "PENDING") {
         await prisma.booking.update({
@@ -83,12 +83,9 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    return Response.json({ url: session.url });
+    return apiOk({ url: session.url });
   } catch (err) {
-    console.error("Stripe checkout error:", err);
-    return Response.json(
-      { error: "Failed to create checkout session", details: String(err) },
-      { status: 500 }
-    );
+    reportError(err, { scope: "checkout-long" });
+    return apiServerError("Failed to create checkout session", String(err));
   }
 }

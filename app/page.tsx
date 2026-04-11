@@ -43,7 +43,12 @@ export default function HomePage() {
   // Base nightly prices from apaleo (fetched once on mount)
   const [basePrices, setBasePrices] = useState<Record<string, Record<string, number>>>({});
   useEffect(() => {
-    fetch("/api/prices").then(r => r.ok ? r.json() : {}).then(setBasePrices).catch(() => {});
+    fetch("/api/prices")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((res) => {
+        if (res?.ok) setBasePrices(res.data);
+      })
+      .catch(() => {});
   }, []);
 
   const getLowestPrice = (slug: string) => {
@@ -73,9 +78,9 @@ export default function HomePage() {
     const locs = locations.filter((l) => l.stayType === "SHORT");
     const fetches = locs.map((loc) =>
       fetch(`/api/availability?location=${loc.slug}&persons=${persons}&checkIn=${checkIn}&checkOut=${checkOut}`)
-        .then((r) => r.ok ? r.json() : null)
+        .then((r) => (r.ok ? r.json() : null))
         .catch(() => null)
-        .then((data) => ({ slug: loc.slug, data }))
+        .then((res) => ({ slug: loc.slug, data: res?.ok ? res.data : null }))
     );
 
     Promise.all(fetches).then((results) => {
@@ -107,7 +112,10 @@ export default function HomePage() {
     const locs = locations.filter((l) => l.stayType === "LONG" && l.city === longCity);
     const fetchOnce = async (url: string) => {
       const res = await fetch(url);
-      if (res.ok) return res.json();
+      if (res.ok) {
+        const body = await res.json();
+        return body?.ok ? body.data : null;
+      }
       if (res.status >= 500) throw new Error(`retry ${res.status}`);
       return null;
     };

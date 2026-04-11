@@ -3,6 +3,7 @@ import { isApaleoProperty, getShortStayAvailability } from "@/lib/apaleo";
 import { stripe } from "@/lib/stripe";
 import { reportError } from "@/lib/observability";
 import { bookingLimiter, checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
+import { apiOk, apiBadRequest, apiConflict, apiServerError } from "@/lib/api-response";
 
 export async function POST(request: NextRequest) {
   const limit = await checkRateLimit(bookingLimiter, request);
@@ -33,28 +34,24 @@ export async function POST(request: NextRequest) {
     } = body;
 
     if (!slug || !category || !checkIn || !checkOut || !firstName || !lastName || !email) {
-      return Response.json({ error: "Missing required fields" }, { status: 400 });
+      return apiBadRequest("Missing required fields");
     }
 
     const nights = Math.round(
       (new Date(checkOut).getTime() - new Date(checkIn).getTime()) / 86400000
     );
-    if (nights < 5) {
-      return Response.json({ error: "Minimum stay is 5 nights" }, { status: 400 });
-    }
+    if (nights < 5) return apiBadRequest("Minimum stay is 5 nights");
 
-    if (!isApaleoProperty(slug)) {
-      return Response.json({ error: "Not an apaleo property" }, { status: 400 });
-    }
+    if (!isApaleoProperty(slug)) return apiBadRequest("Not an apaleo property");
 
     // Get pricing from apaleo
     const categories = await getShortStayAvailability(slug, checkIn, checkOut, persons || 1);
     const cat = categories.find((c: { category: string }) => c.category === category);
     if (!cat || cat.available <= 0) {
-      return Response.json({ error: "No availability" }, { status: 409 });
+      return apiConflict("NOT_AVAILABLE", "No availability");
     }
     if (!cat.grandTotal || !cat.totalGross) {
-      return Response.json({ error: "Price not available" }, { status: 500 });
+      return apiServerError("Price not available");
     }
 
     // Split: room rate (totalGross) and city tax (separate)
@@ -126,12 +123,9 @@ export async function POST(request: NextRequest) {
       cancel_url: `${origin}/move-in?payment=cancelled`,
     });
 
-    return Response.json({ url: session.url });
+    return apiOk({ url: session.url });
   } catch (err) {
     reportError(err, { scope: "checkout-short" });
-    return Response.json(
-      { error: "Failed to create checkout session", details: String(err) },
-      { status: 500 }
-    );
+    return apiServerError("Failed to create checkout session", String(err));
   }
 }

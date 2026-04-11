@@ -99,7 +99,12 @@ function MoveInFlow() {
   // Base nightly prices from apaleo (fetched once on mount)
   const [basePrices, setBasePrices] = useState<Record<string, Record<string, number>>>({});
   useEffect(() => {
-    fetch("/api/prices").then(r => r.ok ? r.json() : {}).then(setBasePrices).catch(() => {});
+    fetch("/api/prices")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((res) => {
+        if (res?.ok) setBasePrices(res.data);
+      })
+      .catch(() => {});
   }, []);
 
   // Helper: get nightly price for a room.
@@ -119,7 +124,10 @@ function MoveInFlow() {
     setLoadingAvailability(true);
     const fetchOnce = async (url: string) => {
       const res = await fetch(url);
-      if (res.ok) return res.json();
+      if (res.ok) {
+        const body = await res.json();
+        return body?.ok ? body.data : null;
+      }
       if (res.status >= 500) throw new Error(`retry ${res.status}`);
       return null;
     };
@@ -252,8 +260,9 @@ function MoveInFlow() {
         if (!r.ok) throw new Error(`API ${r.status}`);
         return r.json();
       })
-      .then(data => {
+      .then(body => {
         if (cancelled) return;
+        const data = body?.ok ? body.data : null;
         const found = data?.categories?.find((c: { category: string }) => c.category === cat);
         if (found?.grandTotal) {
           setSelectedRoomPricing({
@@ -449,9 +458,9 @@ function MoveInFlow() {
         // LONG Stay: Booking fee paid → fetch booking data and show confirmation
         fetch(`/api/booking?id=${bookingId}`)
           .then(async (r) => {
-            const data = await r.json();
-            if (!r.ok) throw new Error(data?.error || "Failed to load booking");
-            return data;
+            const body = await r.json();
+            if (!body?.ok) throw new Error(body?.error?.message || "Failed to load booking");
+            return body.data;
           })
           .then((data) => {
             setStayType("LONG");
@@ -484,9 +493,9 @@ function MoveInFlow() {
           body: JSON.stringify({ sessionId }),
         })
           .then(async (r) => {
-            const data = await r.json();
-            if (!r.ok) throw new Error(data?.details || data?.error || `Confirm failed (${r.status})`);
-            return data;
+            const body = await r.json();
+            if (!body?.ok) throw new Error(body?.error?.message || `Confirm failed (${r.status})`);
+            return body.data;
           })
           .then((data) => {
             setStayType("SHORT");
@@ -595,15 +604,16 @@ function MoveInFlow() {
             message,
           }),
         });
-        const bookingData = await bookingRes.json();
-        if (!bookingRes.ok) {
+        const bookingBody = await bookingRes.json();
+        if (!bookingBody?.ok) {
           if (bookingRes.status === 409) {
             alert("Sorry, this room type is no longer available. Please try a different category.");
             setSubmitting(false);
             return;
           }
-          throw new Error(bookingData.error || "Booking failed");
+          throw new Error(bookingBody?.error?.message || "Booking failed");
         }
+        const bookingData = bookingBody.data;
 
         setBookingId(bookingData.id);
 
@@ -628,8 +638,9 @@ function MoveInFlow() {
             moveInDate,
           }),
         });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "Failed to generate lease");
+        const leaseBody = await res.json();
+        if (!leaseBody?.ok) throw new Error(leaseBody?.error?.message || "Failed to generate lease");
+        const data = leaseBody.data;
 
         setSigningUrl(data.signingUrl || null);
         setSignatureRequestId(data.signatureRequestId || null);
@@ -675,18 +686,18 @@ function MoveInFlow() {
           roomName: selectedRoom.name,
         }),
       });
-      const data = await res.json();
-      if (!res.ok) {
+      const body = await res.json();
+      if (!body?.ok) {
         if (res.status === 409) {
           alert("Sorry, this room type is no longer available for your dates. Please try a different category or dates.");
         } else {
-          throw new Error(data.error || "Checkout failed");
+          throw new Error(body?.error?.message || "Checkout failed");
         }
         setSubmitting(false);
         return;
       }
       // Redirect to Stripe
-      window.location.href = data.url;
+      window.location.href = body.data.url;
     } catch (err) {
       console.error("Checkout failed:", err);
       alert("Something went wrong. Please try again.");
@@ -713,10 +724,10 @@ function MoveInFlow() {
           email,
         }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
+      const body = await res.json();
+      if (!body?.ok) throw new Error(body?.error?.message || "Checkout failed");
       // Redirect to Stripe hosted checkout
-      window.location.href = data.url;
+      window.location.href = body.data.url;
     } catch (err) {
       console.error("Checkout failed:", err);
       alert("Payment setup failed. Please try again.");
