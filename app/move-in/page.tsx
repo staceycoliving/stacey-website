@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState, useEffect, useRef, useCallback } from "react";
+import { Suspense, useState, useRef, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -29,8 +29,11 @@ import {
   ROOM_NAME_TO_CATEGORY,
   formatMoveInLabel,
 } from "@/lib/data";
-import type { Location, Room, StayType } from "@/lib/data";
+import type { StayType } from "@/lib/data";
 import { expandMoveInDates, isMoveInDateBookable, filterRoomsForPersons } from "@/lib/availability";
+import { useAvailability } from "./_hooks/useAvailability";
+import { useRoomPricing } from "./_hooks/useRoomPricing";
+import { usePaymentConfirmation } from "./_hooks/usePaymentConfirmation";
 
 // ─── Main export ───
 export default function MoveInPage() {
@@ -75,8 +78,6 @@ function MoveInFlow() {
   const [country, setCountry] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const [confirmingPayment, setConfirmingPayment] = useState(false);
-  const [confirmError, setConfirmError] = useState<string | null>(null);
   // Lease signing (LONG only)
   const [showLease, setShowLease] = useState(false);
   const [signingUrl, setSigningUrl] = useState<string | null>(null);
@@ -87,25 +88,17 @@ function MoveInFlow() {
   // Refs
   const resultsRef = useRef<HTMLDivElement>(null);
   const aboutRef = useRef<HTMLDivElement>(null);
-  const paymentProcessedRef = useRef(false);
   const leaseRef = useRef<HTMLDivElement>(null);
-  const initialResetDoneRef = useRef(false);
 
-  // ─── Availability from DB ───
-  type AvailabilityMap = Record<string, Record<string, { available: number; total: number; moveInDates?: string[]; pricePerNight?: number | null; totalGross?: number | null; vatAmount?: number | null; vatPercent?: number | null; cityTaxTotal?: number | null; grandTotal?: number | null }>>;
-  const [availability, setAvailability] = useState<AvailabilityMap>({});
-  const [loadingAvailability, setLoadingAvailability] = useState(false);
-
-  // Base nightly prices from apaleo (fetched once on mount)
-  const [basePrices, setBasePrices] = useState<Record<string, Record<string, number>>>({});
-  useEffect(() => {
-    fetch("/api/prices")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((res) => {
-        if (res?.ok) setBasePrices(res.data);
-      })
-      .catch(() => {});
-  }, []);
+  // ─── Availability + base prices (single hook) ───
+  const { availability, loadingAvailability, basePrices } = useAvailability({
+    stayType,
+    persons,
+    city,
+    checkIn,
+    checkOut,
+    showResults,
+  });
 
   // Helper: get nightly price for a room.
   // Once live availability has loaded for the location, only use the live (persons-aware)
@@ -117,85 +110,6 @@ function MoveInFlow() {
     if (liveLoaded) return availability[locSlug]?.[cat]?.pricePerNight ?? null;
     return basePrices[locSlug]?.[cat] ?? null;
   };
-
-  // Fetch availability from DB. Retries once on 5xx to ride out Vercel cold starts
-  // / transient Supabase pool issues that would otherwise leave the UI empty.
-  const fetchAvailability = useCallback((locs: Location[], opts?: { ci?: string; co?: string }) => {
-    setLoadingAvailability(true);
-    const fetchOnce = async (url: string) => {
-      const res = await fetch(url);
-      if (res.ok) {
-        const body = await res.json();
-        return body?.ok ? body.data : null;
-      }
-      if (res.status >= 500) throw new Error(`retry ${res.status}`);
-      return null;
-    };
-    const fetches = locs.map(async (loc) => {
-      const params = new URLSearchParams({ location: loc.slug, persons: String(persons) });
-      if (loc.stayType === "SHORT" && opts?.ci && opts?.co) {
-        params.set("checkIn", opts.ci);
-        params.set("checkOut", opts.co);
-      }
-      const url = `/api/availability?${params}`;
-      try {
-        return { slug: loc.slug, stayType: loc.stayType, data: await fetchOnce(url) };
-      } catch {
-        // Retry once after a short delay
-        await new Promise((r) => setTimeout(r, 600));
-        try {
-          return { slug: loc.slug, stayType: loc.stayType, data: await fetchOnce(url) };
-        } catch {
-          return { slug: loc.slug, stayType: loc.stayType, data: null };
-        }
-      }
-    });
-
-    Promise.all(fetches).then((results) => {
-      const map: AvailabilityMap = {};
-      results.forEach(({ slug, stayType: locStayType, data }) => {
-        if (!data?.categories) {
-          // SHORT failure → insert empty entry so the display shows "Sold out" instead
-          // of falling back to 1-person basePrices.
-          // LONG failure → leave the slot empty so the next fetch (e.g. on city change)
-          // can retry without a stale empty cache hiding the move-in date dropdown.
-          if (locStayType === "SHORT") map[slug] = {};
-          return;
-        }
-        const catMap: Record<string, { available: number; total: number; moveInDates?: string[]; pricePerNight?: number | null; totalGross?: number | null; vatAmount?: number | null; vatPercent?: number | null; cityTaxTotal?: number | null; grandTotal?: number | null }> = {};
-        for (const cat of data.categories) {
-          catMap[cat.category] = {
-            available: cat.available ?? cat.freeNow ?? 0,
-            total: cat.total,
-            moveInDates: cat.moveInDates,
-            pricePerNight: cat.pricePerNight ?? null,
-            totalGross: cat.totalGross ?? null,
-            vatAmount: cat.vatAmount ?? null,
-            vatPercent: cat.vatPercent ?? null,
-            cityTaxTotal: cat.cityTaxTotal ?? null,
-            grandTotal: cat.grandTotal ?? null,
-          };
-        }
-        map[slug] = catMap;
-      });
-      setAvailability(map);
-      setLoadingAvailability(false);
-    });
-  }, [persons]);
-
-  // SHORT stay: fetch when search results are shown
-  useEffect(() => {
-    if (stayType !== "SHORT" || !showResults || !checkIn || !checkOut) return;
-    const locs = locations.filter((l) => l.stayType === "SHORT");
-    fetchAvailability(locs, { ci: checkIn, co: checkOut });
-  }, [stayType, persons, checkIn, checkOut, showResults, fetchAvailability]);
-
-  // LONG stay: fetch as soon as city is selected (before showResults)
-  useEffect(() => {
-    if (stayType !== "LONG" || !city) return;
-    const locs = locations.filter((l) => l.stayType === "LONG" && l.city === city);
-    if (locs.length > 0) fetchAvailability(locs);
-  }, [stayType, persons, city, fetchAvailability]);
 
   // LONG stay: build move-in dropdown options from API data using the shared
   // 14-day flexibility expansion helper.
@@ -219,71 +133,16 @@ function MoveInFlow() {
   const selectedRoom = selectedRoomId ? getRoomById(selectedRoomId) ?? null : null;
   const selectedLocation = selectedRoomId ? getLocationByRoomId(selectedRoomId) ?? null : null;
 
-  // Fetch pricing when SHORT stay room is selected
-  type PricingState = { totalGross: number; netAmount: number; vatAmount: number; vatPercent: number; cityTaxTotal: number; grandTotal: number; perNight: number } | null;
-  const [selectedRoomPricing, setSelectedRoomPricing] = useState<PricingState>(null);
-  const [pricingLoading, setPricingLoading] = useState(false);
-  const locSlug = selectedLocation?.slug ?? null;
-  const roomName = selectedRoom?.name ?? null;
-  useEffect(() => {
-    if (stayType !== "SHORT" || !locSlug || !roomName || !checkIn || !checkOut) {
-      setSelectedRoomPricing(null);
-      setPricingLoading(false);
-      return;
-    }
-    const cat = ROOM_NAME_TO_CATEGORY[roomName];
-    if (!cat) return;
-    const nights = Math.round((new Date(checkOut).getTime() - new Date(checkIn).getTime()) / 86400000);
-
-    // Already have pricing from availability state?
-    const existing = availability[locSlug]?.[cat];
-    if (existing?.grandTotal) {
-      setSelectedRoomPricing({
-        totalGross: existing.totalGross!,
-        netAmount: existing.vatAmount ? existing.totalGross! - existing.vatAmount! : existing.totalGross!,
-        vatAmount: existing.vatAmount!,
-        vatPercent: existing.vatPercent!,
-        cityTaxTotal: existing.cityTaxTotal!,
-        grandTotal: existing.grandTotal!,
-        perNight: existing.pricePerNight!,
-      });
-      setPricingLoading(false);
-      return;
-    }
-
-    // Fetch from API
-    let cancelled = false;
-    setPricingLoading(true);
-    setSelectedRoomPricing(null);
-    fetch(`/api/availability?location=${locSlug}&checkIn=${checkIn}&checkOut=${checkOut}&persons=${persons}`)
-      .then(r => {
-        if (!r.ok) throw new Error(`API ${r.status}`);
-        return r.json();
-      })
-      .then(body => {
-        if (cancelled) return;
-        const data = body?.ok ? body.data : null;
-        const found = data?.categories?.find((c: { category: string }) => c.category === cat);
-        if (found?.grandTotal) {
-          setSelectedRoomPricing({
-            totalGross: found.totalGross,
-            netAmount: found.netAmount,
-            vatAmount: found.vatAmount,
-            vatPercent: found.vatPercent,
-            cityTaxTotal: found.cityTaxTotal,
-            grandTotal: found.grandTotal,
-            perNight: found.pricePerNight,
-          });
-        }
-        setPricingLoading(false);
-      })
-      .catch((err) => {
-        if (cancelled) return;
-        console.error("Pricing fetch failed:", err);
-        setPricingLoading(false);
-      });
-    return () => { cancelled = true; };
-  }, [stayType, locSlug, roomName, checkIn, checkOut, persons, availability]);
+  // Fetch pricing when a SHORT stay room is selected
+  const { selectedRoomPricing, pricingLoading } = useRoomPricing({
+    stayType,
+    locSlug: selectedLocation?.slug ?? null,
+    roomName: selectedRoom?.name ?? null,
+    checkIn,
+    checkOut,
+    persons,
+    availability,
+  });
 
   // Helper: get availability count for a room at a location
   const hasAvailabilityData = Object.keys(availability).length > 0;
@@ -408,145 +267,32 @@ function MoveInFlow() {
     setTimeout(() => resultsRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
   };
 
-  // ─── Smart skip from URL params / reset on fresh visit ───
-  useEffect(() => {
-    const paramRoom = searchParams.get("room");
-    const paramDate = searchParams.get("date");
-    const paramCheckIn = searchParams.get("checkin");
-    const paramCheckOut = searchParams.get("checkout");
-    const paramPersons = searchParams.get("persons");
-    const paymentStatus = searchParams.get("payment");
-
-    // No URL params → fresh visit, reset everything (only on initial mount)
-    if (!paramRoom && !paymentStatus && !paymentProcessedRef.current && !initialResetDoneRef.current) {
-      initialResetDoneRef.current = true;
-      setStayType(null);
-      setPersons(1);
-      setCity("");
-      setCheckIn(null);
-      setCheckOut(null);
-      setMoveInDate(null);
-      setShowResults(false);
-      setSelectedRoomId(null);
-      setRoomCollapsed(false);
-      setFirstName("");
-      setLastName("");
-      setEmail("");
-      setPhone("");
-      setDateOfBirth("");
-      setStreet("");
-      setZipCode("");
-      setAddressCity("");
-      setCountry("");
-      setMoveInReason("");
-      setMessage("");
-      setTermsAccepted(false);
-      setSubmitted(false);
-      setSubmitting(false);
-      return;
-    }
-
-    // Handle Stripe redirect
-    const sessionId = searchParams.get("session_id");
-    const bookingId = searchParams.get("booking_id");
-    if (paymentStatus === "success") {
-      paymentProcessedRef.current = true;
-      setConfirmingPayment(true);
-      setConfirmError(null);
-
-      if (bookingId) {
-        // LONG Stay: Booking fee paid → fetch booking data and show confirmation
-        fetch(`/api/booking?id=${bookingId}`)
-          .then(async (r) => {
-            const body = await r.json();
-            if (!body?.ok) throw new Error(body?.error?.message || "Failed to load booking");
-            return body.data;
-          })
-          .then((data) => {
-            setStayType("LONG");
-            setFirstName(data.firstName || "");
-            setPersons(data.persons || 1);
-            setMoveInDate(data.moveInDate || "");
-            const loc = locations.find((l) => l.slug === data.location);
-            if (loc) {
-              setCity(loc.city);
-              const room = loc.rooms.find((r) => ROOM_NAME_TO_CATEGORY[r.name] === data.category);
-              if (room) setSelectedRoomId(room.id);
-            }
-            setSubmitted(true);
-            setConfirmingPayment(false);
-            window.history.replaceState({}, "", "/move-in");
-          })
-          .catch((err) => {
-            console.error("Booking load error:", err);
-            // Still show confirmation even if fetch fails
-            setStayType("LONG");
-            setSubmitted(true);
-            setConfirmingPayment(false);
-            window.history.replaceState({}, "", "/move-in");
-          });
-      } else if (sessionId) {
-        // SHORT Stay: confirm via apaleo
-        fetch("/api/checkout/short/confirm", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ sessionId }),
-        })
-          .then(async (r) => {
-            const body = await r.json();
-            if (!body?.ok) throw new Error(body?.error?.message || `Confirm failed (${r.status})`);
-            return body.data;
-          })
-          .then((data) => {
-            setStayType("SHORT");
-            setFirstName(data.firstName || "");
-            setPersons(data.persons || 1);
-            setCheckIn(data.checkIn || null);
-            setCheckOut(data.checkOut || null);
-            const loc = locations.find((l) => l.slug === data.slug);
-            if (loc) {
-              setCity(loc.city);
-              const room = loc.rooms.find((r) => ROOM_NAME_TO_CATEGORY[r.name] === data.category);
-              if (room) setSelectedRoomId(room.id);
-            }
-            setSubmitted(true);
-            setConfirmingPayment(false);
-            window.history.replaceState({}, "", "/move-in");
-          })
-          .catch((err) => {
-            console.error("Booking confirm error:", err);
-            setConfirmError(String(err));
-            window.history.replaceState({}, "", "/move-in");
-            setConfirmingPayment(false);
-          });
-      } else {
-        setConfirmError("No session ID or booking ID in URL");
-        setConfirmingPayment(false);
-      }
-      return;
-    }
-
-    if (paramRoom) {
-      const foundRoom = getRoomById(paramRoom);
-      const foundLoc = getLocationByRoomId(paramRoom);
-      if (foundRoom && foundLoc) {
-        setStayType(foundLoc.stayType);
-        setPersons(paramPersons === "2" ? 2 : 1);
-        setCity(foundLoc.city);
-        setSelectedRoomId(paramRoom);
-
-        if (paramCheckIn && paramCheckOut) {
-          setCheckIn(paramCheckIn);
-          setCheckOut(paramCheckOut);
-        } else if (paramDate) {
-          setMoveInDate(paramDate);
-        }
-
-        setShowResults(true);
-        setRoomCollapsed(true);
-      }
-    }
-  }, [searchParams]);
+  // ─── Smart skip from URL params / reset on fresh visit / Stripe redirect ───
+  const { confirmingPayment, confirmError } = usePaymentConfirmation(searchParams, {
+    setStayType,
+    setPersons,
+    setCity,
+    setCheckIn,
+    setCheckOut,
+    setMoveInDate,
+    setShowResults,
+    setSelectedRoomId,
+    setRoomCollapsed,
+    setFirstName,
+    setLastName,
+    setEmail,
+    setPhone,
+    setDateOfBirth,
+    setStreet,
+    setZipCode,
+    setAddressCity,
+    setCountry,
+    setMoveInReason,
+    setMessage,
+    setTermsAccepted,
+    setSubmitted,
+    setSubmitting,
+  });
 
   // ─── Scroll helper ───
   const scrollTo = useCallback((ref: React.RefObject<HTMLDivElement | null>) => {
