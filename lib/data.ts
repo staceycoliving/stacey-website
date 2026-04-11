@@ -68,6 +68,14 @@ export const locations: Location[] = [
       loc("muehlenkamp", "community", "04-muehlenkamp.webp"),
       loc("muehlenkamp", "community", "05-muehlenkamp.webp"),
       loc("muehlenkamp", "community", "06-muehlenkamp.webp"),
+      loc("muehlenkamp", "community", "07-muehlenkamp.webp"),
+      loc("muehlenkamp", "community", "08-muehlenkamp.webp"),
+      loc("muehlenkamp", "community", "09-muehlenkamp.webp"),
+      loc("muehlenkamp", "community", "10-muehlenkamp.webp"),
+      loc("muehlenkamp", "community", "11-muehlenkamp.webp"),
+      loc("muehlenkamp", "community", "12-muehlenkamp.webp"),
+      loc("muehlenkamp", "community", "13-muehlenkamp.webp"),
+      loc("muehlenkamp", "community", "14-muehlenkamp.webp"),
     ],
     rooms: [
       {
@@ -197,6 +205,10 @@ export const locations: Location[] = [
       loc("eppendorf", "community", "004-community-ew.webp"),
       loc("eppendorf", "community", "005-community-ew.webp"),
       loc("eppendorf", "community", "006-community-ew.webp"),
+      loc("eppendorf", "community", "007-community-ew.webp"),
+      loc("eppendorf", "community", "008-community-ew.webp"),
+      loc("eppendorf", "community", "009-community-ew.webp"),
+      loc("eppendorf", "community", "010-community-ew.webp"),
     ],
     rooms: [
       {
@@ -208,6 +220,12 @@ export const locations: Location[] = [
         description: "A cozy room with everything you need for a great stay.",
         interior: "Bed, Nightstand, Floor lamp, Wardrobe, Hangers, Artwork, Bedding",
         image: loc("eppendorf", "mighty", "001-mighty-ew.webp"),
+        images: [
+          loc("eppendorf", "mighty", "001-mighty-ew.webp"),
+          loc("eppendorf", "mighty", "002-mighty-ew.webp"),
+          loc("eppendorf", "mighty", "003-mighty-ew.webp"),
+          loc("eppendorf", "mighty", "004-mighty-ew.webp"),
+        ],
       },
       {
         id: "eppendorf-premium",
@@ -218,6 +236,12 @@ export const locations: Location[] = [
         description: "More space, more style — our Premium suite in Eppendorf.",
         interior: "Double bed, Nightstand, Desk, Chair, Armchair, Floor lamp, Wardrobe, Bedding",
         image: loc("eppendorf", "premium-balcony", "001-premium-ew.webp"),
+        images: [
+          loc("eppendorf", "premium-balcony", "001-premium-ew.webp"),
+          loc("eppendorf", "premium-balcony", "002-premium-ew.webp"),
+          loc("eppendorf", "premium-balcony", "003-premium-ew.webp"),
+          loc("eppendorf", "premium-balcony", "004-premium-ew.webp"),
+        ],
       },
       {
         id: "eppendorf-premium-balcony",
@@ -228,6 +252,12 @@ export const locations: Location[] = [
         description: "Your own Premium suite with a private balcony in Eppendorf.",
         interior: "Double bed, Nightstand, Desk, Chair, Armchair, Floor lamp, Wardrobe, Bedding",
         image: loc("eppendorf", "premium-balcony", "001-premium-ew.webp"),
+        images: [
+          loc("eppendorf", "premium-balcony", "001-premium-ew.webp"),
+          loc("eppendorf", "premium-balcony", "002-premium-ew.webp"),
+          loc("eppendorf", "premium-balcony", "003-premium-ew.webp"),
+          loc("eppendorf", "premium-balcony", "004-premium-ew.webp"),
+        ],
       },
       {
         id: "eppendorf-premium-plus",
@@ -238,6 +268,12 @@ export const locations: Location[] = [
         description: "Extra space in one of Hamburg's most beautiful neighborhoods.",
         interior: "Double bed, Nightstand, Desk, Chair, Armchair, Floor lamp, Wardrobe, Bedding",
         image: loc("eppendorf", "premium-plus-balcony", "001-premium-plus-ew.webp"),
+        images: [
+          loc("eppendorf", "premium-plus-balcony", "001-premium-plus-ew.webp"),
+          loc("eppendorf", "premium-plus-balcony", "002-premium-plus-ew.webp"),
+          loc("eppendorf", "premium-plus-balcony", "003-premium-plus-ew.webp"),
+          loc("eppendorf", "premium-plus-balcony", "004-premium-plus-ew.webp"),
+        ],
       },
       {
         id: "eppendorf-premium-plus-balcony",
@@ -248,6 +284,12 @@ export const locations: Location[] = [
         description: "Our Premium+ with a private balcony — the best of Eppendorf.",
         interior: "Double bed, Nightstand, Desk, Chair, Armchair, Floor lamp, Wardrobe, Bedding",
         image: loc("eppendorf", "premium-plus-balcony", "001-premium-plus-ew.webp"),
+        images: [
+          loc("eppendorf", "premium-plus-balcony", "001-premium-plus-ew.webp"),
+          loc("eppendorf", "premium-plus-balcony", "002-premium-plus-ew.webp"),
+          loc("eppendorf", "premium-plus-balcony", "003-premium-plus-ew.webp"),
+          loc("eppendorf", "premium-plus-balcony", "004-premium-plus-ew.webp"),
+        ],
       },
       {
         id: "eppendorf-jumbo",
@@ -258,6 +300,13 @@ export const locations: Location[] = [
         description: "Our largest suite in Eppendorf — perfect for singles and couples.",
         interior: "Queen-size bed, Nightstand, Desk, Chair, Armchair, Floor lamp, Walk-in closet, Bedding",
         image: loc("eppendorf", "jumbo", "001-jumbo-ew.webp"),
+        images: [
+          loc("eppendorf", "jumbo", "001-jumbo-ew.webp"),
+          loc("eppendorf", "jumbo", "002-jumbo-ew.webp"),
+          loc("eppendorf", "jumbo", "003-jumbo-ew.webp"),
+          loc("eppendorf", "jumbo", "004-jumbo-ew.webp"),
+          loc("eppendorf", "jumbo", "005-jumbo-ew.webp"),
+        ],
       },
       {
         id: "eppendorf-jumbo-balcony",
@@ -268,6 +317,13 @@ export const locations: Location[] = [
         description: "The biggest suite with a balcony — the ultimate Eppendorf experience.",
         interior: "Queen-size bed, Nightstand, Desk, Chair, Armchair, Floor lamp, Walk-in closet, Bedding",
         image: loc("eppendorf", "jumbo-balcony", "001-jumbo-balcony-ew.webp"),
+        images: [
+          loc("eppendorf", "jumbo-balcony", "001-jumbo-balcony-ew.webp"),
+          loc("eppendorf", "jumbo-balcony", "002-jumbo-balcony-ew.webp"),
+          loc("eppendorf", "jumbo-balcony", "003-jumbo-balcony-ew.webp"),
+          loc("eppendorf", "jumbo-balcony", "004-jumbo-balcony-ew.webp"),
+          loc("eppendorf", "jumbo-balcony", "005-jumbo-balcony-ew.webp"),
+        ],
       },
     ],
     nearbyLocationSlugs: ["muehlenkamp", "eimsbuettel"],
@@ -301,6 +357,11 @@ export const locations: Location[] = [
       loc("downtown", "community", "003-community-dt.webp"),
       loc("downtown", "community", "004-community-dt.webp"),
       loc("downtown", "community", "005-community-dt.webp"),
+      loc("downtown", "community", "006-community-dt.webp"),
+      loc("downtown", "community", "007-community-dt.webp"),
+      loc("downtown", "community", "008-community-dt.webp"),
+      loc("downtown", "community", "010-community-dt.webp"),
+      loc("downtown", "community", "011-community-dt.webp"),
     ],
     rooms: [
       {
@@ -313,6 +374,11 @@ export const locations: Location[] = [
         interior:
           "Double bed, Nightstand, Desk, Chair, Wardrobe, Bedding",
         image: loc("downtown", "mighty", "001-mighty-dt.webp"),
+        images: [
+          loc("downtown", "mighty", "001-mighty-dt.webp"),
+          loc("downtown", "mighty", "002-mighty-dt.webp"),
+          loc("downtown", "mighty", "003-mighty-dt.webp"),
+        ],
       },
       {
         id: "downtown-premium",
@@ -324,6 +390,12 @@ export const locations: Location[] = [
         interior:
           "Double bed, Nightstand, Desk, Chair, Wardrobe, Bedding",
         image: loc("downtown", "premium", "001-premium-dt.webp"),
+        images: [
+          loc("downtown", "premium", "001-premium-dt.webp"),
+          loc("downtown", "premium", "002-premium-dt.webp"),
+          loc("downtown", "premium", "003-premium-dt.webp"),
+          loc("downtown", "premium", "004-premium-dt.webp"),
+        ],
       },
       {
         id: "downtown-premium-balcony",
@@ -335,6 +407,12 @@ export const locations: Location[] = [
         interior:
           "Double bed, Nightstand, Desk, Chair, Wardrobe, Bedding",
         image: loc("downtown", "premium", "001-premium-dt.webp"),
+        images: [
+          loc("downtown", "premium", "001-premium-dt.webp"),
+          loc("downtown", "premium", "002-premium-dt.webp"),
+          loc("downtown", "premium", "003-premium-dt.webp"),
+          loc("downtown", "premium", "004-premium-dt.webp"),
+        ],
       },
       {
         id: "downtown-premium-plus",
@@ -346,6 +424,12 @@ export const locations: Location[] = [
         interior:
           "Double bed, Nightstand, Desk, Chair, Armchair, Wardrobe, Mirror, Bedding",
         image: loc("downtown", "premium-plus", "001-premium-plus-dt.webp"),
+        images: [
+          loc("downtown", "premium-plus", "001-premium-plus-dt.webp"),
+          loc("downtown", "premium-plus", "002-premium-plus-dt.webp"),
+          loc("downtown", "premium-plus", "003-premium-plus-dt.webp"),
+          loc("downtown", "premium-plus", "004-premium-plus-dt.webp"),
+        ],
       },
       {
         id: "downtown-jumbo",
@@ -357,6 +441,14 @@ export const locations: Location[] = [
         interior:
           "Double bed, Nightstand, Desk, Chair, Armchair, Wardrobe, Mirror, Bedding",
         image: loc("downtown", "jumbo", "001-jumbo-dt.webp"),
+        images: [
+          loc("downtown", "jumbo", "001-jumbo-dt.webp"),
+          loc("downtown", "jumbo", "002-jumbo-dt.webp"),
+          loc("downtown", "jumbo", "003-jumbo-dt.webp"),
+          loc("downtown", "jumbo", "004-jumbo-dt.webp"),
+          loc("downtown", "jumbo", "005-jumbo-dt.webp"),
+          loc("downtown", "jumbo", "006-jumbo-dt.webp"),
+        ],
       },
     ],
     nearbyLocationSlugs: ["alster", "st-pauli"],
@@ -389,6 +481,14 @@ export const locations: Location[] = [
       loc("alster", "community", "04-community-al.webp"),
       loc("alster", "community", "05-community-al.webp"),
       loc("alster", "community", "06-community-al.webp"),
+      loc("alster", "community", "07-community-al.webp"),
+      loc("alster", "community", "08-community-al.webp"),
+      loc("alster", "community", "09-community-al.webp"),
+      loc("alster", "community", "010-community-al.webp"),
+      loc("alster", "community", "011-community-al.webp"),
+      loc("alster", "community", "012-community-al.webp"),
+      loc("alster", "community", "013-community-al.webp"),
+      loc("alster", "community", "014-community-al.webp"),
     ],
     rooms: [
       {
@@ -401,6 +501,12 @@ export const locations: Location[] = [
         interior:
           "Double bed, Nightstand, Desk, Chair, Wardrobe, Bedding",
         image: loc("alster", "premium", "01-premium-al.webp"),
+        images: [
+          loc("alster", "premium", "01-premium-al.webp"),
+          loc("alster", "premium", "02-premium-al.webp"),
+          loc("alster", "premium", "03-premium-al.webp"),
+          loc("alster", "premium", "04-premium-al.webp"),
+        ],
       },
       {
         id: "alster-premium-balcony",
@@ -412,6 +518,11 @@ export const locations: Location[] = [
         interior:
           "Double bed, Nightstand, Desk, Chair, Wardrobe, Bedding",
         image: loc("alster", "premium-balcony", "01-premium-balcony-al.webp"),
+        images: [
+          loc("alster", "premium-balcony", "01-premium-balcony-al.webp"),
+          loc("alster", "premium-balcony", "02-premium-balcony-al.webp"),
+          loc("alster", "premium-balcony", "03-premium-balcony-al.webp"),
+        ],
       },
       {
         id: "alster-premium-plus",
@@ -423,6 +534,13 @@ export const locations: Location[] = [
         interior:
           "Double bed, Nightstand, Desk, Chair, Armchair, Wardrobe, Mirror, Bedding",
         image: loc("alster", "premium-plus", "01-premium-plus-al.webp"),
+        images: [
+          loc("alster", "premium-plus", "01-premium-plus-al.webp"),
+          loc("alster", "premium-plus", "02-premium-plus-al.webp"),
+          loc("alster", "premium-plus", "03-premium-plus-al.webp"),
+          loc("alster", "premium-plus", "04-premium-plus-al.webp"),
+          loc("alster", "premium-plus", "05-premium-plus-al.webp"),
+        ],
       },
       {
         id: "alster-premium-plus-balcony",
@@ -434,6 +552,12 @@ export const locations: Location[] = [
         interior:
           "Double bed, Nightstand, Desk, Chair, Armchair, Wardrobe, Mirror, Bedding",
         image: loc("alster", "premium-plus-balcony", "01-premium-plus-balcony-al.webp"),
+        images: [
+          loc("alster", "premium-plus-balcony", "01-premium-plus-balcony-al.webp"),
+          loc("alster", "premium-plus-balcony", "02-premium-plus-balcony-al.webp"),
+          loc("alster", "premium-plus-balcony", "03-premium-plus-balcony-al.webp"),
+          loc("alster", "premium-plus-balcony", "04-premium-plus-balcony-al.webp"),
+        ],
       },
       {
         id: "alster-jumbo",
@@ -445,6 +569,13 @@ export const locations: Location[] = [
         interior:
           "Double bed, Nightstand, Desk, Chair, Armchair, Wardrobe, Mirror, Bedding",
         image: loc("alster", "premium-plus", "01-premium-plus-al.webp"),
+        images: [
+          loc("alster", "premium-plus", "01-premium-plus-al.webp"),
+          loc("alster", "premium-plus", "02-premium-plus-al.webp"),
+          loc("alster", "premium-plus", "03-premium-plus-al.webp"),
+          loc("alster", "premium-plus", "04-premium-plus-al.webp"),
+          loc("alster", "premium-plus", "05-premium-plus-al.webp"),
+        ],
       },
     ],
     nearbyLocationSlugs: ["downtown", "muehlenkamp"],
@@ -477,6 +608,7 @@ export const locations: Location[] = [
       loc("st-pauli", "community", "004-community-sp.webp"),
       loc("st-pauli", "community", "005-community-sp.webp"),
       loc("st-pauli", "community", "006-community-sp.webp"),
+      loc("st-pauli", "community", "007-community-sp.webp"),
     ],
     rooms: [
       {
@@ -488,6 +620,13 @@ export const locations: Location[] = [
         description: "Your room in Hamburg's most vibrant neighborhood.",
         interior: "Double bed, Nightstand, Armchair, Wardrobe, Bedding",
         image: loc("st-pauli", "mighty", "001-mighty-sp.webp"),
+        images: [
+          loc("st-pauli", "mighty", "001-mighty-sp.webp"),
+          loc("st-pauli", "mighty", "002-mighty-sp.webp"),
+          loc("st-pauli", "mighty", "003-mighty-sp.webp"),
+          loc("st-pauli", "mighty", "004-mighty-sp.webp"),
+          loc("st-pauli", "mighty", "005-mighty-sp.webp"),
+        ],
       },
       {
         id: "st-pauli-premium",
@@ -498,6 +637,14 @@ export const locations: Location[] = [
         description: "More space in the heart of St. Pauli.",
         interior: "Double bed, Nightstand, Desk, Chair, Wardrobe, Mirror, Bedding",
         image: loc("st-pauli", "premium", "001-premium-sp.webp"),
+        images: [
+          loc("st-pauli", "premium", "001-premium-sp.webp"),
+          loc("st-pauli", "premium", "002-premium-sp.webp"),
+          loc("st-pauli", "premium", "003-premium-sp.webp"),
+          loc("st-pauli", "premium", "004-premium-sp.webp"),
+          loc("st-pauli", "premium", "005-premium-sp.webp"),
+          loc("st-pauli", "premium", "006-premium-sp.webp"),
+        ],
       },
       {
         id: "st-pauli-premium-plus",
@@ -508,6 +655,12 @@ export const locations: Location[] = [
         description: "Extra space in St. Pauli for those who want room to breathe.",
         interior: "Double bed, Nightstand, Desk, Chair, Armchair, Wardrobe, Mirror, Bedding",
         image: loc("st-pauli", "premium-plus", "001-premium-plus-sp.webp"),
+        images: [
+          loc("st-pauli", "premium-plus", "001-premium-plus-sp.webp"),
+          loc("st-pauli", "premium-plus", "002-premium-plus-sp.webp"),
+          loc("st-pauli", "premium-plus", "003-premium-plus-sp.webp"),
+          loc("st-pauli", "premium-plus", "004-premium-plus-sp.webp"),
+        ],
       },
       {
         id: "st-pauli-jumbo",
@@ -518,6 +671,13 @@ export const locations: Location[] = [
         description: "The biggest suite at St. Pauli — for singles and couples who want it all.",
         interior: "Double bed, Nightstand, Desk, Chair, Armchair, Wardrobe, Mirror, Bedding",
         image: loc("st-pauli", "jumbo", "001-jumbo-sp.webp"),
+        images: [
+          loc("st-pauli", "jumbo", "001-jumbo-sp.webp"),
+          loc("st-pauli", "jumbo", "002-jumbo-sp.webp"),
+          loc("st-pauli", "jumbo", "003-jumbo-sp.webp"),
+          loc("st-pauli", "jumbo", "004-jumbo-sp.webp"),
+          loc("st-pauli", "jumbo", "005-jumbo-sp.webp"),
+        ],
       },
     ],
     nearbyLocationSlugs: ["downtown", "eimsbuettel"],
@@ -550,6 +710,8 @@ export const locations: Location[] = [
       loc("eimsbuettel", "community", "004-community-ei.webp"),
       loc("eimsbuettel", "community", "005-community-ei.webp"),
       loc("eimsbuettel", "community", "006-community-ei.webp"),
+      loc("eimsbuettel", "community", "007-community-ei.webp"),
+      loc("eimsbuettel", "community", "008-community-ei.webp"),
     ],
     rooms: [
       {
@@ -561,6 +723,10 @@ export const locations: Location[] = [
         description: "A smart, compact room in Hamburg's trendiest neighborhood.",
         interior: "Bed, Nightstand, Wardrobe, Hangers, Bedding",
         image: loc("eimsbuettel", "basic-plus", "202406-stacey-eimsbuttel-38.webp"),
+        images: [
+          loc("eimsbuettel", "basic-plus", "202406-stacey-eimsbuttel-38.webp"),
+          loc("eimsbuettel", "basic-plus", "202406-stacey-eimsbuttel-40.webp"),
+        ],
       },
       {
         id: "eimsbuettel-premium",
@@ -571,6 +737,12 @@ export const locations: Location[] = [
         description: "Spacious living in Eimsbüttel's best location.",
         interior: "Double bed, Nightstand, Desk, Chair, Armchair, Wardrobe, Mirror, Bedding",
         image: loc("eimsbuettel", "premium", "001-premium-ei.webp"),
+        images: [
+          loc("eimsbuettel", "premium", "001-premium-ei.webp"),
+          loc("eimsbuettel", "premium", "002-premium-ei.webp"),
+          loc("eimsbuettel", "premium", "003-premium-ei.webp"),
+          loc("eimsbuettel", "premium", "004-premium-ei.webp"),
+        ],
       },
       {
         id: "eimsbuettel-premium-balcony",
@@ -581,6 +753,12 @@ export const locations: Location[] = [
         description: "Your own Premium suite with a private balcony in Eimsbüttel.",
         interior: "Double bed, Nightstand, Desk, Chair, Armchair, Wardrobe, Mirror, Bedding",
         image: loc("eimsbuettel", "premium-balcony", "001-premium-balcony-ei.webp"),
+        images: [
+          loc("eimsbuettel", "premium-balcony", "001-premium-balcony-ei.webp"),
+          loc("eimsbuettel", "premium-balcony", "002-premium-balcony-ei.webp"),
+          loc("eimsbuettel", "premium-balcony", "003-premium-balcony-ei.webp"),
+          loc("eimsbuettel", "premium-balcony", "004-premium-balcony-ei.webp"),
+        ],
       },
       {
         id: "eimsbuettel-premium-plus",
@@ -591,6 +769,14 @@ export const locations: Location[] = [
         description: "Extra space in the heart of Eimsbüttel.",
         interior: "Double bed, Nightstand, Desk, Chair, Armchair, Wardrobe, Mirror, Bedding",
         image: loc("eimsbuettel", "premium-plus", "001-premium-plus-ei.webp"),
+        images: [
+          loc("eimsbuettel", "premium-plus", "001-premium-plus-ei.webp"),
+          loc("eimsbuettel", "premium-plus", "002-premium-plus-ei.webp"),
+          loc("eimsbuettel", "premium-plus", "003-premium-plus-ei.webp"),
+          loc("eimsbuettel", "premium-plus", "004-premium-plus-ei.webp"),
+          loc("eimsbuettel", "premium-plus", "005-premium-plus-ei.webp"),
+          loc("eimsbuettel", "premium-plus", "006-premium-plus-ei.webp"),
+        ],
       },
     ],
     nearbyLocationSlugs: ["eppendorf", "st-pauli", "muehlenkamp"],
@@ -623,6 +809,11 @@ export const locations: Location[] = [
       loc("berlin-mitte", "community", "16-berlin.webp"),
       loc("berlin-mitte", "community", "17-berlin.webp"),
       loc("berlin-mitte", "community", "18-berlin.webp"),
+      loc("berlin-mitte", "community", "19-berlin.webp"),
+      loc("berlin-mitte", "community", "20-berlin.webp"),
+      loc("berlin-mitte", "community", "21-berlin.webp"),
+      loc("berlin-mitte", "community", "22-berlin.webp"),
+      loc("berlin-mitte", "community", "23-berlin.webp"),
     ],
     rooms: [
       {
@@ -634,6 +825,11 @@ export const locations: Location[] = [
         description: "A compact, clever suite in the heart of Berlin.",
         interior: "Bed, Nightstand, Wardrobe, Hangers, Bedding",
         image: loc("berlin-mitte", "mighty", "001-mighty-fi.webp"),
+        images: [
+          loc("berlin-mitte", "mighty", "001-mighty-fi.webp"),
+          loc("berlin-mitte", "mighty", "002-mighty-fi.webp"),
+          loc("berlin-mitte", "mighty", "003-mighty-fi.webp"),
+        ],
       },
       {
         id: "mitte-mighty",
@@ -644,6 +840,11 @@ export const locations: Location[] = [
         description: "Your room in the heart of Berlin.",
         interior: "Double bed, Nightstand, Armchair, Wardrobe, Bedding",
         image: loc("berlin-mitte", "mighty", "001-mighty-fi.webp"),
+        images: [
+          loc("berlin-mitte", "mighty", "001-mighty-fi.webp"),
+          loc("berlin-mitte", "mighty", "002-mighty-fi.webp"),
+          loc("berlin-mitte", "mighty", "003-mighty-fi.webp"),
+        ],
       },
       {
         id: "mitte-premium",
@@ -654,6 +855,14 @@ export const locations: Location[] = [
         description: "Spacious living in Berlin Mitte with Spree views.",
         interior: "Double bed, Nightstand, Desk, Chair, Wardrobe, Mirror, Bedding",
         image: loc("berlin-mitte", "premium", "001-premium-fi.webp"),
+        images: [
+          loc("berlin-mitte", "premium", "001-premium-fi.webp"),
+          loc("berlin-mitte", "premium", "002-premium-fi.webp"),
+          loc("berlin-mitte", "premium", "003-premium-fi.webp"),
+          loc("berlin-mitte", "premium", "004-premium-fi.webp"),
+          loc("berlin-mitte", "premium", "005-premium-fi.webp"),
+          loc("berlin-mitte", "premium", "006-premium-fi.webp"),
+        ],
       },
       {
         id: "mitte-premium-balcony",
@@ -664,6 +873,14 @@ export const locations: Location[] = [
         description: "Your Premium suite with a balcony and Spree views.",
         interior: "Double bed, Nightstand, Desk, Chair, Wardrobe, Mirror, Bedding",
         image: loc("berlin-mitte", "premium", "001-premium-fi.webp"),
+        images: [
+          loc("berlin-mitte", "premium", "001-premium-fi.webp"),
+          loc("berlin-mitte", "premium", "002-premium-fi.webp"),
+          loc("berlin-mitte", "premium", "003-premium-fi.webp"),
+          loc("berlin-mitte", "premium", "004-premium-fi.webp"),
+          loc("berlin-mitte", "premium", "005-premium-fi.webp"),
+          loc("berlin-mitte", "premium", "006-premium-fi.webp"),
+        ],
       },
       {
         id: "mitte-premium-plus-balcony",
@@ -674,6 +891,11 @@ export const locations: Location[] = [
         description: "Extra space with a balcony in Berlin Mitte.",
         interior: "Double bed, Nightstand, Desk, Chair, Armchair, Wardrobe, Mirror, Bedding",
         image: loc("berlin-mitte", "premium-plus-balcony", "003-premium-plus-balcony.webp"),
+        images: [
+          loc("berlin-mitte", "premium-plus-balcony", "003-premium-plus-balcony.webp"),
+          loc("berlin-mitte", "premium-plus-balcony", "01-premium-plus-balcony.webp"),
+          loc("berlin-mitte", "premium-plus-balcony", "02-premium-plus-balcony.webp"),
+        ],
       },
       {
         id: "mitte-jumbo",
@@ -684,6 +906,14 @@ export const locations: Location[] = [
         description: "The biggest suite in Berlin — for those who want it all.",
         interior: "Queen-size bed, Sofa, Nightstand, Desk, Chair, Armchair, Floor lamp, Wardrobe, Bedding",
         image: loc("berlin-mitte", "jumbo", "001-jumbo-fi.webp"),
+        images: [
+          loc("berlin-mitte", "jumbo", "001-jumbo-fi.webp"),
+          loc("berlin-mitte", "jumbo", "002-jumbo-fi.webp"),
+          loc("berlin-mitte", "jumbo", "003-jumbo-fi.webp"),
+          loc("berlin-mitte", "jumbo", "004-jumbo-fi.webp"),
+          loc("berlin-mitte", "jumbo", "005-jumbo-fi.webp"),
+          loc("berlin-mitte", "jumbo", "006-jumbo-fi.webp"),
+        ],
       },
       {
         id: "mitte-jumbo-balcony",
@@ -694,6 +924,12 @@ export const locations: Location[] = [
         description: "Our largest Berlin suite with a private balcony.",
         interior: "Queen-size bed, Sofa, Nightstand, Desk, Chair, Armchair, Floor lamp, Wardrobe, Bedding",
         image: loc("berlin-mitte", "jumbo-balcony", "001-jumbo-balcony-fi.webp"),
+        images: [
+          loc("berlin-mitte", "jumbo-balcony", "001-jumbo-balcony-fi.webp"),
+          loc("berlin-mitte", "jumbo-balcony", "002-jumbo-balcony-fi.webp"),
+          loc("berlin-mitte", "jumbo-balcony", "003-jumbo-balcony-fi.webp"),
+          loc("berlin-mitte", "jumbo-balcony", "004-jumbo-balcony-fi.webp"),
+        ],
       },
       {
         id: "mitte-studio",
@@ -704,6 +940,19 @@ export const locations: Location[] = [
         description: "Your own private studio — with private bathroom and kitchen.",
         interior: "Double bed, Sofa, Desk, Chair, Kitchen, Private bathroom, Wardrobe, Bedding",
         image: loc("berlin-mitte", "studio", "001-studio-mitte.webp"),
+        images: [
+          loc("berlin-mitte", "studio", "001-studio-mitte.webp"),
+          loc("berlin-mitte", "studio", "002-studio-mitte.webp"),
+          loc("berlin-mitte", "studio", "003-studio-mitte.webp"),
+          loc("berlin-mitte", "studio", "004-studio-mitte.webp"),
+          loc("berlin-mitte", "studio", "005-studio-mitte.webp"),
+          loc("berlin-mitte", "studio", "006-studio-mitte.webp"),
+          loc("berlin-mitte", "studio", "007-studio-mitte.webp"),
+          loc("berlin-mitte", "studio", "008-studio-mitte.webp"),
+          loc("berlin-mitte", "studio", "009-studio-mitte.webp"),
+          loc("berlin-mitte", "studio", "010-studio-mitte.webp"),
+          loc("berlin-mitte", "studio", "011-studio-mitte.webp"),
+        ],
       },
     ],
     nearbyLocationSlugs: [],
@@ -736,6 +985,18 @@ export const locations: Location[] = [
       loc("vallendar", "community", "004-community-va.webp"),
       loc("vallendar", "community", "005-community-va.webp"),
       loc("vallendar", "community", "006-community-va.webp"),
+      loc("vallendar", "community", "007-community-va.webp"),
+      loc("vallendar", "community", "008-community-va.webp"),
+      loc("vallendar", "community", "009-community-va.webp"),
+      loc("vallendar", "community", "010-community-va.webp"),
+      loc("vallendar", "community", "011-community-va.webp"),
+      loc("vallendar", "community", "012-community-va.webp"),
+      loc("vallendar", "community", "013-community-va.webp"),
+      loc("vallendar", "community", "014-community-va.webp"),
+      loc("vallendar", "community", "015-community-va.webp"),
+      loc("vallendar", "community", "016-community-va.webp"),
+      loc("vallendar", "community", "017-community-va.webp"),
+      loc("vallendar", "community", "018-community-va.webp"),
     ],
     rooms: [
       {
@@ -747,6 +1008,11 @@ export const locations: Location[] = [
         description: "A cozy room near the WHU campus.",
         interior: "Double bed, Desk, Chair, Wardrobe, Mirror, Hangers, Artwork, Bedding",
         image: loc("vallendar", "mighty", "001-mighty-va.webp"),
+        images: [
+          loc("vallendar", "mighty", "001-mighty-va.webp"),
+          loc("vallendar", "mighty", "002-mighty-va.webp"),
+          loc("vallendar", "mighty", "003-mighty-va.webp"),
+        ],
       },
       {
         id: "vallendar-premium",
@@ -757,6 +1023,12 @@ export const locations: Location[] = [
         description: "Extra space for studying and living — our Premium in Vallendar.",
         interior: "Double bed, Desk, Chair, Armchair, Wall lamp, Wardrobe, Mirror, Bedding",
         image: loc("vallendar", "premium", "001-premium-va.webp"),
+        images: [
+          loc("vallendar", "premium", "001-premium-va.webp"),
+          loc("vallendar", "premium", "002-premium-va.webp"),
+          loc("vallendar", "premium", "003-premium-va.webp"),
+          loc("vallendar", "premium", "004-premium-va.webp"),
+        ],
       },
       {
         id: "vallendar-premium-plus",
@@ -766,7 +1038,16 @@ export const locations: Location[] = [
         forCouples: false,
         description: "Our largest standard suite in Vallendar — room to study and relax.",
         interior: "Double bed, Desk, Chair, Armchair, Wall lamp, Wardrobe, Mirror, Bedding",
-        image: loc("vallendar", "premium-plus", "001-jumbo-va.webp"),
+        image: loc("vallendar", "premium-plus", "001-premium-plus-va.webp"),
+        images: [
+          loc("vallendar", "premium-plus", "001-premium-plus-va.webp"),
+          loc("vallendar", "premium-plus", "002-premium-plus-va.webp"),
+          loc("vallendar", "premium-plus", "003-premium-plus-va.webp"),
+          loc("vallendar", "premium-plus", "004-premium-plus-va.webp"),
+          loc("vallendar", "premium-plus", "005-premium-plus-va.webp"),
+          loc("vallendar", "premium-plus", "006-premium-plus-va.webp"),
+          loc("vallendar", "premium-plus", "007-premium-plus-va.webp"),
+        ],
       },
       {
         id: "vallendar-duplex",
@@ -777,6 +1058,12 @@ export const locations: Location[] = [
         description: "A two-level suite with sleeping loft — the premium Vallendar experience.",
         interior: "Double bed (loft), Desk, Chair, Armchair, Wardrobe, Mirror, Bedding",
         image: loc("vallendar", "premium-plus", "001-jumbo-va.webp"),
+        images: [
+          loc("vallendar", "premium-plus", "001-jumbo-va.webp"),
+          loc("vallendar", "premium-plus", "002-jumbo-va.webp"),
+          loc("vallendar", "premium-plus", "003-jumbo-va.webp"),
+          loc("vallendar", "premium-plus", "004-jumbo-va.webp"),
+        ],
       },
     ],
     nearbyLocationSlugs: [],
