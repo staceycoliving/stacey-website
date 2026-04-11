@@ -16,21 +16,39 @@ Neuaufbau von stacey.de — modernes Coliving-Website mit Next.js.
 
 ```
 app/
-  page.tsx               → Homepage (Hero-Booking-Flow + Sektionen)
+  page.tsx                → Homepage (Hero-Booking-Flow + Sektionen)
   template.tsx            → Page transition wrapper
   locations/[slug]/       → Location-Detailseiten (dynamisch, client-side)
-  preview/                → Design-Preview Seite (Varianten testen)
-  hamburg/, berlin/, vallendar/ → Alte Routen (TODO: redirect)
-  faq/, why-stacey/       → Unterseiten (TODO: neu bauen)
-  move-in/                → Platzhalter (Buchungssystem kommt)
+  move-in/                → Buchungs-Flow (SHORT + LONG end-to-end)
+  faq/, why-stacey/       → Unterseiten (Inhalt = Platzhalter, verlinkt aus Footer/Hero)
+  admin/                  → Admin-Dashboard (Bookings, Tenants, Rooms, Rent, Deposits)
+  api/                    → Route handlers
+    availability/         → Verfügbarkeit (LONG aus DB, SHORT via apaleo)
+    booking/              → Buchungs-Erstellung
+    checkout/, checkout/short/ → Stripe checkout sessions (LONG booking fee, SHORT full payment)
+    lease/                → Yousign Vertrags-Erstellung + Status
+    webhooks/stripe/      → Stripe Event-Handler
+    cron/daily/, cron/monthly-rent/ → Vercel Cron jobs
+    admin/                → Admin-only routes
 components/
   layout/Navbar.tsx       → Mega Menu, Frosted Glass, Contextual CTA, Animated Hamburger
-  layout/Footer.tsx       → Footer (TODO: aktualisieren)
-  ui/DualCalendar.tsx     → Shared Kalender-Component (Homepage + Location-Seiten)
-  ui/LocationCard.tsx     → Location-Karte mit large-Prop
-  ui/RoomCard.tsx         → Zimmer-Karte (alt, wird auf Location-Seite nicht mehr genutzt)
+  layout/Footer.tsx       → Footer
+  move-in/StepAboutYou.tsx, StepLease.tsx → Step-Components für /move-in
+  ui/DualCalendar.tsx     → Shared Kalender (Homepage + Location-Seiten + /move-in)
+  ui/LocationCard.tsx     → Location-Karte
+  ui/LocationMap.tsx      → Mapbox Karte (dynamic import, kein SSR)
   ui/Badge.tsx            → SHORT/LONG Badges
-lib/data.ts               → Alle Daten, Types, Helper-Funktionen
+  ui/FadeIn.tsx           → Fade-In Wrapper
+lib/
+  data.ts                 → Locations, features, faq, helpers, types (Frontend-Daten)
+  availability.ts         → Shared availability/filter helpers (14-day window, persons filter)
+  apaleo.ts               → apaleo API-Wrapper (SHORT stay)
+  db.ts                   → Prisma client (uses DIRECT_URL)
+  email.ts                → Resend templates + TEST_MODE wrapper
+  stripe.ts               → Stripe client config
+  yousign.ts              → Yousign API-Wrapper
+  admin-auth.ts           → Cookie-based admin auth
+  test-mode.ts            → TEST_MODE_EMAILS whitelist
 ```
 
 ## Kommandos
@@ -61,7 +79,7 @@ lib/data.ts               → Alle Daten, Types, Helper-Funktionen
 
 - SHORT/LONG wird automatisch erkannt via `location.stayType`
 - SHORT: DualCalendar als Modal (z-[9999]) für Check-in/Check-out, min 5 Nächte
-- LONG: Move-in Datum Dropdown mit verfügbaren Daten (1./15. jeden Monats)
+- LONG: Move-in Datum Dropdown mit verfügbaren Daten (flexibler Einzugstag)
 - Personen-Toggle (1/2) filtert Rooms (nur Jumbo/Jumbo Balcony/Studio für 2 Personen)
 - Sticky Booking Card rechts (Desktop), normaler Block (Mobile)
 - Room `images` Array für Kategorie-Lightbox (aktuell nur Mühlenkamp befüllt)
@@ -82,10 +100,19 @@ lib/data.ts               → Alle Daten, Types, Helper-Funktionen
 
 ## Booking Rules
 
-- forCouples: NUR Jumbo, Jumbo Balcony, Studio
-- SHORT Stay: Alster, Downtown
-- LONG Stay: alle anderen
+- forCouples: NUR Jumbo, Jumbo Balcony, Studio, Premium+ Balcony
+- SHORT Stay: Alster, Downtown (über apaleo, NICHT in der DB)
+- LONG Stay: Mühlenkamp, Eimsbüttel, St. Pauli, Eppendorf, Mitte (Berlin), Vallendar (über eigene DB)
 - Min Stay SHORT: 5 Nächte
 - Min Stay LONG: 3 Monate
 - Cancellation LONG: 3 months notice
 - Check-in: from 4 PM, Check-out: until 11 AM
+- **Othmarschen**: Nur Info-Seite, NICHT buchbar (Pachtvertrag läuft aus)
+
+## LONG Stay 14-Tage Flexibility Rule
+
+Pro Kategorie liefert die API earliest moveInDates (Auszugstag+1 jedes frei werdenden Zimmers). Filter-Logik:
+- **earliest ≤ today+14** → flexibel: jeder Tag von earliest bis today+14 ist buchbar
+- **earliest > today+14** → fest: NUR das exakte earliest-Datum buchbar (NICHT spätere Tage)
+
+Diese Logik lebt in `lib/availability.ts` und wird von Homepage, Location-Seite und /move-in geteilt. NIE einfach `>=` als Filter nutzen — das verletzt die Regel.

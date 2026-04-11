@@ -38,18 +38,6 @@ export type Feature = {
   image: string;
 };
 
-export type MemberStory = {
-  name: string;
-  age: number;
-  story: string;
-};
-
-export type HowItWorksStep = {
-  number: number;
-  title: string;
-  description: string;
-};
-
 // ─── HELPER: image path builder ───────────────────────────
 const loc = (location: string, folder: string, file: string) =>
   `/images/locations/${location}/${folder}/${file}`;
@@ -847,28 +835,6 @@ export function formatMoveInLabel(dateStr: string): string {
   });
 }
 
-export function getAvailableMoveInDates(): { value: string; label: string }[] {
-  const dates: { value: string; label: string }[] = [];
-  const now = new Date();
-  for (let i = 0; i < 12; i++) {
-    const d1 = new Date(now.getFullYear(), now.getMonth() + i, 1);
-    if (d1 > now) {
-      dates.push({
-        value: `${d1.getFullYear()}-${String(d1.getMonth() + 1).padStart(2, "0")}-01`,
-        label: d1.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }),
-      });
-    }
-    const d15 = new Date(now.getFullYear(), now.getMonth() + i, 15);
-    if (d15 > now) {
-      dates.push({
-        value: `${d15.getFullYear()}-${String(d15.getMonth() + 1).padStart(2, "0")}-15`,
-        label: d15.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }),
-      });
-    }
-  }
-  return dates.slice(0, 12);
-}
-
 // ─── Room name → DB category enum mapping ─────────────────
 
 export const ROOM_NAME_TO_CATEGORY: Record<string, string> = {
@@ -883,10 +849,6 @@ export const ROOM_NAME_TO_CATEGORY: Record<string, string> = {
   "Studio": "STUDIO",
   "Duplex": "DUPLEX",
 };
-
-export const CATEGORY_TO_ROOM_NAME: Record<string, string> = Object.fromEntries(
-  Object.entries(ROOM_NAME_TO_CATEGORY).map(([k, v]) => [v, k])
-);
 
 // ─── FEATURES ──────────────────────────────────────────────
 
@@ -944,52 +906,6 @@ export const features: Feature[] = [
     title: "Repair Services",
     desc: "Our team takes care of all maintenance requests.",
     image: loc("muehlenkamp", "community", "08-muehlenkamp.webp"),
-  },
-];
-
-// ─── MEMBER STORIES ────────────────────────────────────────
-
-export const memberStories: MemberStory[] = [
-  {
-    name: "Jihane",
-    age: 46,
-    story:
-      "Originally from Lebanon, I came to Berlin looking for more than just four walls. At STACEY I found spontaneous kitchen conversations, new friends, and unforgettable movie nights. Strangers became neighbors — and neighbors became family.",
-  },
-  {
-    name: "Daniel",
-    age: 19,
-    story:
-      "My first move to Hamburg for university — moving alone to a new city was exciting and intimidating at the same time. Through STACEY I quickly found connections, friends, and even a new passion: I'm now a die-hard HSV fan!",
-  },
-  {
-    name: "Christian",
-    age: 34,
-    story:
-      "When I moved to Hamburg for my new job, I didn't know anyone in the city. At STACEY I found not just a home, but a community. I love art, architecture and interior design — and quickly became the driving force behind our community projects.",
-  },
-];
-
-// ─── HOW IT WORKS ──────────────────────────────────────────
-
-export const howItWorksSteps: HowItWorksStep[] = [
-  {
-    number: 1,
-    title: "Start exploring",
-    description:
-      "Explore our locations in Hamburg, Berlin and Vallendar and sign up online through our booking portal.",
-  },
-  {
-    number: 2,
-    title: "Choose your Suite",
-    description:
-      "Pick your dream suite on our booking portal and secure your spot in the STACEY community.",
-  },
-  {
-    number: 3,
-    title: "Make memories",
-    description:
-      "Become a member of the STACEY community, join our events and enjoy the coliving life.",
   },
 ];
 
