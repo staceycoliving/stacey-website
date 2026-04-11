@@ -11,6 +11,7 @@ import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { getLocationBySlug, getNearbyLocations, locations, ROOM_NAME_TO_CATEGORY, formatMoveInLabel } from "@/lib/data";
 import type { Location } from "@/lib/data";
+import { expandMoveInDates, isMoveInDateBookable, filterRoomsForPersons } from "@/lib/availability";
 
 export default function LocationPage() {
   const params = useParams();
@@ -307,9 +308,6 @@ function LocationDetail({ location }: { location: Location }) {
     }).catch(() => {});
   }, [location.slug, isShort]);
 
-  const localDate = (d: Date) =>
-    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-
   // Fetch availability on mount + when persons change.
   // Track whether we've actually attempted a fetch (loadingAvail flips false even on
   // failure) so the display can distinguish "not loaded yet" from "loaded, no data".
@@ -343,34 +341,9 @@ function LocationDetail({ location }: { location: Location }) {
       });
   }, [location.slug, persons, isShort ? `${checkIn}-${checkOut}` : ""]);
 
-  // Build LONG stay move-in dates — per category and combined for the booking card
-  const expandDates = (earliestDates: string[]): { value: string; label: string }[] => {
-    const now = new Date();
-    const today = localDate(now);
-    const limit = new Date(now);
-    limit.setDate(limit.getDate() + 14);
-    const limitStr = localDate(limit);
-
-    const bookableDays = new Set<string>();
-    for (const earliest of earliestDates) {
-      if (earliest < today) continue;
-      if (earliest > limitStr) {
-        bookableDays.add(earliest);
-      } else {
-        const d = new Date(earliest + "T12:00:00");
-        while (localDate(d) <= limitStr) {
-          bookableDays.add(localDate(d));
-          d.setDate(d.getDate() + 1);
-        }
-      }
-    }
-
-    const sorted = [...bookableDays].filter((d) => d >= today).sort();
-    return sorted.map((d) => ({
-      value: d,
-      label: formatMoveInLabel(d),
-    }));
-  };
+  // Format helper: turn a list of YYYY-MM-DD strings into dropdown options
+  const toDropdown = (dates: string[]): { value: string; label: string }[] =>
+    dates.map((d) => ({ value: d, label: formatMoveInLabel(d) }));
 
   // Combined dates (all categories) for the booking card dropdown
   const availableDates = (() => {
@@ -379,7 +352,7 @@ function LocationDetail({ location }: { location: Location }) {
     for (const catData of Object.values(availability)) {
       if (catData.moveInDates) allEarliest.push(...catData.moveInDates);
     }
-    return expandDates(allEarliest);
+    return toDropdown(expandMoveInDates(allEarliest));
   })();
 
   // Per-room dates: only dates for that specific category
@@ -387,24 +360,21 @@ function LocationDetail({ location }: { location: Location }) {
     const cat = ROOM_NAME_TO_CATEGORY[roomName];
     const catData = cat ? availability[cat] : null;
     if (!catData?.moveInDates) return [];
-    return expandDates(catData.moveInDates);
+    return toDropdown(expandMoveInDates(catData.moveInDates));
   };
 
   // Filter rooms: only hide sold-out when a date is selected
   const hasAvail = Object.keys(availability).length > 0;
   const dateSelected = isShort ? (checkIn && checkOut && nights >= 5) : !!moveInDate;
-  const availableRooms = (persons === 2 ? location.rooms.filter((r) => r.forCouples) : location.rooms)
+  const availableRooms = filterRoomsForPersons(location.rooms, persons)
     .filter((r) => {
       if (!hasAvail || !dateSelected) return true; // no date yet → show all categories
       const cat = ROOM_NAME_TO_CATEGORY[r.name];
       const catData = cat ? availability[cat] : null;
       if (!catData) return false; // not in DB → hide
       if (isShort) return catData.available > 0;
-      // LONG rule: rooms freeing within 14 days are flexible (any day until today+14);
-      // rooms freeing later can only be booked on the exact freeing date (Auszugstag+1).
-      // expandDates encodes both — match the picked date against the expanded list.
-      const roomDates = getRoomDates(r.name);
-      return roomDates.some((d) => d.value === moveInDate);
+      // LONG: shared 14-day flexibility rule
+      return catData.moveInDates ? isMoveInDateBookable(moveInDate!, catData.moveInDates) : false;
     });
   const nearby = getNearbyLocations(location);
   const cityLabel = location.city === "hamburg" ? "Hamburg" : location.city === "berlin" ? "Berlin" : "Vallendar";

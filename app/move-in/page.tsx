@@ -28,6 +28,7 @@ import {
   formatMoveInLabel,
 } from "@/lib/data";
 import type { Location, Room, StayType } from "@/lib/data";
+import { expandMoveInDates, isMoveInDateBookable, filterRoomsForPersons } from "@/lib/availability";
 
 // ─── Reveal animation ───
 function Reveal({ children, className }: { children: React.ReactNode; className?: string }) {
@@ -486,53 +487,19 @@ function MoveInFlow() {
     if (locs.length > 0) fetchAvailability(locs);
   }, [stayType, persons, city, fetchAvailability]);
 
-  // ─── LONG stay: build move-in options from API data ───
-  // Expand earliest-available dates into all bookable days:
-  // - Free now (today) → every day from today to today+14
-  // - Free within 14 days (e.g. April 21) → every day from April 21 to today+14
-  // - Free in >14 days (e.g. June 16) → only June 16
+  // LONG stay: build move-in dropdown options from API data using the shared
+  // 14-day flexibility expansion helper.
   const moveInOptions: { value: string; label: string }[] = (() => {
     if (stayType !== "LONG" || !city) return [];
-    const now = new Date();
-    const localDate = (d: Date) =>
-      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-    const today = localDate(now);
-    const limit = new Date(now);
-    limit.setDate(limit.getDate() + 14);
-    const limitStr = localDate(limit);
-
-    // Collect earliest moveInDates from API
-    const earliestDates = new Set<string>();
+    const earliestDates: string[] = [];
     for (const locSlug of Object.keys(availability)) {
       const loc = locations.find((l) => l.slug === locSlug);
       if (!loc || loc.stayType !== "LONG" || loc.city !== city) continue;
       for (const catData of Object.values(availability[locSlug])) {
-        if (catData.moveInDates) {
-          for (const d of catData.moveInDates) earliestDates.add(d);
-        }
+        if (catData.moveInDates) earliestDates.push(...catData.moveInDates);
       }
     }
-
-    // Expand into all bookable days
-    const bookableDays = new Set<string>();
-    for (const earliest of earliestDates) {
-      if (earliest < today) continue; // skip past dates
-      if (earliest > limitStr) {
-        // >14 days out → only that specific date
-        bookableDays.add(earliest);
-      } else {
-        // Within 14 days (or today) → every day from earliest to today+14
-        const start = new Date(earliest + "T12:00:00"); // noon to avoid timezone shifts
-        const d = new Date(start);
-        while (localDate(d) <= limitStr) {
-          bookableDays.add(localDate(d));
-          d.setDate(d.getDate() + 1);
-        }
-      }
-    }
-
-    const sorted = [...bookableDays].filter((d) => d >= today).sort();
-    return sorted.map((d) => ({
+    return expandMoveInDates(earliestDates).map((d) => ({
       value: d,
       label: formatMoveInLabel(d),
     }));
@@ -619,19 +586,9 @@ function MoveInFlow() {
     // SHORT stay: just return available count
     if (!catData.moveInDates) return catData.available;
 
-    // LONG stay rule: rooms freeing within 14 days are flexible (any day until today+14);
-    // rooms freeing later can only be booked on the exact freeing date (Auszugstag+1).
+    // LONG stay: shared 14-day flexibility rule
     if (!moveInDate) return catData.available;
-    const now = new Date();
-    const limit = new Date(now);
-    limit.setDate(limit.getDate() + 14);
-    const fmt = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-    const limitStr = fmt(limit);
-    const isAvailable = catData.moveInDates.some((earliest) => {
-      if (earliest > limitStr) return moveInDate === earliest; // outside 14d → exact only
-      return moveInDate >= earliest && moveInDate <= limitStr; // inside 14d → any day in window
-    });
-    if (!isAvailable) return 0;
+    if (!isMoveInDateBookable(moveInDate, catData.moveInDates)) return 0;
     // catData.available is `freeNow` (rooms free TODAY); for a future moveInDate that
     // matches an earliest date, the category is bookable even if nothing is free today.
     return Math.max(catData.available, 1);
@@ -643,7 +600,7 @@ function MoveInFlow() {
         .filter((l) => stayType === "LONG" && city ? l.city === city : true)
         .map((l) => ({
           ...l,
-          rooms: (persons === 2 ? l.rooms.filter((r) => r.forCouples) : l.rooms)
+          rooms: filterRoomsForPersons(l.rooms, persons)
             .filter((r) => {
               const avail = getRoomAvailability(l.slug, r.name);
               return avail === null || avail > 0; // null = still loading, show; 0 = sold out, hide

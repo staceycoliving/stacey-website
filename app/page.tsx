@@ -24,7 +24,8 @@ import FadeIn from "@/components/ui/FadeIn";
 import dynamic from "next/dynamic";
 
 const LocationMap = dynamic(() => import("@/components/ui/LocationMap"), { ssr: false });
-import { locations, memberStories, ROOM_NAME_TO_CATEGORY, formatMoveInLabel } from "@/lib/data";
+import { locations, ROOM_NAME_TO_CATEGORY, formatMoveInLabel } from "@/lib/data";
+import { expandMoveInDates } from "@/lib/availability";
 
 
 export default function HomePage() {
@@ -130,55 +131,26 @@ export default function HomePage() {
     });
 
     Promise.all(fetches).then((results) => {
-      const now = new Date();
-      const localDate = (d: Date) =>
-        `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-      const today = localDate(now);
-      const limit = new Date(now);
-      limit.setDate(limit.getDate() + 14);
-      const limitStr = localDate(limit);
-
       // Store raw availability for filtering results
       const availMap: AvailMap = {};
+      const earliestDates: string[] = [];
       for (const data of results) {
         if (!data?.categories) continue;
         const catMap: Record<string, { available: number; moveInDates?: string[] }> = {};
         for (const cat of data.categories) {
           catMap[cat.category] = { available: cat.freeNow ?? 0, moveInDates: cat.moveInDates };
+          if (cat.moveInDates) earliestDates.push(...cat.moveInDates);
         }
         availMap[data.location] = catMap;
       }
       setLongAvailability(availMap);
 
-      // Collect earliest moveInDates
-      const earliestDates = new Set<string>();
-      for (const data of results) {
-        if (!data?.categories) continue;
-        for (const cat of data.categories) {
-          if (cat.moveInDates) cat.moveInDates.forEach((d: string) => earliestDates.add(d));
-        }
-      }
-
-      // Expand into all bookable days
-      const bookableDays = new Set<string>();
-      for (const earliest of earliestDates) {
-        if (earliest < today) continue;
-        if (earliest > limitStr) {
-          bookableDays.add(earliest);
-        } else {
-          const d = new Date(earliest + "T12:00:00");
-          while (localDate(d) <= limitStr) {
-            bookableDays.add(localDate(d));
-            d.setDate(d.getDate() + 1);
-          }
-        }
-      }
-
-      const sorted = [...bookableDays].filter((d) => d >= today).sort();
-      setLongStayDates(sorted.map((d) => ({
-        value: d,
-        label: formatMoveInLabel(d),
-      })));
+      setLongStayDates(
+        expandMoveInDates(earliestDates).map((d) => ({
+          value: d,
+          label: formatMoveInLabel(d),
+        }))
+      );
       setLoadingLongDates(false);
     });
   }, [stayType, longCity, persons]);
