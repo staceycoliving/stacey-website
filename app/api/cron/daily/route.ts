@@ -6,7 +6,6 @@ import {
   sendRentReminder,
   sendMahnung1,
   sendMahnung2,
-  sendTerminationNotice,
   sendPaymentSetupReminder,
   sendPaymentFinalWarning,
 } from "@/lib/email";
@@ -488,29 +487,7 @@ async function handleRentReminders() {
 
       const location = tenant.room.apartment.location;
 
-      // Send termination notice to tenant
-      sendTerminationNotice({
-        firstName: tenant.firstName,
-        lastName: tenant.lastName,
-        email: tenant.email,
-        locationName: location.name,
-        moveOutDate: moveOutDate.toISOString().split("T")[0],
-        reason: `Mietrückstand ${unpaidMonths} Monate`,
-      }).catch((err) => console.error("Termination notice error:", err));
-
-      // Notify team
-      sendTeamNotification({
-        stayType: "LONG",
-        firstName: tenant.firstName,
-        lastName: tenant.lastName,
-        email: tenant.email,
-        phone: tenant.phone || "",
-        locationName: location.name,
-        category: tenant.room.category,
-        persons: 1,
-        moveInDate: tenant.moveIn.toISOString().split("T")[0],
-        bookingId: `Auto-terminated: ${unpaidMonths} months arrears`,
-      }).catch((err) => console.error("Team notification error:", err));
+      // No automatic termination email — this is handled manually by the team
 
       console.log(`Auto-terminated tenant ${tenant.id} (${tenant.firstName} ${tenant.lastName}): ${unpaidMonths} months unpaid`);
     }

@@ -3,7 +3,6 @@ import { prisma } from "@/lib/db";
 import { RoomCategory, BookingStatus } from "@/lib/generated/prisma/client";
 import {
   sendShortStayConfirmation,
-  sendTeamNotification,
 } from "@/lib/email";
 import { isApaleoProperty, createShortStayBooking } from "@/lib/apaleo";
 import { getLocationBySlug } from "@/lib/data";
@@ -108,28 +107,17 @@ export async function POST(request: NextRequest) {
           lastName,
           email,
           locationName,
+          locationAddress: staticLoc?.address ?? "",
           category,
           persons,
           checkIn,
           checkOut,
           nights,
+          grandTotal: 0, // Price comes from Stripe session in checkout flow
           bookingId: apaleoBooking.id,
         }).catch((err) => console.error("Email error (guest):", err));
 
-        sendTeamNotification({
-          stayType: "SHORT",
-          firstName,
-          lastName,
-          email,
-          phone,
-          locationName,
-          category,
-          persons,
-          checkIn,
-          checkOut,
-          nights,
-          bookingId: apaleoBooking.id,
-        }).catch((err) => console.error("Email error (team):", err));
+        // No team notification for SHORT stay — booking is visible in apaleo
 
         return apiOk({
           id: apaleoBooking.id,
@@ -241,19 +229,7 @@ export async function POST(request: NextRequest) {
       });
     });
 
-    // Team notification only — guest email comes after deposit payment (via Stripe webhook)
-    sendTeamNotification({
-      stayType: "LONG",
-      firstName,
-      lastName,
-      email,
-      phone,
-      locationName: location.name,
-      category,
-      persons,
-      moveInDate,
-      bookingId: booking.id,
-    }).catch((err) => console.error("Email error (team):", err));
+    // No team notification at booking creation — team gets notified when deposit is paid (Stripe webhook)
 
     return apiOk({
       id: booking.id,

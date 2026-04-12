@@ -1,9 +1,10 @@
 import { NextRequest } from "next/server";
 import { createPaidShortStayBooking } from "@/lib/apaleo";
-import { sendShortStayConfirmation, sendTeamNotification } from "@/lib/email";
+import { sendShortStayConfirmation } from "@/lib/email";
 import { stripe } from "@/lib/stripe";
 import { reportError } from "@/lib/observability";
 import { apiOk, apiBadRequest, apiServerError } from "@/lib/api-response";
+import { locations } from "@/lib/data";
 
 export async function POST(request: NextRequest) {
   try {
@@ -47,33 +48,23 @@ export async function POST(request: NextRequest) {
     });
 
     // Send confirmation emails (fire-and-forget)
+    const loc = locations.find((l) => l.slug === m.slug);
     sendShortStayConfirmation({
       firstName: m.firstName,
       lastName: m.lastName,
       email: m.email,
       locationName: m.locationName,
+      locationAddress: loc?.address ?? "",
       category: m.category,
       persons: parseInt(m.persons),
       checkIn: m.checkIn,
       checkOut: m.checkOut,
       nights,
+      grandTotal: totalAmountEur,
       bookingId: booking.id,
     }).catch((err) => console.error("Email error (guest):", err));
 
-    sendTeamNotification({
-      stayType: "SHORT",
-      firstName: m.firstName,
-      lastName: m.lastName,
-      email: m.email,
-      phone: m.phone,
-      locationName: m.locationName,
-      category: m.category,
-      persons: parseInt(m.persons),
-      checkIn: m.checkIn,
-      checkOut: m.checkOut,
-      nights,
-      bookingId: booking.id,
-    }).catch((err) => console.error("Email error (team):", err));
+    // No team notification for SHORT stay — booking is visible in apaleo
 
     return apiOk({
       bookingId: booking.id,

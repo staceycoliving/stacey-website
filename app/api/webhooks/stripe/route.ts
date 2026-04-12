@@ -205,18 +205,19 @@ async function handleBookingFeePaid(bookingId: string, sessionId: string) {
     },
   });
 
-  // Send deposit payment email with signed lease attached
+  // Send deposit payment email (lease PDF moves to deposit confirmation email)
   try {
     await sendDepositPaymentLink({
       firstName: booking.firstName,
       email: booking.email,
       locationName: booking.location.name,
       roomCategory: booking.category,
+      persons: booking.persons,
+      moveInDate: booking.moveInDate?.toISOString().split("T")[0] ?? "",
       monthlyRent: booking.monthlyRent || 0,
       depositAmount,
       depositPaymentUrl: depositSession.url!,
       deadlineHours: DEPOSIT_DEADLINE_HOURS,
-      signedLeasePdf,
     });
   } catch (err) {
     reportError(err, {
@@ -321,14 +322,33 @@ async function handleDepositPaid(bookingId: string) {
     ? booking.moveInDate.toISOString().split("T")[0]
     : "";
 
+  // Download signed lease from Yousign to attach to confirmation email
+  let signedLeasePdf: Buffer | undefined;
+  if (booking.signatureRequestId && booking.signatureDocumentId) {
+    try {
+      const arrayBuffer = await downloadSignedDocument(
+        booking.signatureRequestId,
+        booking.signatureDocumentId
+      );
+      signedLeasePdf = Buffer.from(arrayBuffer);
+    } catch (err) {
+      reportError(err, {
+        scope: "stripe-webhook",
+        tags: { stage: "yousign-download-for-deposit-confirm", bookingId },
+      });
+    }
+  }
+
   try {
     await sendDepositConfirmation({
       firstName: booking.firstName,
+      lastName: booking.lastName,
       email: booking.email,
       locationName: booking.location.name,
       moveInDate: moveInStr,
       depositAmount: booking.depositAmount || 0,
       paymentSetupUrl,
+      signedLeasePdf,
     });
   } catch (err) {
     reportError(err, {
@@ -349,6 +369,7 @@ async function handleDepositPaid(bookingId: string) {
       persons: booking.persons,
       moveInDate: moveInStr,
       bookingId: booking.id,
+      depositAmount: booking.depositAmount || 0,
     });
   } catch (err) {
     reportError(err, {
