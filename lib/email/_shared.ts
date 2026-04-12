@@ -11,16 +11,19 @@ const resendClient = new Resend(env.RESEND_API_KEY);
 export const FROM = "STACEY Coliving <booking@stacey.de>";
 export const TEAM_EMAIL = "booking@stacey.de";
 
-// Wrapper that respects TEST_MODE_EMAILS whitelist
+// Wrapper that respects TEST_MODE_EMAILS whitelist.
+// Returns `skipped: true` so callers can avoid updating DB flags
+// (e.g. reminderSentAt) when the email never actually went out.
 export const resend = {
   emails: {
     send: async (params: Parameters<typeof resendClient.emails.send>[0]) => {
       const to = Array.isArray(params.to) ? params.to[0] : params.to;
       if (!canSendEmail(to as string)) {
         logSkipped(to as string, params.subject || "(no subject)");
-        return { data: { id: "test-mode-skipped" }, error: null };
+        return { data: { id: "test-mode-skipped" }, error: null, skipped: true as const };
       }
-      return resendClient.emails.send(params);
+      const result = await resendClient.emails.send(params);
+      return { ...result, skipped: false as const };
     },
   },
 };

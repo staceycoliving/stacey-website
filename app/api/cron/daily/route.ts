@@ -11,7 +11,7 @@ import {
   sendPaymentFinalWarning,
 } from "@/lib/email";
 import { stripe } from "@/lib/stripe";
-import { canSendEmail, logSkipped } from "@/lib/test-mode";
+import { isTestMode, canSendEmail, logSkipped } from "@/lib/test-mode";
 import { env } from "@/lib/env";
 import { reportError } from "@/lib/observability";
 import { Resend } from "resend";
@@ -19,16 +19,18 @@ import { Resend } from "resend";
 const resendClient = new Resend(env.RESEND_API_KEY);
 const FROM = "STACEY Coliving <booking@stacey.de>";
 
-// Test-mode wrapper
+// Test-mode wrapper. Returns `skipped: true` so callers can avoid updating
+// DB flags (e.g. welcomeEmailSentAt) when the email never actually went out.
 const resend = {
   emails: {
     send: async (params: Parameters<typeof resendClient.emails.send>[0]) => {
       const to = Array.isArray(params.to) ? params.to[0] : params.to;
       if (!canSendEmail(to as string)) {
         logSkipped(to as string, params.subject || "(no subject)");
-        return { data: { id: "test-mode-skipped" }, error: null };
+        return { data: { id: "test-mode-skipped" }, error: null, skipped: true };
       }
-      return resendClient.emails.send(params);
+      const result = await resendClient.emails.send(params);
+      return { ...result, skipped: false };
     },
   },
 };
@@ -157,6 +159,7 @@ async function handlePaymentSetupReminders() {
 
   const tenants = await prisma.tenant.findMany({
     where: {
+      bookingId: { not: null }, // Only tenants booked via frontend (skip legacy)
       sepaMandateId: null, // No payment method set up
       moveIn: { gt: threeDaysFromNow },
       moveOut: null,
@@ -176,6 +179,12 @@ async function handlePaymentSetupReminders() {
     const dueDay = SETUP_REMINDER_DAYS[nextReminderIndex];
 
     if (daysSinceCreation < dueDay) continue;
+
+    // Don't create Stripe sessions or bump reminder counter when test-mode will skip the email
+    if (!canSendEmail(tenant.email)) {
+      logSkipped(tenant.email, `Payment setup reminder #${nextReminderIndex + 1}`);
+      continue;
+    }
 
     try {
       const setupUrl = await createSetupSessionForTenant(tenant);
@@ -204,14 +213,20 @@ async function handlePaymentSetupReminders() {
 
 async function handleWelcomeEmails() {
   const now = new Date();
-  // Find tenants moving in within next 3 days (incl. last-minute / past-due cases)
+  // Find tenants moving in within next 3 days.
+  // Floor at 7 days ago so we don't retroactively catch every historical tenant
+  // whose welcomeEmailSentAt is still null (e.g. after first deploy of this feature).
+  const targetStart = new Date(now);
+  targetStart.setDate(targetStart.getDate() - 7);
+  targetStart.setHours(0, 0, 0, 0);
   const targetEnd = new Date(now);
   targetEnd.setDate(targetEnd.getDate() + 3);
   targetEnd.setHours(23, 59, 59, 999);
 
   const tenants = await prisma.tenant.findMany({
     where: {
-      moveIn: { lte: targetEnd },
+      bookingId: { not: null }, // Only tenants booked via frontend (skip legacy)
+      moveIn: { gte: targetStart, lte: targetEnd },
       welcomeEmailSentAt: null,
       moveOut: null,
     },
@@ -232,18 +247,21 @@ async function handleWelcomeEmails() {
     if (tenant.sepaMandateId) {
       // Payment is set up → send Welcome Email
       try {
-        await resend.emails.send({
+        const result = await resend.emails.send({
           from: FROM,
           to: tenant.email,
           subject: `Welcome to STACEY ${location.name}!`,
           html: welcomeEmailHtml(tenant, location, moveInFormatted),
         });
 
-        await prisma.tenant.update({
-          where: { id: tenant.id },
-          data: { welcomeEmailSentAt: new Date() },
-        });
-        welcomeSent++;
+        // Only mark as sent if the email actually went out (not test-mode-skipped)
+        if (!result.skipped) {
+          await prisma.tenant.update({
+            where: { id: tenant.id },
+            data: { welcomeEmailSentAt: new Date() },
+          });
+          welcomeSent++;
+        }
       } catch (err) {
         console.error(`Welcome email failed for ${tenant.email}:`, err);
       }
@@ -252,6 +270,12 @@ async function handleWelcomeEmails() {
       if (tenant.paymentFinalWarningSentAt) continue;
 
       try {
+        // Don't create Stripe sessions or update DB flags when test-mode will skip the email
+        if (!canSendEmail(tenant.email)) {
+          logSkipped(tenant.email, "Final warning (skipping Stripe session + DB flag)");
+          continue;
+        }
+
         const setupUrl = await createSetupSessionForTenant(tenant);
         await sendPaymentFinalWarning({
           firstName: tenant.firstName,
@@ -334,6 +358,7 @@ async function handleRentReminders() {
     where: {
       status: { in: ["PENDING", "FAILED"] },
       month: { lt: now },
+      tenant: { bookingId: { not: null } }, // Only frontend-booked tenants (skip legacy)
     },
     include: {
       tenant: {
@@ -354,63 +379,84 @@ async function handleRentReminders() {
     const location = tenant.room.apartment.location;
     const monthStr = rent.month.toLocaleDateString("en-GB", { month: "long", year: "numeric" });
 
+    // Skip DB-flag updates when test-mode will just discard the email
+    const emailAllowed = canSendEmail(tenant.email);
+
     // Day 3: friendly reminder
     if (daysOverdue >= 3 && !rent.reminder1SentAt) {
-      sendRentReminder({
-        firstName: tenant.firstName,
-        email: tenant.email,
-        locationName: location.name,
-        month: monthStr,
-        amount: rent.amount,
-      }).catch((err) => console.error("Rent reminder error:", err));
+      if (emailAllowed) {
+        sendRentReminder({
+          firstName: tenant.firstName,
+          email: tenant.email,
+          locationName: location.name,
+          month: monthStr,
+          amount: rent.amount,
+        }).catch((err) => console.error("Rent reminder error:", err));
 
-      await prisma.rentPayment.update({
-        where: { id: rent.id },
-        data: { reminder1SentAt: new Date() },
-      });
-      reminders++;
+        await prisma.rentPayment.update({
+          where: { id: rent.id },
+          data: { reminder1SentAt: new Date() },
+        });
+        reminders++;
+      } else {
+        logSkipped(tenant.email, `Rent reminder ${monthStr}`);
+      }
     }
 
     // Day 14: 1. Mahnung
     if (daysOverdue >= 14 && !rent.mahnung1SentAt) {
-      sendMahnung1({
-        firstName: tenant.firstName,
-        lastName: tenant.lastName,
-        email: tenant.email,
-        locationName: location.name,
-        month: monthStr,
-        amount: rent.amount,
-      }).catch((err) => console.error("Mahnung 1 error:", err));
+      if (emailAllowed) {
+        sendMahnung1({
+          firstName: tenant.firstName,
+          lastName: tenant.lastName,
+          email: tenant.email,
+          locationName: location.name,
+          month: monthStr,
+          amount: rent.amount,
+        }).catch((err) => console.error("Mahnung 1 error:", err));
 
-      await prisma.rentPayment.update({
-        where: { id: rent.id },
-        data: { mahnung1SentAt: new Date() },
-      });
-      mahnungen1++;
+        await prisma.rentPayment.update({
+          where: { id: rent.id },
+          data: { mahnung1SentAt: new Date() },
+        });
+        mahnungen1++;
+      } else {
+        logSkipped(tenant.email, `Mahnung 1 ${monthStr}`);
+      }
     }
 
     // Day 30: 2. Mahnung + Kündigungsandrohung
     if (daysOverdue >= 30 && !rent.mahnung2SentAt) {
-      sendMahnung2({
-        firstName: tenant.firstName,
-        lastName: tenant.lastName,
-        email: tenant.email,
-        locationName: location.name,
-        month: monthStr,
-        amount: rent.amount,
-      }).catch((err) => console.error("Mahnung 2 error:", err));
+      if (emailAllowed) {
+        sendMahnung2({
+          firstName: tenant.firstName,
+          lastName: tenant.lastName,
+          email: tenant.email,
+          locationName: location.name,
+          month: monthStr,
+          amount: rent.amount,
+        }).catch((err) => console.error("Mahnung 2 error:", err));
 
-      await prisma.rentPayment.update({
-        where: { id: rent.id },
-        data: { mahnung2SentAt: new Date() },
-      });
-      mahnungen2++;
+        await prisma.rentPayment.update({
+          where: { id: rent.id },
+          data: { mahnung2SentAt: new Date() },
+        });
+        mahnungen2++;
+      } else {
+        logSkipped(tenant.email, `Mahnung 2 ${monthStr}`);
+      }
     }
   }
 
   // Auto-Kündigung: 2+ months of unpaid rent
+  // NEVER auto-terminate in test mode — this is an irreversible DB mutation
+  if (isTestMode()) {
+    return { reminders, mahnungen1, mahnungen2, terminations, testModeSkippedAutoTermination: true };
+  }
+
   const tenantsWithArrears = await prisma.tenant.findMany({
     where: {
+      bookingId: { not: null }, // Only frontend-booked tenants (skip legacy)
       moveOut: null, // Not already terminated
       notice: null,
     },

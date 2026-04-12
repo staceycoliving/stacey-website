@@ -21,6 +21,7 @@ export async function GET(request: NextRequest) {
   const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0); // last day
   const tenants = await prisma.tenant.findMany({
     where: {
+      bookingId: { not: null }, // Only tenants booked via frontend (legacy tenants pay manually)
       OR: [
         { moveOut: null },
         { moveOut: { gt: monthStart } },
