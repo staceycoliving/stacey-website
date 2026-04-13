@@ -53,3 +53,7 @@ next-env.d.ts
 public/images/*.mp4
 public/images/**/*.mp4
 public/images/locations/**/*.mp4
+stacey-1548069662041-*.json
+Unterschrift.jpeg
+Vorlage Hamburg.pdf
+tmp-email-preview.html

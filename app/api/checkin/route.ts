@@ -1,6 +1,5 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
-import { generateMeldescheinPdf } from "@/lib/meldeschein-pdf";
 
 export async function POST(request: NextRequest) {
   let body: any;
@@ -14,7 +13,7 @@ export async function POST(request: NextRequest) {
     reservationId, firstName, lastName, dateOfBirth, nationality,
     idDocumentType, idDocumentNumber, street, zipCode, city, country,
     arrivalDate, departureDate, locationSlug, locationName,
-    companionFirstName, companionLastName,
+    companionFirstName, companionLastName, signatureDataUrl,
   } = body;
 
   if (!reservationId || !firstName || !lastName || !dateOfBirth || !nationality ||
@@ -32,9 +31,10 @@ export async function POST(request: NextRequest) {
     return Response.json({ ok: true, alreadyCompleted: true });
   }
 
-  // Generate Meldeschein PDF
+  // Generate Meldeschein PDF (dynamic import — pdfkit is heavy)
   let pdfData: Buffer | null = null;
   try {
+    const { generateMeldescheinPdf } = await import("@/lib/meldeschein-pdf");
     pdfData = await generateMeldescheinPdf({
       firstName,
       lastName,
@@ -52,32 +52,56 @@ export async function POST(request: NextRequest) {
       locationName: locationName || locationSlug,
       companionFirstName: companionFirstName || undefined,
       companionLastName: companionLastName || undefined,
+      signatureDataUrl: signatureDataUrl || undefined,
     });
   } catch (err) {
-    console.error("Meldeschein PDF generation failed:", err);
+    console.error("Meldeschein PDF generation failed:", err?.message || err);
+  }
+  console.log("PDF generated:", pdfData ? pdfData.length + " bytes" : "FAILED");
+
+  try {
+    await prisma.meldeschein.create({
+      data: {
+        apaleoReservationId: reservationId,
+        firstName,
+        lastName,
+        dateOfBirth: new Date(dateOfBirth),
+        nationality,
+        idDocumentType,
+        idDocumentNumber,
+        street,
+        zipCode,
+        city,
+        country,
+        arrivalDate: new Date(arrivalDate),
+        departureDate: new Date(departureDate),
+        locationSlug,
+        companionFirstName: companionFirstName || null,
+        companionLastName: companionLastName || null,
+        pdfData: pdfData ? Buffer.from(pdfData) : null,
+      },
+    });
+  } catch (err: any) {
+    console.error("Meldeschein DB save failed:", err?.message || err);
+    return Response.json({ error: "Failed to save registration", detail: err?.message }, { status: 500 });
   }
 
-  await prisma.meldeschein.create({
-    data: {
-      apaleoReservationId: reservationId,
-      firstName,
-      lastName,
-      dateOfBirth: new Date(dateOfBirth),
-      nationality,
-      idDocumentType,
-      idDocumentNumber,
-      street,
-      zipCode,
-      city,
-      country,
-      arrivalDate: new Date(arrivalDate),
-      departureDate: new Date(departureDate),
-      locationSlug,
-      companionFirstName: companionFirstName || null,
-      companionLastName: companionLastName || null,
-      pdfData: pdfData ? new Uint8Array(pdfData) : null,
-    },
-  });
+  // Upload PDF to Google Drive
+  if (pdfData) {
+    try {
+      const { uploadMeldescheinToDrive } = await import("@/lib/google-drive");
+      const driveResult = await uploadMeldescheinToDrive({
+        pdf: pdfData,
+        firstName,
+        lastName,
+        locationName: locationName || locationSlug,
+        arrivalDate,
+      });
+      console.log("Google Drive upload result:", driveResult);
+    } catch (err: any) {
+      console.error("Google Drive upload failed:", err?.message || err);
+    }
+  }
 
   // TODO: Trigger Kiwi/Salto access activation here
   // - Alster: Kiwi only

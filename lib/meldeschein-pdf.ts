@@ -29,6 +29,7 @@ interface MeldescheinPdfData {
   locationName: string;
   companionFirstName?: string;
   companionLastName?: string;
+  signatureDataUrl?: string; // Base64 PNG data URL from signature pad
 }
 
 function formatDateGerman(isoDate: string): string {
@@ -52,6 +53,7 @@ export async function generateMeldescheinPdf(data: MeldescheinPdfData): Promise<
     const doc = new PDFDocument({
       size: "A4",
       margins: { top: 30, bottom: 40, left: 50, right: 50 },
+      font: fontRegular, // Use Montserrat as default (avoids Helvetica.afm lookup)
     });
 
     doc.registerFont("Mont", fontRegular);
@@ -169,7 +171,13 @@ export async function generateMeldescheinPdf(data: MeldescheinPdfData): Promise<
     doc.fontSize(7).font("Mont").fillColor(GRAY).text("Ort, Datum", PAD, sigLineY + 5);
 
     const rightX = PAD + halfWidth + 8;
-    doc.fontSize(9).font("Mont").fillColor(BLACK).text("Elektronisch bestätigt", rightX, sigLineY - 18);
+    if (data.signatureDataUrl) {
+      // Embed actual guest signature
+      const sigBuffer = Buffer.from(data.signatureDataUrl.replace(/^data:image\/png;base64,/, ""), "base64");
+      doc.image(sigBuffer, rightX, sigLineY - 45, { width: 140, height: 40 });
+    } else {
+      doc.fontSize(9).font("Mont").fillColor(BLACK).text("Elektronisch bestätigt", rightX, sigLineY - 18);
+    }
     doc.moveTo(rightX, sigLineY).lineTo(rightX + halfWidth, sigLineY).strokeColor("#ccc").lineWidth(0.5).stroke();
     doc.fontSize(7).font("Mont").fillColor(GRAY).text("Unterschrift des Gastes", rightX, sigLineY + 5);
 

@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
+import SignaturePad from "signature_pad";
 
 const NATIONALITIES = [
   "Afghan", "Albanian", "Algerian", "American", "Argentine", "Australian",
@@ -38,6 +39,9 @@ export default function CheckinPage() {
   const [error, setError] = useState("");
   const [hasCompanion, setHasCompanion] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
+  const [hasSigned, setHasSigned] = useState(false);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const sigPadRef = useRef<SignaturePad | null>(null);
 
   const [form, setForm] = useState({
     firstName: prefillFirstName,
@@ -62,6 +66,23 @@ export default function CheckinPage() {
       .catch(() => {});
   }, [reservationId]);
 
+  // Initialize signature pad
+  useEffect(() => {
+    if (!canvasRef.current || sigPadRef.current) return;
+    const canvas = canvasRef.current;
+    const ratio = Math.max(window.devicePixelRatio || 1, 1);
+    canvas.width = canvas.offsetWidth * ratio;
+    canvas.height = canvas.offsetHeight * ratio;
+    canvas.getContext("2d")?.scale(ratio, ratio);
+
+    const pad = new SignaturePad(canvas, {
+      backgroundColor: "rgb(250, 250, 250)",
+      penColor: "#1A1A1A",
+    });
+    pad.addEventListener("endStroke", () => setHasSigned(!pad.isEmpty()));
+    sigPadRef.current = pad;
+  });
+
   const updateField = (field: string, value: string) => {
     setForm(prev => ({ ...prev, [field]: value }));
     setError("");
@@ -81,6 +102,10 @@ export default function CheckinPage() {
       setError("Please confirm that your information is correct.");
       return;
     }
+    if (!hasSigned || sigPadRef.current?.isEmpty()) {
+      setError("Please sign the registration form.");
+      return;
+    }
 
     setSubmitting(true);
     try {
@@ -96,6 +121,7 @@ export default function CheckinPage() {
           departureDate,
           locationSlug,
           locationName,
+          signatureDataUrl: sigPadRef.current?.toDataURL("image/png"),
         }),
       });
       const data = await res.json();
@@ -249,6 +275,34 @@ export default function CheckinPage() {
           )}
         </div>
 
+        {/* Signature */}
+        <div className="mb-6">
+          <h2 className="text-sm font-semibold text-[#1A1A1A] mb-3 pb-2 border-b border-[#FCB0C0]">Signature</h2>
+          <p className="text-xs text-[#888] mb-2">Please sign below to confirm your registration.</p>
+          <div className="relative border border-gray-200 rounded-[5px] overflow-hidden" style={{ height: 160 }}>
+            <canvas
+              ref={canvasRef}
+              className="w-full"
+              style={{ height: 160 }}
+            />
+            {!hasSigned && (
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <span className="text-sm text-gray-300">Sign here</span>
+              </div>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              sigPadRef.current?.clear();
+              setHasSigned(false);
+            }}
+            className="text-xs text-[#888] mt-1 hover:text-[#1A1A1A]"
+          >
+            Clear signature
+          </button>
+        </div>
+
         {/* Confirmation */}
         <div className="mb-6 p-4 bg-[#FAFAFA] rounded-[5px]">
           <label className="flex items-start gap-3 cursor-pointer">
@@ -272,7 +326,7 @@ export default function CheckinPage() {
 
         <button
           onClick={handleSubmit}
-          disabled={submitting || !confirmed}
+          disabled={submitting || !confirmed || !hasSigned}
           className="w-full bg-[#1A1A1A] text-white py-3.5 rounded-[5px] font-semibold text-base disabled:opacity-40 disabled:cursor-not-allowed"
         >
           {submitting ? "Submitting..." : "Complete registration"}

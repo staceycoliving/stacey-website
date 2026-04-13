@@ -95,6 +95,7 @@ export async function generateWohnungsgeberbestaetigung(
     const doc = new PDFDocument({
       size: "A4",
       margins: { top: 30, bottom: 40, left: 50, right: 50 },
+      font: fontRegular,
     });
 
     doc.registerFont("Mont", fontRegular);
