@@ -317,6 +317,13 @@ model Meldeschein {
   departureDate         DateTime
   locationSlug          String
 
+  // Begleitperson (optional)
+  companionFirstName    String?
+  companionLastName     String?
+
+  // PDF
+  pdfData               Bytes?    // Generated Meldeschein PDF
+
   // Status
   completedAt           DateTime  @default(now())
 

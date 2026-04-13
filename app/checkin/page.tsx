@@ -36,6 +36,8 @@ export default function CheckinPage() {
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [hasCompanion, setHasCompanion] = useState(false);
+  const [confirmed, setConfirmed] = useState(false);
 
   const [form, setForm] = useState({
     firstName: prefillFirstName,
@@ -48,6 +50,8 @@ export default function CheckinPage() {
     zipCode: "",
     city: "",
     country: "",
+    companionFirstName: "",
+    companionLastName: "",
   });
 
   useEffect(() => {
@@ -66,7 +70,15 @@ export default function CheckinPage() {
   const handleSubmit = async () => {
     if (!form.firstName || !form.lastName || !form.dateOfBirth || !form.nationality ||
         !form.idDocumentNumber || !form.street || !form.zipCode || !form.city || !form.country) {
-      setError("Please fill in all fields.");
+      setError("Please fill in all required fields.");
+      return;
+    }
+    if (hasCompanion && (!form.companionFirstName || !form.companionLastName)) {
+      setError("Please fill in your companion's name.");
+      return;
+    }
+    if (!confirmed) {
+      setError("Please confirm that your information is correct.");
       return;
     }
 
@@ -78,9 +90,12 @@ export default function CheckinPage() {
         body: JSON.stringify({
           reservationId,
           ...form,
+          companionFirstName: hasCompanion ? form.companionFirstName : undefined,
+          companionLastName: hasCompanion ? form.companionLastName : undefined,
           arrivalDate,
           departureDate,
           locationSlug,
+          locationName,
         }),
       });
       const data = await res.json();
@@ -92,7 +107,6 @@ export default function CheckinPage() {
     setSubmitting(false);
   };
 
-  // Already completed
   if (alreadyDone) {
     return (
       <div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center px-4">
@@ -108,7 +122,6 @@ export default function CheckinPage() {
     );
   }
 
-  // Success state
   if (submitted) {
     return (
       <div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center px-4">
@@ -146,21 +159,21 @@ export default function CheckinPage() {
           <h2 className="text-sm font-semibold text-[#1A1A1A] mb-3 pb-2 border-b border-[#FCB0C0]">Personal details</h2>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className={labelClass}>First name</label>
+              <label className={labelClass}>First name *</label>
               <input className={inputClass} value={form.firstName} onChange={e => updateField("firstName", e.target.value)} />
             </div>
             <div>
-              <label className={labelClass}>Last name</label>
+              <label className={labelClass}>Last name *</label>
               <input className={inputClass} value={form.lastName} onChange={e => updateField("lastName", e.target.value)} />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3 mt-3">
             <div>
-              <label className={labelClass}>Date of birth</label>
+              <label className={labelClass}>Date of birth *</label>
               <input type="date" className={inputClass} value={form.dateOfBirth} onChange={e => updateField("dateOfBirth", e.target.value)} />
             </div>
             <div>
-              <label className={labelClass}>Nationality</label>
+              <label className={labelClass}>Nationality *</label>
               <select className={inputClass} value={form.nationality} onChange={e => updateField("nationality", e.target.value)}>
                 <option value="">Select...</option>
                 {NATIONALITIES.map(n => <option key={n} value={n}>{n}</option>)}
@@ -174,14 +187,14 @@ export default function CheckinPage() {
           <h2 className="text-sm font-semibold text-[#1A1A1A] mb-3 pb-2 border-b border-[#FCB0C0]">ID document</h2>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className={labelClass}>Document type</label>
+              <label className={labelClass}>Document type *</label>
               <select className={inputClass} value={form.idDocumentType} onChange={e => updateField("idDocumentType", e.target.value)}>
                 <option value="passport">Passport</option>
                 <option value="id_card">ID Card</option>
               </select>
             </div>
             <div>
-              <label className={labelClass}>Document number</label>
+              <label className={labelClass}>Document number *</label>
               <input className={inputClass} placeholder="e.g. C01X00T47" value={form.idDocumentNumber} onChange={e => updateField("idDocumentNumber", e.target.value)} />
             </div>
           </div>
@@ -191,23 +204,66 @@ export default function CheckinPage() {
         <div className="mb-6">
           <h2 className="text-sm font-semibold text-[#1A1A1A] mb-3 pb-2 border-b border-[#FCB0C0]">Home address</h2>
           <div className="mb-3">
-            <label className={labelClass}>Street + house number</label>
+            <label className={labelClass}>Street + house number *</label>
             <input className={inputClass} placeholder="e.g. Musterstraße 12" value={form.street} onChange={e => updateField("street", e.target.value)} />
           </div>
           <div className="grid grid-cols-3 gap-3">
             <div>
-              <label className={labelClass}>Zip code</label>
+              <label className={labelClass}>Zip code *</label>
               <input className={inputClass} placeholder="12345" value={form.zipCode} onChange={e => updateField("zipCode", e.target.value)} />
             </div>
             <div>
-              <label className={labelClass}>City</label>
+              <label className={labelClass}>City *</label>
               <input className={inputClass} placeholder="Berlin" value={form.city} onChange={e => updateField("city", e.target.value)} />
             </div>
             <div>
-              <label className={labelClass}>Country</label>
+              <label className={labelClass}>Country *</label>
               <input className={inputClass} placeholder="Germany" value={form.country} onChange={e => updateField("country", e.target.value)} />
             </div>
           </div>
+        </div>
+
+        {/* Companion */}
+        <div className="mb-6">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={hasCompanion}
+              onChange={e => setHasCompanion(e.target.checked)}
+              className="w-4 h-4 accent-[#FCB0C0]"
+            />
+            <span className="text-sm text-[#1A1A1A]">I'm traveling with a companion</span>
+          </label>
+
+          {hasCompanion && (
+            <div className="grid grid-cols-2 gap-3 mt-3">
+              <div>
+                <label className={labelClass}>Companion first name *</label>
+                <input className={inputClass} value={form.companionFirstName} onChange={e => updateField("companionFirstName", e.target.value)} />
+              </div>
+              <div>
+                <label className={labelClass}>Companion last name *</label>
+                <input className={inputClass} value={form.companionLastName} onChange={e => updateField("companionLastName", e.target.value)} />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Confirmation */}
+        <div className="mb-6 p-4 bg-[#FAFAFA] rounded-[5px]">
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={confirmed}
+              onChange={e => setConfirmed(e.target.checked)}
+              className="w-4 h-4 accent-[#FCB0C0] mt-0.5 flex-shrink-0"
+            />
+            <span className="text-sm text-[#555] leading-relaxed">
+              I confirm that the information provided above is correct and complete.
+              I understand that providing false information is a regulatory offense
+              under German registration law.
+            </span>
+          </label>
         </div>
 
         {error && (
@@ -216,7 +272,7 @@ export default function CheckinPage() {
 
         <button
           onClick={handleSubmit}
-          disabled={submitting}
+          disabled={submitting || !confirmed}
           className="w-full bg-[#1A1A1A] text-white py-3.5 rounded-[5px] font-semibold text-base disabled:opacity-40 disabled:cursor-not-allowed"
         >
           {submitting ? "Submitting..." : "Complete registration"}

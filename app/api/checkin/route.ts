@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
+import { generateMeldescheinPdf } from "@/lib/meldeschein-pdf";
 
 export async function POST(request: NextRequest) {
   let body: any;
@@ -10,20 +11,10 @@ export async function POST(request: NextRequest) {
   }
 
   const {
-    reservationId,
-    firstName,
-    lastName,
-    dateOfBirth,
-    nationality,
-    idDocumentType,
-    idDocumentNumber,
-    street,
-    zipCode,
-    city,
-    country,
-    arrivalDate,
-    departureDate,
-    locationSlug,
+    reservationId, firstName, lastName, dateOfBirth, nationality,
+    idDocumentType, idDocumentNumber, street, zipCode, city, country,
+    arrivalDate, departureDate, locationSlug, locationName,
+    companionFirstName, companionLastName,
   } = body;
 
   if (!reservationId || !firstName || !lastName || !dateOfBirth || !nationality ||
@@ -39,6 +30,31 @@ export async function POST(request: NextRequest) {
 
   if (existing) {
     return Response.json({ ok: true, alreadyCompleted: true });
+  }
+
+  // Generate Meldeschein PDF
+  let pdfData: Buffer | null = null;
+  try {
+    pdfData = await generateMeldescheinPdf({
+      firstName,
+      lastName,
+      dateOfBirth,
+      nationality,
+      idDocumentType,
+      idDocumentNumber,
+      street,
+      zipCode,
+      city,
+      country,
+      arrivalDate,
+      departureDate,
+      locationSlug,
+      locationName: locationName || locationSlug,
+      companionFirstName: companionFirstName || undefined,
+      companionLastName: companionLastName || undefined,
+    });
+  } catch (err) {
+    console.error("Meldeschein PDF generation failed:", err);
   }
 
   await prisma.meldeschein.create({
@@ -57,6 +73,9 @@ export async function POST(request: NextRequest) {
       arrivalDate: new Date(arrivalDate),
       departureDate: new Date(departureDate),
       locationSlug,
+      companionFirstName: companionFirstName || null,
+      companionLastName: companionLastName || null,
+      pdfData: pdfData ? new Uint8Array(pdfData) : null,
     },
   });
 
