@@ -11,6 +11,7 @@ import {
   sendWelcomeEmail,
 } from "@/lib/email";
 import { downloadSignedDocument } from "@/lib/yousign";
+import { uploadLongstayDocument } from "@/lib/google-drive";
 
 const DEPOSIT_DEADLINE_HOURS = 48;
 
@@ -323,7 +324,7 @@ async function handleDepositPaid(bookingId: string) {
     ? booking.moveInDate.toISOString().split("T")[0]
     : "";
 
-  // Download signed lease from Yousign to attach to confirmation email
+  // Download signed lease from Yousign to attach to confirmation email + save to Drive
   let signedLeasePdf: Buffer | undefined;
   if (booking.signatureRequestId && booking.signatureDocumentId) {
     try {
@@ -332,6 +333,16 @@ async function handleDepositPaid(bookingId: string) {
         booking.signatureDocumentId
       );
       signedLeasePdf = Buffer.from(arrayBuffer);
+
+      // Upload to Google Drive
+      uploadLongstayDocument({
+        pdf: signedLeasePdf,
+        firstName: booking.firstName,
+        lastName: booking.lastName,
+        locationName: booking.location.name,
+        date: moveInStr,
+        documentType: "Mietvertrag",
+      }).catch(err => console.error("Mietvertrag Drive upload failed:", err));
     } catch (err) {
       reportError(err, {
         scope: "stripe-webhook",
