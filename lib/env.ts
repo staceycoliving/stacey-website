@@ -24,6 +24,7 @@ const serverSchema = z.object({
   // apaleo PMS (SHORT stay)
   APALEO_CLIENT_ID: z.string().min(1),
   APALEO_CLIENT_SECRET: z.string().min(1),
+  APALEO_WEBHOOK_SECRET: z.string().min(1).optional(),
 
   // Stripe
   STRIPE_SECRET_KEY: z.string().min(1).startsWith("sk_"),

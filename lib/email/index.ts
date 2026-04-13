@@ -4,10 +4,10 @@
 // formatters) lives in _shared.ts.
 
 export { sendShortStayConfirmation } from "./short-stay";
-export { sendLongStayConfirmation } from "./long-stay";
 
 export {
   sendDepositPaymentLink,
+  sendDepositReminder,
   sendDepositConfirmation,
   sendDepositTimeoutNotification,
   sendDepositReturnNotification,
@@ -29,3 +29,11 @@ export {
 export { sendTerminationNotice } from "./termination";
 
 export { sendTeamNotification } from "./team";
+
+export { sendWelcomeEmail } from "./welcome";
+
+export { sendPostStayFeedback } from "./post-stay";
+
+export { sendPreArrival } from "./pre-arrival";
+
+export { sendCheckoutReminder } from "./checkout-reminder";

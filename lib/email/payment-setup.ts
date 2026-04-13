@@ -89,7 +89,7 @@ export async function sendPaymentSetupReminder(data: PaymentSetupReminderEmail) 
       We need this before your move-in so we can automatically charge your rent each month.
     </p>
     ${ctaButton("Set up payment method", data.setupUrl)}
-    ${isUrgent ? `<p style="font-size:13px;color:#c00;font-weight:600;margin-top:16px;">This is reminder ${data.reminderNumber} of 4. Please complete the setup as soon as possible.</p>` : ""}
+    ${isUrgent ? `<p style="font-size:13px;color:#c00;font-weight:600;margin-top:16px;">This is reminder ${data.reminderNumber} of 3. Please complete the setup as soon as possible.</p>` : ""}
   `);
 
   return resend.emails.send({

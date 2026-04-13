@@ -143,6 +143,11 @@ const RATE_PLAN_CODES: Record<string, Record<string, string>> = {
 
 // ─── Public API ─────────────────────────────────────────────
 
+// Reverse: property ID → slug
+const PROPERTY_ID_TO_SLUG: Record<string, string> = Object.fromEntries(
+  Object.entries(PROPERTY_MAP).map(([slug, id]) => [id, slug])
+);
+
 export function isApaleoProperty(slug: string): boolean {
   return slug in PROPERTY_MAP;
 }
@@ -487,6 +492,72 @@ export async function createPaidShortStayBooking(params: {
  * (some may be sold out in near-term dates).
  * Returns: { alster: { PREMIUM: 63, JUMBO: 69, ... }, downtown: { ... } }
  */
+/**
+ * Get reservations filtered by arrival or departure date.
+ * Used by the daily cron for SHORT stay lifecycle emails.
+ */
+export async function getReservations(params: {
+  dateFilter: "arrival" | "departure";
+  from: string; // YYYY-MM-DD
+  to: string;   // YYYY-MM-DD
+  status?: string; // e.g. "Confirmed", "InHouse", "CheckedOut"
+}) {
+  const propertyIds = Object.values(PROPERTY_MAP).join(",");
+  const query = new URLSearchParams({
+    propertyIds,
+    dateFilter: params.dateFilter === "arrival" ? "Arrival" : "Departure",
+    from: params.from,
+    to: params.to,
+    ...(params.status ? { status: params.status } : {}),
+    pageSize: "100",
+    expand: "unit",
+  });
+
+  const data = await apiFetch(`/booking/v1/reservations?${query}`);
+  const reservations = data.reservations || [];
+
+  return reservations.map((r: any) => ({
+    id: r.id,
+    bookingId: r.bookingId,
+    arrival: r.arrival,
+    departure: r.departure,
+    status: r.status,
+    guestFirstName: r.primaryGuest?.firstName || r.booker?.firstName || "",
+    guestLastName: r.primaryGuest?.lastName || r.booker?.lastName || "",
+    guestEmail: r.primaryGuest?.email || r.booker?.email || "",
+    propertyId: r.property?.id || "",
+    propertyName: r.property?.name || "",
+    locationSlug: PROPERTY_ID_TO_SLUG[r.property?.id] || "",
+    unitName: r.unit?.name || null, // Room number (null = not assigned)
+    unitGroupName: r.unitGroup?.name || "",
+    category: APALEO_NAME_TO_CATEGORY[r.unitGroup?.name] || r.unitGroup?.name || "",
+  }));
+}
+
+/**
+ * Get a single reservation by ID. Used by the apaleo webhook
+ * to check if a unit was just assigned.
+ */
+export async function getReservation(reservationId: string) {
+  const data = await apiFetch(`/booking/v1/reservations/${reservationId}?expand=unit`);
+  return {
+    id: data.id,
+    bookingId: data.bookingId,
+    arrival: data.arrival,
+    departure: data.departure,
+    status: data.status,
+    guestFirstName: data.primaryGuest?.firstName || data.booker?.firstName || "",
+    guestLastName: data.primaryGuest?.lastName || data.booker?.lastName || "",
+    guestEmail: data.primaryGuest?.email || data.booker?.email || "",
+    propertyId: data.property?.id || "",
+    propertyName: data.property?.name || "",
+    locationSlug: PROPERTY_ID_TO_SLUG[data.property?.id] || "",
+    unitName: data.unit?.name || null,
+    unitGroupName: data.unitGroup?.name || "",
+    category: APALEO_NAME_TO_CATEGORY[data.unitGroup?.name] || data.unitGroup?.name || "",
+  };
+}
+
 export async function getBaseNightlyPrices(): Promise<Record<string, Record<string, number>>> {
   const result: Record<string, Record<string, number>> = {};
   const nights = 5;

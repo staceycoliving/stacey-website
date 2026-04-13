@@ -50,7 +50,7 @@ export async function sendShortStayConfirmation(booking: ShortStayBooking) {
       <p style="margin:0 0 10px;font-size:15px;font-weight:600;">Check-in details</p>
       <p style="margin:0;font-size:14px;color:#555;line-height:1.6;">
         Come to <strong>${booking.locationAddress}</strong> from <strong>4 PM</strong>.
-        You'll receive your digital key and check-in instructions by email before your arrival.
+        You'll receive your digital access code and check-in instructions shortly before your arrival.
       </p>
     </div>
   `);

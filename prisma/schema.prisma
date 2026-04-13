@@ -53,9 +53,11 @@ model Room {
   apartmentId String
   apartment   Apartment    @relation(fields: [apartmentId], references: [id])
 
-  roomNumber  String       // Zimmernummer (z.B. "201")
-  category    RoomCategory // Cozy, Comfy, Jumbo, etc.
-  monthlyRent Int          @default(0) // Monatliche Miete in Cent
+  roomNumber       String       // Zimmernummer (z.B. "201")
+  category         RoomCategory // Cozy, Comfy, Jumbo, etc.
+  monthlyRent      Int          @default(0) // Monatliche Miete in Cent
+  buildingAddress  String?      // Hausnummer wenn abweichend (z.B. "Dorotheenstraße 3")
+  floorDescription String?      // Stockwerk + Lage (z.B. "3. OG rechts")
 
   tenant   Tenant? // Aktueller Mieter (oder null = frei)
   bookings Booking[]
@@ -119,8 +121,9 @@ model Tenant {
 
   // Emails
   welcomeEmailSentAt           DateTime?
-  paymentSetupRemindersSent    Int       @default(0) // Counter: 0..4
+  paymentSetupRemindersSent    Int       @default(0) // Counter: 0..3
   paymentFinalWarningSentAt    DateTime?
+  postStayFeedbackSentAt       DateTime?
 
   rentPayments RentPayment[]
 
@@ -179,6 +182,7 @@ model Booking {
   depositPaymentLinkUrl String?   // URL für Gast
   depositDeadline       DateTime? // 48h nach Booking Fee
   depositPaidAt         DateTime?
+  depositReminderSentAt DateTime? // 24h Reminder vor Deadline
 
   // Tenant (Rück-Referenz)
   tenant     Tenant?
@@ -228,6 +232,9 @@ model RentPayment {
   failedAt  DateTime?
   failureReason String?
 
+  // Retry-Tracking
+  lastRetryAt DateTime? // Last SEPA retry attempt (at most once/day)
+
   // Mahnung-Tracking
   reminder1SentAt DateTime? // Tag 3: freundliche Erinnerung
   mahnung1SentAt  DateTime? // Tag 14: 1. Mahnung
@@ -264,4 +271,22 @@ model WebhookEvent {
 
   @@unique([provider, eventId])
   @@index([receivedAt])
+}
+
+// ─── SHORT STAY: Email-Tracking per apaleo Reservation ──
+
+model ShortStayEmailLog {
+  id                       String    @id @default(cuid())
+  apaleoReservationId      String    @unique // apaleo reservation ID
+  guestEmail               String
+  locationSlug             String
+
+  preArrivalSentAt         DateTime?
+  checkoutReminderSentAt   DateTime?
+  postStayFeedbackSentAt   DateTime?
+
+  createdAt                DateTime  @default(now())
+  updatedAt                DateTime  @updatedAt
+
+  @@index([apaleoReservationId])
 }

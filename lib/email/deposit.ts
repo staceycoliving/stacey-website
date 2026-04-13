@@ -132,6 +132,45 @@ export async function sendDepositConfirmation(data: DepositConfirmationEmail) {
   });
 }
 
+// ─── Deposit Reminder (24h left) ────────────────────────────
+
+interface DepositReminderEmail {
+  firstName: string;
+  email: string;
+  locationName: string;
+  depositAmount: number; // in cents
+  depositPaymentUrl: string;
+  hoursLeft: number;
+}
+
+export async function sendDepositReminder(data: DepositReminderEmail) {
+  const depositEur = (data.depositAmount / 100).toFixed(2);
+
+  const html = layout(`
+    ${badge("Action required", "orange")}
+    <h2 style="margin:0 0 8px;font-size:22px;font-weight:700;">Your deposit is still pending</h2>
+    <p style="margin:0 0 24px;color:#555;font-size:15px;line-height:1.5;">
+      Hi ${data.firstName}, your room at STACEY ${data.locationName} is still reserved — but your security deposit
+      hasn't been paid yet. You have about <strong>${data.hoursLeft} hours left</strong>.
+    </p>
+    ${detailTable(
+      detailRow("Security deposit", `€${depositEur}`, { highlight: "orange" })
+    )}
+    ${ctaButton(`Pay deposit — €${depositEur}`, data.depositPaymentUrl)}
+    ${warningBox(
+      "Your reservation will be released if the deposit is not received in time.",
+      "After that, the room may no longer be available."
+    )}
+  `, { accent: "orange" });
+
+  return resend.emails.send({
+    from: FROM,
+    to: data.email,
+    subject: `Reminder: Deposit pending — STACEY ${data.locationName}`,
+    html,
+  });
+}
+
 // ─── Deposit Timeout ────────────────────────────────────────
 
 interface DepositTimeoutEmail {

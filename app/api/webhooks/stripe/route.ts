@@ -8,6 +8,7 @@ import {
   sendDepositConfirmation,
   sendTeamNotification,
   sendPaymentSetupConfirmation,
+  sendWelcomeEmail,
 } from "@/lib/email";
 import { downloadSignedDocument } from "@/lib/yousign";
 
@@ -518,6 +519,99 @@ async function handlePaymentSetupCompleted(tenantId: string, session: any) {
     { scope: "stripe-webhook", tags: { tenantId, paymentMethodId, methodLabel } },
     "payment method saved + confirmation sent",
   );
+
+  // If move-in is within 7 days and welcome email hasn't been sent yet,
+  // send it immediately instead of waiting for the next cron run
+  if (!tenant.welcomeEmailSentAt) {
+    const daysUntilMoveIn = Math.floor(
+      (tenant.moveIn.getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+    );
+    if (daysUntilMoveIn <= 3) {
+      try {
+        const location = tenant.room.apartment.location;
+        await sendWelcomeEmail({
+          firstName: tenant.firstName,
+          lastName: tenant.lastName,
+          email: tenant.email,
+          locationName: location.name,
+          locationAddress: tenant.room.buildingAddress || location.address,
+          locationSlug: location.slug,
+          roomNumber: tenant.room.roomNumber,
+          moveInDate: tenant.moveIn.toISOString().split("T")[0],
+          floor: tenant.room.floorDescription || undefined,
+        });
+        await prisma.tenant.update({
+          where: { id: tenantId },
+          data: { welcomeEmailSentAt: new Date() },
+        });
+        logEvent(
+          { scope: "stripe-webhook", tags: { tenantId, daysUntilMoveIn } },
+          "welcome email sent immediately (move-in soon)",
+        );
+      } catch (err) {
+        reportError(err, {
+          scope: "stripe-webhook",
+          tags: { stage: "immediate-welcome-email", tenantId },
+        });
+      }
+    }
+  }
+
+  // Auto-charge any outstanding rent now that a payment method is available
+  try {
+    const unpaidRents = await prisma.rentPayment.findMany({
+      where: {
+        tenantId,
+        status: { in: ["PENDING", "FAILED"] },
+        month: { lt: new Date() },
+      },
+      orderBy: { month: "asc" },
+    });
+
+    for (const rent of unpaidRents) {
+      try {
+        const pi = await stripe.paymentIntents.create({
+          amount: rent.amount,
+          currency: "eur",
+          customer: tenant.stripeCustomerId!,
+          payment_method: paymentMethodId,
+          off_session: true,
+          confirm: true,
+          metadata: {
+            type: "long_stay_rent",
+            tenantId,
+            rentPaymentId: rent.id,
+            month: rent.month.toISOString(),
+            autoCharge: "payment_method_updated",
+          },
+        });
+
+        await prisma.rentPayment.update({
+          where: { id: rent.id },
+          data: {
+            status: "PROCESSING",
+            stripePaymentIntentId: pi.id,
+            lastRetryAt: new Date(),
+          },
+        });
+
+        logEvent(
+          { scope: "stripe-webhook", tags: { tenantId, rentPaymentId: rent.id } },
+          `auto-charged outstanding rent after payment method update`,
+        );
+      } catch (chargeErr) {
+        reportError(chargeErr, {
+          scope: "stripe-webhook",
+          tags: { stage: "auto-charge-outstanding", tenantId, rentPaymentId: rent.id },
+        });
+      }
+    }
+  } catch (err) {
+    reportError(err, {
+      scope: "stripe-webhook",
+      tags: { stage: "auto-charge-outstanding-query", tenantId },
+    });
+  }
 }
 
 // ─── Rent Payment Succeeded (SEPA) ─────────────────────────
