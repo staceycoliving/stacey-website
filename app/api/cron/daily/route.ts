@@ -13,7 +13,6 @@ import {
   sendPostStayFeedback,
   sendPreArrival,
   sendCheckoutReminder,
-  sendInvoice,
 } from "@/lib/email";
 import { stripe } from "@/lib/stripe";
 import { getReservations, createInvoiceAndGetPdf } from "@/lib/apaleo";
@@ -93,7 +92,6 @@ export async function GET(request: NextRequest) {
     ...(process.env.ENABLE_SHORT_STAY_EMAILS === "true" ? {
       shortStayPreArrival: await runStep("shortStayPreArrival", handleShortStayPreArrival),
       shortStayCheckout: await runStep("shortStayCheckout", handleShortStayCheckoutReminder),
-      shortStayInvoice: await runStep("shortStayInvoice", handleShortStayInvoice),
       shortStayPostStay: await runStep("shortStayPostStay", handleShortStayPostStayFeedback),
     } : { shortStay: "disabled" }),
   };
@@ -850,17 +848,37 @@ async function handleShortStayPostStayFeedback() {
     }
 
     try {
+      // Try to get invoice from apaleo (non-blocking — send email even if invoice fails)
+      let invoicePdf: Buffer | undefined;
+      let invoiceNumber: string | undefined;
+      try {
+        const invoiceResult = await createInvoiceAndGetPdf(res.id);
+        if (invoiceResult) {
+          invoicePdf = invoiceResult.pdf;
+          invoiceNumber = invoiceResult.invoiceNumber;
+        }
+      } catch (err) {
+        console.error(`Invoice generation failed for ${res.id}, sending email without:`, err);
+      }
+
       await sendPostStayFeedback({
         firstName: res.guestFirstName,
         email: res.guestEmail,
         locationName: getLocationName(res.locationSlug),
         locationSlug: res.locationSlug,
         stayType: "SHORT",
+        checkIn: res.arrival,
+        checkOut: res.departure,
+        invoicePdf,
+        invoiceNumber,
       });
 
       await prisma.shortStayEmailLog.update({
         where: { apaleoReservationId: res.id },
-        data: { postStayFeedbackSentAt: new Date() },
+        data: {
+          postStayFeedbackSentAt: new Date(),
+          ...(invoicePdf ? { invoiceSentAt: new Date() } : {}),
+        },
       });
       sent++;
     } catch (err) {
@@ -871,58 +889,3 @@ async function handleShortStayPostStayFeedback() {
   return { sent };
 }
 
-// ─── 8. SHORT Stay Invoice (checked out yesterday) ──────────
-
-async function handleShortStayInvoice() {
-  const yesterday = new Date();
-  yesterday.setDate(yesterday.getDate() - 1);
-  const dateStr = yesterday.toISOString().split("T")[0];
-
-  const reservations = await getReservations({
-    dateFilter: "departure",
-    from: dateStr,
-    to: dateStr,
-    status: "CheckedOut",
-  });
-
-  let sent = 0;
-  for (const res of reservations) {
-    if (!res.guestEmail) continue;
-
-    const log = await getOrCreateEmailLog(res.id, res.guestEmail, res.locationSlug);
-    if (log.invoiceSentAt) continue;
-
-    if (!canSendEmail(res.guestEmail)) {
-      logSkipped(res.guestEmail, "SHORT invoice");
-      continue;
-    }
-
-    try {
-      const invoiceResult = await createInvoiceAndGetPdf(res.id);
-      if (!invoiceResult) {
-        console.error(`No invoice/folio found for reservation ${res.id}`);
-        continue;
-      }
-
-      await sendInvoice({
-        firstName: res.guestFirstName,
-        email: res.guestEmail,
-        locationName: getLocationName(res.locationSlug),
-        checkIn: res.arrival,
-        checkOut: res.departure,
-        invoicePdf: invoiceResult.pdf,
-        invoiceNumber: invoiceResult.invoiceNumber,
-      });
-
-      await prisma.shortStayEmailLog.update({
-        where: { apaleoReservationId: res.id },
-        data: { invoiceSentAt: new Date() },
-      });
-      sent++;
-    } catch (err) {
-      console.error(`Invoice failed for ${res.guestEmail}:`, err);
-    }
-  }
-
-  return { sent };
-}
