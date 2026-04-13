@@ -558,6 +558,43 @@ export async function getReservation(reservationId: string) {
   };
 }
 
+/**
+ * Create an invoice for a folio and return the PDF.
+ * Used after check-out to send the invoice to the guest.
+ */
+export async function createInvoiceAndGetPdf(reservationId: string): Promise<{
+  pdf: Buffer;
+  invoiceNumber: string;
+} | null> {
+  // 1. Find the folio for this reservation
+  const folios = await apiFetch(`/finance/v1/folios?reservationIds=${reservationId}`);
+  const folio = folios.folios?.[0];
+  if (!folio) return null;
+
+  // 2. Create invoice from folio
+  const invoice = await apiFetch(`/finance/v1/invoices`, {
+    method: "POST",
+    body: JSON.stringify({ folioId: folio.id }),
+  });
+
+  if (!invoice?.id) return null;
+
+  // 3. Download PDF
+  const token = await getToken();
+  const pdfRes = await fetch(`${API_URL}/finance/v1/invoices/${invoice.id}/pdf`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (!pdfRes.ok) return null;
+
+  const pdfBuffer = Buffer.from(await pdfRes.arrayBuffer());
+
+  return {
+    pdf: pdfBuffer,
+    invoiceNumber: invoice.number || invoice.id,
+  };
+}
+
 export async function getBaseNightlyPrices(): Promise<Record<string, Record<string, number>>> {
   const result: Record<string, Record<string, number>> = {};
   const nights = 5;

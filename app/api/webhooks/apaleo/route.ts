@@ -116,20 +116,21 @@ export async function POST(request: NextRequest) {
 
     const locationAddress = locations.find(l => l.slug === reservation.locationSlug)?.address || "";
 
-    // TODO: Create Kiwi/Salto digital access account here
-    // - Alster: Kiwi only
-    // - Downtown DT01-05,DT07: Kiwi only
-    // - Downtown other: Kiwi + Salto
+    // NOTE: Kiwi/Salto access is activated AFTER the guest completes the
+    // Meldeschein form (POST /api/checkin), not here.
 
     await sendPreArrival({
       firstName: reservation.guestFirstName,
+      lastName: reservation.guestLastName,
       email: reservation.guestEmail,
       locationName,
       locationAddress,
+      locationSlug: reservation.locationSlug,
       roomNumber: reservation.unitName,
       checkIn: reservation.arrival,
       checkOut: reservation.departure,
       nights,
+      reservationId: reservation.id,
     });
 
     // Track in DB

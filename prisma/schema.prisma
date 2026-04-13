@@ -284,9 +284,44 @@ model ShortStayEmailLog {
   preArrivalSentAt         DateTime?
   checkoutReminderSentAt   DateTime?
   postStayFeedbackSentAt   DateTime?
+  invoiceSentAt            DateTime?
 
   createdAt                DateTime  @default(now())
   updatedAt                DateTime  @updatedAt
 
   @@index([apaleoReservationId])
+}
+
+// ─── SHORT STAY: Meldeschein (Guest Registration) ───────
+
+model Meldeschein {
+  id                    String   @id @default(cuid())
+  apaleoReservationId   String   @unique
+
+  // Gast-Daten
+  firstName             String
+  lastName              String
+  dateOfBirth           DateTime
+  nationality           String
+  idDocumentType        String   // "passport" | "id_card"
+  idDocumentNumber      String
+
+  // Anschrift (Heimatadresse)
+  street                String
+  zipCode               String
+  city                  String
+  country               String
+
+  // Aufenthalt
+  arrivalDate           DateTime
+  departureDate         DateTime
+  locationSlug          String
+
+  // Status
+  completedAt           DateTime  @default(now())
+
+  createdAt             DateTime  @default(now())
+
+  @@index([apaleoReservationId])
+  @@index([locationSlug])
 }

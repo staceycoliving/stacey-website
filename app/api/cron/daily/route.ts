@@ -13,9 +13,10 @@ import {
   sendPostStayFeedback,
   sendPreArrival,
   sendCheckoutReminder,
+  sendInvoice,
 } from "@/lib/email";
 import { stripe } from "@/lib/stripe";
-import { getReservations } from "@/lib/apaleo";
+import { getReservations, createInvoiceAndGetPdf } from "@/lib/apaleo";
 import { locations } from "@/lib/data";
 import { isTestMode, canSendEmail, logSkipped } from "@/lib/test-mode";
 import { env } from "@/lib/env";
@@ -92,6 +93,7 @@ export async function GET(request: NextRequest) {
     ...(process.env.ENABLE_SHORT_STAY_EMAILS === "true" ? {
       shortStayPreArrival: await runStep("shortStayPreArrival", handleShortStayPreArrival),
       shortStayCheckout: await runStep("shortStayCheckout", handleShortStayCheckoutReminder),
+      shortStayInvoice: await runStep("shortStayInvoice", handleShortStayInvoice),
       shortStayPostStay: await runStep("shortStayPostStay", handleShortStayPostStayFeedback),
     } : { shortStay: "disabled" }),
   };
@@ -618,18 +620,18 @@ async function handleRentReminders() {
 async function handlePostStayFeedback() {
   const now = new Date();
 
-  // Find tenants who moved out 1-2 days ago
-  const twoDaysAgo = new Date(now);
-  twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
-  twoDaysAgo.setHours(0, 0, 0, 0);
-  const oneDayAgo = new Date(now);
-  oneDayAgo.setDate(oneDayAgo.getDate() - 1);
-  oneDayAgo.setHours(23, 59, 59, 999);
+  // Find tenants who moved out yesterday
+  const yesterdayStart = new Date(now);
+  yesterdayStart.setDate(yesterdayStart.getDate() - 1);
+  yesterdayStart.setHours(0, 0, 0, 0);
+  const yesterdayEnd = new Date(now);
+  yesterdayEnd.setDate(yesterdayEnd.getDate() - 1);
+  yesterdayEnd.setHours(23, 59, 59, 999);
 
   const tenants = await prisma.tenant.findMany({
     where: {
       bookingId: { not: null },
-      moveOut: { gte: twoDaysAgo, lte: oneDayAgo },
+      moveOut: { gte: yesterdayStart, lte: yesterdayEnd },
       postStayFeedbackSentAt: null,
     },
     include: {
@@ -744,20 +746,21 @@ async function handleShortStayPreArrival() {
     );
 
     try {
-      // TODO: Create Kiwi/Salto digital access account here
-      // - Alster: Kiwi only
-      // - Downtown DT01-05,DT07: Kiwi only
-      // - Downtown other: Kiwi + Salto
+      // NOTE: Kiwi/Salto access is activated AFTER the guest completes the
+      // Meldeschein form (POST /api/checkin), not here.
 
       await sendPreArrival({
         firstName: res.guestFirstName,
+        lastName: res.guestLastName,
         email: res.guestEmail,
         locationName: getLocationName(res.locationSlug),
         locationAddress: getLocationAddress(res.locationSlug),
+        locationSlug: res.locationSlug,
         roomNumber: res.unitName,
         checkIn: res.arrival,
         checkOut: res.departure,
         nights,
+        reservationId: res.id,
       });
 
       await prisma.shortStayEmailLog.update({
@@ -820,18 +823,17 @@ async function handleShortStayCheckoutReminder() {
   return { sent };
 }
 
-// ─── 7. SHORT Stay Post-Stay Feedback (checked out 1-2 days ago) ─
+// ─── 7. SHORT Stay Post-Stay Feedback (checked out yesterday) ──
 
 async function handleShortStayPostStayFeedback() {
-  const twoDaysAgo = new Date();
-  twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
-  const oneDayAgo = new Date();
-  oneDayAgo.setDate(oneDayAgo.getDate() - 1);
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  const dateStr = yesterday.toISOString().split("T")[0];
 
   const reservations = await getReservations({
     dateFilter: "departure",
-    from: twoDaysAgo.toISOString().split("T")[0],
-    to: oneDayAgo.toISOString().split("T")[0],
+    from: dateStr,
+    to: dateStr,
     status: "CheckedOut",
   });
 
@@ -863,6 +865,62 @@ async function handleShortStayPostStayFeedback() {
       sent++;
     } catch (err) {
       console.error(`Post-stay feedback failed for ${res.guestEmail}:`, err);
+    }
+  }
+
+  return { sent };
+}
+
+// ─── 8. SHORT Stay Invoice (checked out yesterday) ──────────
+
+async function handleShortStayInvoice() {
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  const dateStr = yesterday.toISOString().split("T")[0];
+
+  const reservations = await getReservations({
+    dateFilter: "departure",
+    from: dateStr,
+    to: dateStr,
+    status: "CheckedOut",
+  });
+
+  let sent = 0;
+  for (const res of reservations) {
+    if (!res.guestEmail) continue;
+
+    const log = await getOrCreateEmailLog(res.id, res.guestEmail, res.locationSlug);
+    if (log.invoiceSentAt) continue;
+
+    if (!canSendEmail(res.guestEmail)) {
+      logSkipped(res.guestEmail, "SHORT invoice");
+      continue;
+    }
+
+    try {
+      const invoiceResult = await createInvoiceAndGetPdf(res.id);
+      if (!invoiceResult) {
+        console.error(`No invoice/folio found for reservation ${res.id}`);
+        continue;
+      }
+
+      await sendInvoice({
+        firstName: res.guestFirstName,
+        email: res.guestEmail,
+        locationName: getLocationName(res.locationSlug),
+        checkIn: res.arrival,
+        checkOut: res.departure,
+        invoicePdf: invoiceResult.pdf,
+        invoiceNumber: invoiceResult.invoiceNumber,
+      });
+
+      await prisma.shortStayEmailLog.update({
+        where: { apaleoReservationId: res.id },
+        data: { invoiceSentAt: new Date() },
+      });
+      sent++;
+    } catch (err) {
+      console.error(`Invoice failed for ${res.guestEmail}:`, err);
     }
   }
 
