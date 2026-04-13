@@ -1,5 +1,6 @@
 import { resend, FROM, layout, detailRow, detailTable, infoBox, formatDate } from "./_shared";
 import { generateWohnungsgeberbestaetigung } from "@/lib/wohnungsgeberbestaetigung";
+import { uploadLongstayDocument } from "@/lib/google-drive";
 
 interface WelcomeEmailData {
   firstName: string;
@@ -30,6 +31,18 @@ export async function sendWelcomeEmail(data: WelcomeEmailData) {
     });
   } catch (err) {
     console.error("Failed to generate Wohnungsgeberbestätigung:", err);
+  }
+
+  // Upload to Google Drive (non-blocking)
+  if (wohnungsgeberPdf) {
+    uploadLongstayDocument({
+      pdf: wohnungsgeberPdf,
+      firstName: data.firstName,
+      lastName: data.lastName,
+      locationName: data.locationName,
+      date: data.moveInDate,
+      documentType: "Wohnungsgeberbestätigung",
+    }).catch(err => console.error("Wohnungsgeberbestätigung Drive upload failed:", err));
   }
 
   const pdfFilename = `wohnungsgeberbestaetigung_${data.firstName.toLowerCase()}_${data.lastName.toLowerCase()}.pdf`;

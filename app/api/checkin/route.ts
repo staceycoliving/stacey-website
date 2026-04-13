@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
       signatureDataUrl: signatureDataUrl || undefined,
     });
   } catch (err) {
-    console.error("Meldeschein PDF generation failed:", err?.message || err);
+    console.error("Meldeschein PDF generation failed:", err instanceof Error ? err.message : err);
   }
   console.log("PDF generated:", pdfData ? pdfData.length + " bytes" : "FAILED");
 
@@ -82,8 +82,9 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (err: any) {
-    console.error("Meldeschein DB save failed:", err?.message || err);
-    return Response.json({ error: "Failed to save registration", detail: err?.message }, { status: 500 });
+    const errMsg = err instanceof Error ? err.message : String(err);
+    console.error("Meldeschein DB save failed:", errMsg);
+    return Response.json({ error: "Failed to save registration", detail: errMsg }, { status: 500 });
   }
 
   // Upload PDF to Google Drive

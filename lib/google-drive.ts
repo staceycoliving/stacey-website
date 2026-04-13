@@ -122,6 +122,72 @@ export async function uploadMeldescheinToDrive(params: {
   }
 }
 
+/**
+ * Upload a LONG stay document (Mietvertrag, Wohnungsgeberbestätigung, etc.)
+ * to the tenant's personal folder in Google Drive.
+ * Structure: Longstay Mieter / Nachname_Vorname / Nachname_Vorname_Dokumenttyp_Location_Datum.pdf
+ */
+export async function uploadLongstayDocument(params: {
+  pdf: Buffer;
+  firstName: string;
+  lastName: string;
+  locationName: string;
+  date: string; // ISO date
+  documentType: string; // "Mietvertrag" | "Wohnungsgeberbestätigung" | etc.
+}): Promise<string | null> {
+  const longstayFolderId = process.env.GOOGLE_DRIVE_LONGSTAY_FOLDER_ID;
+  if (!longstayFolderId) return null;
+
+  const token = await getToken();
+  if (!token) return null;
+
+  try {
+    // Get or create tenant folder
+    const tenantFolderName = `${params.lastName}_${params.firstName}`;
+    const tenantFolderId = await getOrCreateFolder(token, tenantFolderName, longstayFolderId);
+
+    // Upload document
+    const dateFormatted = params.date.replace(/-/g, "");
+    const locationClean = params.locationName.replace(/^STACEY\s*/i, "");
+    const fileName = `${params.lastName}_${params.firstName}_${params.documentType}_${locationClean}_${dateFormatted}.pdf`;
+
+    const metadata = JSON.stringify({
+      name: fileName,
+      parents: [tenantFolderId],
+      mimeType: "application/pdf",
+    });
+
+    const boundary = "stacey_upload_boundary";
+    const body = Buffer.concat([
+      Buffer.from(
+        `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${metadata}\r\n--${boundary}\r\nContent-Type: application/pdf\r\n\r\n`
+      ),
+      params.pdf,
+      Buffer.from(`\r\n--${boundary}--`),
+    ]);
+
+    const res = await fetch(`${UPLOAD_API}/files?uploadType=multipart&supportsAllDrives=true`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": `multipart/related; boundary=${boundary}`,
+      },
+      body,
+    });
+
+    if (!res.ok) {
+      console.error("Drive upload failed:", res.status, await res.text());
+      return null;
+    }
+
+    const data = await res.json();
+    return data.webViewLink || data.id || null;
+  } catch (err) {
+    console.error("Google Drive upload failed:", err);
+    return null;
+  }
+}
+
 async function getOrCreateFolder(token: string, name: string, parentId: string): Promise<string> {
   const q = encodeURIComponent(
     `name='${name}' and '${parentId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`
