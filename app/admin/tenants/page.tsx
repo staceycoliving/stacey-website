@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import TenantsPage from "./TenantsPage";
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminTenantsPage() {
   if (!(await isAuthenticated())) redirect("/admin/login");
 
@@ -15,6 +17,13 @@ export default async function AdminTenantsPage() {
               include: { location: true },
             },
           },
+        },
+        rentPayments: {
+          where: { status: { in: ["PENDING", "FAILED", "PROCESSING", "PARTIAL"] } },
+          select: { id: true, status: true, amount: true, paidAmount: true, month: true },
+        },
+        booking: {
+          select: { id: true, depositPaidAt: true, bookingFeePaidAt: true },
         },
       },
       orderBy: { lastName: "asc" },

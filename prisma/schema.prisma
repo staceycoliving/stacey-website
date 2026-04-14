@@ -58,6 +58,7 @@ model Room {
   monthlyRent      Int          @default(0) // Monatliche Miete in Cent
   buildingAddress  String?      // Hausnummer wenn abweichend (z.B. "Dorotheenstraße 3")
   floorDescription String?      // Stockwerk + Lage (z.B. "3. OG rechts")
+  status           RoomStatus   @default(ACTIVE)
 
   tenant   Tenant? // Aktueller Mieter (oder null = frei)
   bookings Booking[]
@@ -66,6 +67,12 @@ model Room {
   updatedAt DateTime @updatedAt
 
   @@index([apartmentId])
+}
+
+enum RoomStatus {
+  ACTIVE       // Buchbar
+  BLOCKED      // Temporär gesperrt (Renovation, etc.)
+  DEACTIVATED  // Nicht mehr im Inventar
 }
 
 enum RoomCategory {
@@ -125,10 +132,77 @@ model Tenant {
   paymentFinalWarningSentAt    DateTime?
   postStayFeedbackSentAt       DateTime?
 
-  rentPayments RentPayment[]
+  rentPayments    RentPayment[]
+  extraCharges    ExtraCharge[]
+  rentAdjustments RentAdjustment[]
+  defects         Defect[]
+  notes           Note[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// ─── FOLIO: Zusatzkosten, Mietanpassungen, Mängel, Notizen ──
+
+model ExtraCharge {
+  id          String   @id @default(cuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  description String   // z.B. "Schlüsselersatz", "Reinigung extra"
+  amount      Int      // Cent
+  month       DateTime? // Optional: welchem Monat zuordnen (null = einmalig)
+  paidAt      DateTime? // Null = offen
+
+  createdBy   String?  // Admin-User (erstmal optional)
+  createdAt   DateTime @default(now())
+
+  @@index([tenantId])
+}
+
+model RentAdjustment {
+  id              String    @id @default(cuid())
+  tenantId        String
+  tenant          Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  month           DateTime? // Null = permanent
+  originalAmount  Int       // Cent (Snapshot vor Anpassung)
+  adjustedAmount  Int       // Cent (neuer Betrag)
+  reason          String
+  isPermanent     Boolean   @default(false)
+  validFrom       DateTime? // Nur bei isPermanent = true
+
+  createdBy       String?
+  createdAt       DateTime  @default(now())
+
+  @@index([tenantId])
+}
+
+model Defect {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  description     String
+  deductionAmount Int      // Cent
+  photos          String[] // Google Drive Links
+
+  createdBy       String?
+  createdAt       DateTime @default(now())
+
+  @@index([tenantId])
+}
+
+model Note {
+  id        String   @id @default(cuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  content   String
+  createdBy String?
+  createdAt DateTime @default(now())
+
+  @@index([tenantId])
 }
 
 // ─── BUCHUNGEN (SHORT + LONG) ───────────────────────────
@@ -188,7 +262,8 @@ model Booking {
   tenant     Tenant?
 
   // Status
-  status     BookingStatus @default(PENDING)
+  status             BookingStatus @default(PENDING)
+  cancellationReason String?       // z.B. "Widerruf", "Deposit timeout", "Kundenwunsch"
 
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
@@ -271,6 +346,79 @@ model WebhookEvent {
 
   @@unique([provider, eventId])
   @@index([receivedAt])
+}
+
+// ─── AUDIT LOG ─────────────────────────────────────────────
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  at         DateTime @default(now())
+
+  // Module groups related routes — e.g. "tenant", "booking", "deposit",
+  // "rooms", "housekeeping", "finance", "rent", "auth".
+  module     String
+
+  // HTTP-style action: "PATCH", "POST", "DELETE", "GET" (rare),
+  // or a domain-specific verb like "withdraw", "send_settlement".
+  action     String
+
+  // What was acted on: tenantId, bookingId, etc. — free-form.
+  entityType String?
+  entityId   String?
+
+  // Human-readable summary line.
+  summary    String?
+
+  // Free-form JSON for diff or context — kept small.
+  metadata   Json?
+
+  // Path + IP for audit trail.
+  path       String?
+  ip         String?
+
+  @@index([at])
+  @@index([module])
+  @@index([entityType, entityId])
+}
+
+// ─── HOUSEKEEPING ──────────────────────────────────────────
+
+model CleaningTask {
+  id           String   @id @default(cuid())
+
+  // External reference key — composed from source + tenant/reservation + type:
+  //   "tenant-<id>-in", "tenant-<id>-out"
+  //   "apaleo-<resId>-in", "apaleo-<resId>-out"
+  // Used to upsert when the underlying source data changes.
+  taskKey      String   @unique
+
+  taskType     CleaningTaskType
+  date         DateTime         // Day the work is scheduled for
+  locationSlug String?
+  roomLabel    String?          // human-readable room reference
+  guestName    String?
+
+  status       CleaningTaskStatus @default(OPEN)
+  assignedTo   String?
+  notes        String?
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([date])
+  @@index([locationSlug])
+  @@index([status])
+}
+
+enum CleaningTaskType {
+  MOVE_IN
+  MOVE_OUT
+}
+
+enum CleaningTaskStatus {
+  OPEN
+  IN_PROGRESS
+  DONE
 }
 
 // ─── SHORT STAY: Email-Tracking per apaleo Reservation ──

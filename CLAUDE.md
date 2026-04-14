@@ -107,7 +107,6 @@ lib/
 - Min Stay LONG: 3 Monate
 - Cancellation LONG: 3 months notice
 - Check-in: from 4 PM, Check-out: until 11 AM
-- **Othmarschen**: Nur Info-Seite, NICHT buchbar (Pachtvertrag läuft aus)
 
 ## LONG Stay 14-Tage Flexibility Rule
 

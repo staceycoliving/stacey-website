@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { Suspense, useState, useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import SignaturePad from "signature_pad";
 
@@ -23,7 +23,15 @@ const NATIONALITIES = [
   "Vietnamese",
 ];
 
-export default function CheckinPage() {
+export default function CheckinPageWrapper() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-background-alt" />}>
+      <CheckinPage />
+    </Suspense>
+  );
+}
+
+function CheckinPage() {
   const params = useSearchParams();
   const reservationId = params.get("reservation") || "";
   const locationSlug = params.get("location") || "";

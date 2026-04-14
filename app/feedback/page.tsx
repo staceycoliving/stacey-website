@@ -1,12 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
 // Single Google Maps listing for all STACEY locations
 const GOOGLE_REVIEW_URL = "https://www.google.com/maps?cid=16719498132090014953&action=review";
 
-export default function FeedbackPage() {
+export default function FeedbackPageWrapper() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-background-alt" />}>
+      <FeedbackPage />
+    </Suspense>
+  );
+}
+
+function FeedbackPage() {
   const params = useSearchParams();
   const location = params.get("location") || "";
   const locationName = params.get("name") || "STACEY";

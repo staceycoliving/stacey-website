@@ -162,7 +162,10 @@ async function handleDepositTimeouts() {
   for (const booking of expiredBookings) {
     await prisma.booking.update({
       where: { id: booking.id },
-      data: { status: "CANCELLED" },
+      data: {
+        status: "CANCELLED",
+        cancellationReason: "Auto: deposit deadline missed (48h)",
+      },
     });
 
     sendDepositTimeoutNotification({

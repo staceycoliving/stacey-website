@@ -57,3 +57,7 @@ stacey-1548069662041-*.json
 Unterschrift.jpeg
 Vorlage Hamburg.pdf
 tmp-email-preview.html
+
+# Test / preview PDFs generated during development
+Wohnungsgeberbestaetigung_*.pdf
+Meldeschein_*.pdf

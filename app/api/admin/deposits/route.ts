@@ -2,13 +2,23 @@ import { NextRequest } from "next/server";
 import { isAuthenticated } from "@/lib/admin-auth";
 import { prisma } from "@/lib/db";
 import { sendDepositReturnNotification } from "@/lib/email";
+import { audit } from "@/lib/audit";
 
+/**
+ * PATCH /api/admin/deposits
+ *
+ * Actions:
+ *  - set_iban           — store IBAN for refund transfer
+ *  - calculate_refund   — recompute deposit – defects – open rent – open extras
+ *  - send_settlement    — send settlement email (does NOT mark as transferred)
+ *  - mark_transferred   — set depositStatus = RETURNED + depositReturnedAt
+ */
 export async function PATCH(request: NextRequest) {
   if (!(await isAuthenticated())) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { tenantId, action, damagesAmount, iban } = await request.json();
+  const { tenantId, action, iban } = await request.json();
 
   if (!tenantId || !action) {
     return Response.json({ error: "tenantId and action required" }, { status: 400 });
@@ -18,11 +28,11 @@ export async function PATCH(request: NextRequest) {
     where: { id: tenantId },
     include: {
       rentPayments: {
-        where: { status: { in: ["PENDING", "FAILED"] } },
+        where: { status: { in: ["PENDING", "FAILED", "PARTIAL"] } },
       },
-      room: {
-        include: { apartment: { include: { location: true } } },
-      },
+      extraCharges: { where: { paidAt: null } },
+      defects: true,
+      room: { include: { apartment: { include: { location: true } } } },
     },
   });
 
@@ -30,54 +40,109 @@ export async function PATCH(request: NextRequest) {
     return Response.json({ error: "Tenant not found" }, { status: 404 });
   }
 
-  if (action === "set_damages") {
-    if (damagesAmount === undefined) {
-      return Response.json({ error: "damagesAmount required" }, { status: 400 });
-    }
-    const updated = await prisma.tenant.update({
-      where: { id: tenantId },
-      data: { damagesAmount: Math.round(damagesAmount) },
-    });
-    return Response.json({ id: updated.id, damagesAmount: updated.damagesAmount });
-  }
-
-  if (action === "calculate_refund") {
-    // Sum unpaid rent
-    const arrearsAmount = tenant.rentPayments.reduce(
-      (sum: number, rp: { amount: number; paidAmount: number }) => sum + (rp.amount - rp.paidAmount),
-      0
-    );
-    const deposit = tenant.depositAmount || 0;
-    const damages = tenant.damagesAmount || 0;
-    const refund = Math.max(0, deposit - damages - arrearsAmount);
-
-    const updated = await prisma.tenant.update({
-      where: { id: tenantId },
-      data: {
-        arrearsAmount,
-        depositRefundAmount: refund,
-      },
-    });
-
-    return Response.json({
-      depositAmount: deposit,
-      damagesAmount: damages,
-      arrearsAmount,
-      refundAmount: refund,
-    });
-  }
-
+  // ─── set_iban ─────────────────────────────────────────────
   if (action === "set_iban") {
     if (!iban) {
       return Response.json({ error: "iban required" }, { status: 400 });
     }
     const updated = await prisma.tenant.update({
       where: { id: tenantId },
-      data: { depositRefundIban: iban },
+      data: { depositRefundIban: String(iban).trim() },
     });
     return Response.json({ id: updated.id, depositRefundIban: updated.depositRefundIban });
   }
 
+  // ─── calculate_refund ─────────────────────────────────────
+  if (action === "calculate_refund") {
+    const arrearsAmount = tenant.rentPayments.reduce(
+      (sum, rp) => sum + (rp.amount - rp.paidAmount),
+      0
+    );
+    const extrasAmount = tenant.extraCharges.reduce((sum, c) => sum + c.amount, 0);
+    const defectsAmount = tenant.defects.reduce(
+      (sum, d) => sum + d.deductionAmount,
+      0
+    );
+    const deposit = tenant.depositAmount ?? 0;
+    const refund = Math.max(0, deposit - defectsAmount - arrearsAmount - extrasAmount);
+
+    await prisma.tenant.update({
+      where: { id: tenantId },
+      data: {
+        damagesAmount: defectsAmount, // keep tenant.damagesAmount in sync
+        arrearsAmount: arrearsAmount + extrasAmount,
+        depositRefundAmount: refund,
+      },
+    });
+
+    return Response.json({
+      depositAmount: deposit,
+      damagesAmount: defectsAmount,
+      arrearsAmount,
+      extrasAmount,
+      refundAmount: refund,
+    });
+  }
+
+  // ─── send_settlement ──────────────────────────────────────
+  if (action === "send_settlement") {
+    if (!tenant.depositRefundIban) {
+      return Response.json({ error: "Set IBAN first" }, { status: 400 });
+    }
+
+    // Recompute totals so the email is always consistent
+    const arrearsAmount = tenant.rentPayments.reduce(
+      (sum, rp) => sum + (rp.amount - rp.paidAmount),
+      0
+    );
+    const extrasAmount = tenant.extraCharges.reduce((sum, c) => sum + c.amount, 0);
+    const defectsAmount = tenant.defects.reduce(
+      (sum, d) => sum + d.deductionAmount,
+      0
+    );
+    const deposit = tenant.depositAmount ?? 0;
+    const refund = Math.max(0, deposit - defectsAmount - arrearsAmount - extrasAmount);
+
+    await prisma.tenant.update({
+      where: { id: tenantId },
+      data: {
+        damagesAmount: defectsAmount,
+        arrearsAmount: arrearsAmount + extrasAmount,
+        depositRefundAmount: refund,
+      },
+    });
+
+    try {
+      await sendDepositReturnNotification({
+        firstName: tenant.firstName,
+        email: tenant.email,
+        locationName: tenant.room.apartment.location.name,
+        depositAmount: deposit,
+        damagesAmount: defectsAmount,
+        arrearsAmount: arrearsAmount + extrasAmount,
+        refundAmount: refund,
+        iban: tenant.depositRefundIban,
+      });
+    } catch (err) {
+      return Response.json(
+        { error: "Email send failed", details: err instanceof Error ? err.message : String(err) },
+        { status: 500 }
+      );
+    }
+
+    await audit(request, {
+      module: "deposit",
+      action: "send_settlement",
+      entityType: "tenant",
+      entityId: tenantId,
+      summary: `Sent settlement email to ${tenant.firstName} ${tenant.lastName}`,
+      metadata: { refundAmount: refund, iban: tenant.depositRefundIban },
+    });
+
+    return Response.json({ ok: true, sentTo: tenant.email });
+  }
+
+  // ─── mark_transferred ─────────────────────────────────────
   if (action === "mark_transferred") {
     const updated = await prisma.tenant.update({
       where: { id: tenantId },
@@ -87,19 +152,17 @@ export async function PATCH(request: NextRequest) {
       },
     });
 
-    // Send deposit settlement email to tenant
-    if (tenant.depositRefundIban && tenant.depositRefundAmount !== null) {
-      sendDepositReturnNotification({
-        firstName: tenant.firstName,
-        email: tenant.email,
-        locationName: tenant.room.apartment.location.name,
-        depositAmount: tenant.depositAmount || 0,
-        damagesAmount: tenant.damagesAmount,
-        arrearsAmount: tenant.arrearsAmount,
+    await audit(request, {
+      module: "deposit",
+      action: "mark_transferred",
+      entityType: "tenant",
+      entityId: tenantId,
+      summary: `Marked deposit transferred for ${tenant.firstName} ${tenant.lastName}`,
+      metadata: {
         refundAmount: tenant.depositRefundAmount,
         iban: tenant.depositRefundIban,
-      }).catch((err) => console.error("Deposit return email error:", err));
-    }
+      },
+    });
 
     return Response.json({ id: updated.id, depositStatus: updated.depositStatus });
   }

@@ -120,7 +120,7 @@ async function handleBookingFeePaid(bookingId: string, sessionId: string) {
 
   const booking = await prisma.booking.findUnique({
     where: { id: bookingId },
-    include: { location: true, room: true },
+    include: { location: true, room: { include: { tenant: true } } },
   });
 
   if (!booking) {
@@ -143,6 +143,16 @@ async function handleBookingFeePaid(bookingId: string, sessionId: string) {
       scope: "stripe-webhook",
       tags: { bookingId },
     });
+    return;
+  }
+
+  // ─── Race-condition check ─────────────────────────────────────
+  // Two guests might have submitted the form for the same room before
+  // any of them reached this webhook. The first booking fee payment wins;
+  // the second gets an automatic refund.
+  const raceConflict = await detectRoomRaceConflict(booking);
+  if (raceConflict) {
+    await handleRoomRaceLoss(booking, sessionId, raceConflict);
     return;
   }
 
@@ -232,6 +242,124 @@ async function handleBookingFeePaid(bookingId: string, sessionId: string) {
     { scope: "stripe-webhook", tags: { bookingId, deadline: deadline.toISOString() } },
     "booking fee paid, deposit link sent",
   );
+}
+
+// ─── Race-condition helpers ────────────────────────────────
+//
+// Because PENDING/SIGNED bookings don't lock a room anymore, two guests
+// could race for the same room. The booking fee webhook resolves it:
+// first one wins, the loser gets refunded + cancelled.
+
+async function detectRoomRaceConflict(booking: {
+  id: string;
+  roomId: string | null;
+  moveInDate: Date | null;
+  room: { id: string; tenant: { moveOut: Date | null } | null } | null;
+}): Promise<string | null> {
+  if (!booking.roomId) return null;
+
+  // Another booking has already reached DEPOSIT_PENDING for the same room
+  const otherBooking = await prisma.booking.findFirst({
+    where: {
+      id: { not: booking.id },
+      roomId: booking.roomId,
+      stayType: "LONG",
+      status: "DEPOSIT_PENDING",
+    },
+  });
+  if (otherBooking) return "Another guest already reserved this room.";
+
+  // Room has an active tenant who hasn't moved out by our move-in date
+  const tenant = booking.room?.tenant;
+  if (tenant && booking.moveInDate) {
+    const moveInDate = new Date(booking.moveInDate);
+    moveInDate.setHours(0, 0, 0, 0);
+    if (!tenant.moveOut) {
+      return "Room is occupied indefinitely by the previous tenant.";
+    }
+    const out = new Date(tenant.moveOut);
+    out.setHours(0, 0, 0, 0);
+    if (out > moveInDate) {
+      return "The previous tenant is still in the room on your move-in date.";
+    }
+  }
+
+  return null;
+}
+
+async function handleRoomRaceLoss(
+  booking: { id: string; firstName: string; email: string; location: { name: string } },
+  sessionId: string,
+  reason: string
+) {
+  logWarn(
+    { scope: "stripe-webhook", tags: { bookingId: booking.id, reason } },
+    "room race condition detected, refunding booking fee",
+  );
+
+  // ─── Refund the booking fee via Stripe ───
+  try {
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
+    const paymentIntentId =
+      typeof session.payment_intent === "string"
+        ? session.payment_intent
+        : session.payment_intent?.id;
+    if (paymentIntentId) {
+      await stripe.refunds.create({
+        payment_intent: paymentIntentId,
+        reason: "requested_by_customer",
+        metadata: {
+          bookingId: booking.id,
+          context: "room_race_condition",
+        },
+      });
+    }
+  } catch (err) {
+    reportError(err, {
+      scope: "stripe-webhook",
+      tags: { stage: "race-refund", bookingId: booking.id },
+    });
+  }
+
+  // ─── Cancel the booking ───
+  await prisma.booking.update({
+    where: { id: booking.id },
+    data: {
+      status: "CANCELLED",
+      cancellationReason: `Auto-refund: ${reason}`,
+    },
+  });
+
+  // ─── Notify guest + team ───
+  const subject = `Your booking at STACEY ${booking.location.name} could not be completed`;
+  const html = `
+    <p>Hi ${booking.firstName},</p>
+    <p>We're very sorry — while you were completing your booking, this room was reserved by another guest.</p>
+    <p>We've <strong>refunded your €195 booking fee</strong> automatically (it should appear within 3–5 business days).</p>
+    <p>Please visit <a href="${env.NEXT_PUBLIC_BASE_URL}">our site</a> to pick another room — we'd love to still have you.</p>
+    <p>— STACEY Team</p>
+  `;
+  try {
+    const { resend, FROM } = await import("@/lib/email/_shared");
+    await resend.emails.send({ from: FROM, to: booking.email, subject, html });
+  } catch (err) {
+    reportError(err, {
+      scope: "stripe-webhook",
+      tags: { stage: "race-email", bookingId: booking.id },
+    });
+  }
+
+  try {
+    const { resend, FROM, TEAM_EMAIL } = await import("@/lib/email/_shared");
+    await resend.emails.send({
+      from: FROM,
+      to: TEAM_EMAIL,
+      subject: `⚠️ Race refund: ${booking.firstName} @ ${booking.location.name}`,
+      html: `<p>Booking <code>${booking.id}</code> got a room race conflict and was auto-refunded.</p><p>Reason: ${reason}</p><p>Guest: ${booking.firstName} — ${booking.email}</p>`,
+    });
+  } catch {
+    /* best effort */
+  }
 }
 
 // ─── Deposit Paid → Confirm Booking + Create Tenant ────────

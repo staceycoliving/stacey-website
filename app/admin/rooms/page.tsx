@@ -3,11 +3,12 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import RoomsPage from "./RoomsPage";
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminRoomsPage() {
   if (!(await isAuthenticated())) redirect("/admin/login");
 
   const locations = await prisma.location.findMany({
-    where: { stayType: "LONG" },
     include: {
       apartments: {
         include: {

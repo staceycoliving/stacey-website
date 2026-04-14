@@ -21,8 +21,11 @@ function localDate(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-// Active booking statuses that "reserve" a room
-const ACTIVE_BOOKING_STATUSES: BookingStatus[] = ["PENDING", "SIGNED", "PAID", "DEPOSIT_PENDING"];
+import { ROOM_BLOCKING_BOOKING_STATUSES } from "@/lib/booking-status";
+
+// Active booking statuses that "reserve" a room. Shared with the booking
+// flow and admin availability views.
+const ACTIVE_BOOKING_STATUSES: BookingStatus[] = ROOM_BLOCKING_BOOKING_STATUSES;
 
 async function getLongStayAvailability(
   locationId: string,

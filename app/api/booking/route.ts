@@ -9,6 +9,7 @@ import { getLocationBySlug } from "@/lib/data";
 import { reportError } from "@/lib/observability";
 import { bookingLimiter, checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
 import { apiOk, apiBadRequest, apiNotFound, apiConflict, apiBadGateway, apiServerError } from "@/lib/api-response";
+import { ROOM_BLOCKING_BOOKING_STATUSES } from "@/lib/booking-status";
 
 const COUPLE_CATEGORIES: RoomCategory[] = [
   "JUMBO",
@@ -152,8 +153,8 @@ export async function POST(request: NextRequest) {
 
     const miDate = new Date(moveInDate);
 
-    // Active booking statuses that "reserve" a room
-    const ACTIVE_STATUSES: BookingStatus[] = ["PENDING", "SIGNED", "PAID", "DEPOSIT_PENDING"];
+    // Active booking statuses that "reserve" a room (booking fee paid)
+    const ACTIVE_STATUSES: BookingStatus[] = ROOM_BLOCKING_BOOKING_STATUSES;
 
     const booking = await prisma.$transaction(async (tx: any) => {
       // Find all eligible rooms: matching category, at this location

@@ -4,11 +4,15 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
 const NAV_ITEMS = [
-  { href: "/admin", label: "Bookings" },
+  { href: "/admin", label: "Dashboard", exact: true },
+  { href: "/admin/bookings", label: "Bookings" },
   { href: "/admin/tenants", label: "Tenants" },
   { href: "/admin/rooms", label: "Rooms" },
-  { href: "/admin/rent", label: "Rent" },
+  { href: "/admin/occupancy", label: "Occupancy" },
+  { href: "/admin/housekeeping", label: "Housekeeping" },
+  { href: "/admin/finance", label: "Finance" },
   { href: "/admin/deposits", label: "Deposits" },
+  { href: "/admin/audit", label: "Audit" },
 ];
 
 export default function AdminShell({
@@ -45,10 +49,9 @@ export default function AdminShell({
             </Link>
             <nav className="hidden sm:flex items-center gap-1">
               {NAV_ITEMS.map((item) => {
-                const isActive =
-                  item.href === "/admin"
-                    ? pathname === "/admin"
-                    : pathname.startsWith(item.href);
+                const isActive = item.exact
+                  ? pathname === item.href
+                  : pathname.startsWith(item.href);
                 return (
                   <Link
                     key={item.href}
@@ -84,10 +87,9 @@ export default function AdminShell({
         {/* Mobile nav */}
         <nav className="sm:hidden flex border-t border-lightgray">
           {NAV_ITEMS.map((item) => {
-            const isActive =
-              item.href === "/admin"
-                ? pathname === "/admin"
-                : pathname.startsWith(item.href);
+            const isActive = item.exact
+              ? pathname === item.href
+              : pathname.startsWith(item.href);
             return (
               <Link
                 key={item.href}
