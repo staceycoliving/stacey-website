@@ -349,40 +349,7 @@ export default function DashboardPage({ data }: { data: Dashboard }) {
         />
       </div>
 
-      {/* Team pinboard — shared notes for async coordination */}
-      <PinboardSection notes={teamNotes} />
-
-      {/* Booking conversion funnel for the current month */}
-      <BookingFunnelSection funnel={funnel} />
-
-      {/* Availability */}
-      <div>
-        <div className="mb-3">
-          <h2 className="text-sm font-semibold">Availability</h2>
-          <p className="text-xs text-gray mt-0.5">
-            Für Anrufe — filter + sort damit du die passende Option schnell findest.
-          </p>
-        </div>
-
-        <AvailabilityTable
-          locations={availabilityByLocation}
-          desiredDate={desiredDate}
-          onDesiredDateChange={setDesiredDate}
-          allBookableDates={allBookableDates}
-          today={today}
-          cityFilter={cityFilter}
-          onCityFilterChange={(v) => {
-            setCityFilter(v);
-            setLocationFilter(""); // reset location when city changes
-          }}
-          locationFilter={locationFilter}
-          onLocationFilterChange={setLocationFilter}
-          personsFilter={personsFilter}
-          onPersonsFilterChange={setPersonsFilter}
-        />
-      </div>
-
-      {/* Action Items — grouped by urgency + type-legend overview */}
+      {/* Action Items — morning top priority (what must be done today) */}
       <div ref={actionRef}>
         <div className="flex items-baseline justify-between mb-3 gap-3 flex-wrap">
           <h2 className="text-sm font-semibold">
@@ -570,6 +537,9 @@ export default function DashboardPage({ data }: { data: Dashboard }) {
         })()}
       </div>
 
+      {/* Team pinboard — shared notes for async coordination */}
+      <PinboardSection notes={teamNotes} />
+
       {/* Vacancy pipeline — free rooms now + moveOuts in next 30 days */}
       {vacancyPipeline.length > 0 && (
         <div>
@@ -590,7 +560,7 @@ export default function DashboardPage({ data }: { data: Dashboard }) {
             </div>
           </div>
           <Card>
-            <div className="divide-y divide-lightgray">
+            <div className="divide-y divide-lightgray max-h-96 overflow-y-auto">
               {vacancyPipeline.map((n) => {
                 const isVacant = n.kind === "vacant_now";
                 const href = isVacant
@@ -640,6 +610,35 @@ export default function DashboardPage({ data }: { data: Dashboard }) {
           </Card>
         </div>
       )}
+
+      {/* Booking conversion funnel — last 30 days */}
+      <BookingFunnelSection funnel={funnel} />
+
+      {/* Availability — reference for calls */}
+      <div>
+        <div className="mb-3">
+          <h2 className="text-sm font-semibold">Availability</h2>
+          <p className="text-xs text-gray mt-0.5">
+            Für Anrufe — filter + sort damit du die passende Option schnell findest.
+          </p>
+        </div>
+        <AvailabilityTable
+          locations={availabilityByLocation}
+          desiredDate={desiredDate}
+          onDesiredDateChange={setDesiredDate}
+          allBookableDates={allBookableDates}
+          today={today}
+          cityFilter={cityFilter}
+          onCityFilterChange={(v) => {
+            setCityFilter(v);
+            setLocationFilter("");
+          }}
+          locationFilter={locationFilter}
+          onLocationFilterChange={setLocationFilter}
+          personsFilter={personsFilter}
+          onPersonsFilterChange={setPersonsFilter}
+        />
+      </div>
 
       {/* Open Defects — maintenance pipeline */}
       <OpenDefectsSection defects={openDefects} />
@@ -1531,7 +1530,7 @@ function ActivityFeedSection({
         </Link>
       </div>
       <Card>
-        <div className="divide-y divide-lightgray">
+        <div className="divide-y divide-lightgray max-h-96 overflow-y-auto">
           {items.map((a) => {
             const href = a.entityId
               ? a.entityType === "tenant"
