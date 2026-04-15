@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { isAuthenticated } from "@/lib/admin-auth";
 import { prisma } from "@/lib/db";
+import { Prisma } from "@/lib/generated/prisma/client";
 
 /**
  * POST /api/admin/tenants/[id]/rent-adjustment
@@ -34,7 +35,7 @@ export async function POST(
 
   const originalAmount = tenant.monthlyRent;
 
-  await prisma.$transaction(async (tx: any) => {
+  await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     await tx.rentAdjustment.create({
       data: {
         tenantId: id,

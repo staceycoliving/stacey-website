@@ -64,10 +64,13 @@ export async function POST(request: NextRequest) {
     });
 
     return Response.json({ ok: true, setupUrl: session.url });
-  } catch (err: any) {
+  } catch (err) {
     console.error("Setup link error:", err);
     return Response.json(
-      { error: "Failed to send setup link", details: err.message },
+      {
+        error: "Failed to send setup link",
+        details: err instanceof Error ? err.message : String(err),
+      },
       { status: 500 }
     );
   }

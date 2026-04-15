@@ -32,7 +32,7 @@ function FeedbackPage() {
 
     // 4-5 stars → redirect to Google Review
     if (star >= 4) {
-      window.location.href = GOOGLE_REVIEW_URL;
+      window.location.assign(GOOGLE_REVIEW_URL);
     }
   };
 

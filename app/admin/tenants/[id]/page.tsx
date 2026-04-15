@@ -29,9 +29,19 @@ export default async function TenantFolioRoute({
 
   if (!tenant) notFound();
 
+  // 14-day Widerruf window starts at deposit payment. Computed on the server
+  // so the client render stays pure (React Compiler in Next 16).
+  // eslint-disable-next-line react-hooks/purity
+  const nowMs = Date.now();
+  const withdrawEligible = tenant.booking?.depositPaidAt
+    ? nowMs - new Date(tenant.booking.depositPaidAt).getTime() <=
+      14 * 24 * 60 * 60 * 1000
+    : false;
+
   return (
     <TenantFolioPage
       tenant={JSON.parse(JSON.stringify(tenant))}
+      withdrawEligible={withdrawEligible}
     />
   );
 }

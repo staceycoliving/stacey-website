@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Plus, Trash2, Edit2, Check, X, Download } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Edit2, X, Download } from "lucide-react";
 
 type Location = {
   id: string;
@@ -165,7 +165,13 @@ function formatCategory(cat: string) {
     .join(" ");
 }
 
-export default function TenantFolioPage({ tenant }: { tenant: Tenant }) {
+export default function TenantFolioPage({
+  tenant,
+  withdrawEligible,
+}: {
+  tenant: Tenant;
+  withdrawEligible: boolean;
+}) {
   const [tab, setTab] = useState<TabId>("profile");
 
   const openBalance = tenant.rentPayments.reduce(
@@ -189,11 +195,8 @@ export default function TenantFolioPage({ tenant }: { tenant: Tenant }) {
     return { label: "Active", tone: "bg-green-100 text-green-700" };
   })();
 
-  // 14-day Widerruf window starts at deposit payment (lease is binding then).
-  const withdrawEligible =
-    tenant.booking?.depositPaidAt &&
-    Date.now() - new Date(tenant.booking.depositPaidAt).getTime() <=
-      14 * 24 * 60 * 60 * 1000;
+  // withdrawEligible is computed in the server component (page.tsx) so the
+  // client render stays pure — React Compiler rejects Date.now() calls here.
 
   return (
     <div className="space-y-6">

@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { isAuthenticated } from "@/lib/admin-auth";
 import { prisma } from "@/lib/db";
+import { Prisma } from "@/lib/generated/prisma/client";
 import { stripe } from "@/lib/stripe";
 import { reportError, logEvent } from "@/lib/observability";
 import { audit } from "@/lib/audit";
@@ -123,7 +124,7 @@ export async function POST(
     ? "Widerruf (14-day cancellation)"
     : "Widerruf (admin override after deadline)";
 
-  await prisma.$transaction(async (tx: any) => {
+  await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     await tx.booking.update({
       where: { id: booking.id },
       data: {

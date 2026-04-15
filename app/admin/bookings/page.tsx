@@ -44,10 +44,51 @@ export default async function AdminBookingsPage() {
     }),
   ]);
 
+  // KPIs are computed on the server to keep the client component pure
+  // (React Compiler in Next.js 16 rejects impure calls like Date.now() in
+  // useMemo). Date.now() here is fine — this is a Server Component.
+  // eslint-disable-next-line react-hooks/purity
+  const nowMs = Date.now();
+  const day = 86_400_000;
+  const dow = (today.getDay() + 6) % 7;
+  const weekStart = new Date(today.getTime() - dow * day);
+  const weekEnd = new Date(weekStart.getTime() + 7 * day);
+  const in4Weeks = new Date(today.getTime() + 28 * day);
+
+  const kpis = {
+    depositSoon: bookings.filter((b) => {
+      if (b.status !== "DEPOSIT_PENDING" || !b.depositDeadline) return false;
+      const deadline = new Date(b.depositDeadline).getTime();
+      return deadline > nowMs && deadline - nowMs <= 24 * 3_600_000;
+    }).length,
+    depositOverdue: bookings.filter(
+      (b) =>
+        b.status === "DEPOSIT_PENDING" &&
+        b.depositDeadline !== null &&
+        new Date(b.depositDeadline).getTime() < nowMs
+    ).length,
+    moveInsThisWeek: bookings.filter((b) => {
+      if (b.status !== "CONFIRMED" || !b.moveInDate) return false;
+      const d = new Date(b.moveInDate);
+      return d >= weekStart && d < weekEnd;
+    }).length,
+    moveInsNext4Weeks: bookings.filter((b) => {
+      if (b.status !== "CONFIRMED" || !b.moveInDate) return false;
+      const d = new Date(b.moveInDate);
+      return d >= today && d < in4Weeks;
+    }).length,
+    staleLeads: bookings.filter(
+      (b) =>
+        b.status === "PENDING" &&
+        nowMs - new Date(b.createdAt).getTime() > 14 * day
+    ).length,
+  };
+
   return (
     <BookingsPage
       bookings={JSON.parse(JSON.stringify(bookings))}
       locations={JSON.parse(JSON.stringify(locations))}
+      kpis={kpis}
     />
   );
 }

@@ -114,12 +114,22 @@ function formatCategory(cat: string) {
     .join(" ");
 }
 
+type BookingKpis = {
+  depositSoon: number;
+  depositOverdue: number;
+  moveInsThisWeek: number;
+  moveInsNext4Weeks: number;
+  staleLeads: number;
+};
+
 export default function BookingsPage({
   bookings,
   locations,
+  kpis,
 }: {
   bookings: Booking[];
   locations: Location[];
+  kpis: BookingKpis;
 }) {
   const router = useRouter();
   const [view, setView] = useState<"table" | "kanban">("table");
@@ -142,45 +152,9 @@ export default function BookingsPage({
     return true;
   });
 
-  const now = Date.now();
-  const day = 86_400_000;
-  const todayStart = new Date();
-  todayStart.setHours(0, 0, 0, 0);
-
-  // This week (Mon–Sun) + next 4 weeks
-  const dow = (todayStart.getDay() + 6) % 7;
-  const weekStart = new Date(todayStart.getTime() - dow * day);
-  const weekEnd = new Date(weekStart.getTime() + 7 * day);
-  const in4Weeks = new Date(todayStart.getTime() + 28 * day);
-
-  const depositSoon = bookings.filter((b) => {
-    if (b.status !== "DEPOSIT_PENDING" || !b.depositDeadline) return false;
-    const deadline = new Date(b.depositDeadline).getTime();
-    return deadline > now && deadline - now <= 24 * 3_600_000;
-  }).length;
-
-  const depositOverdue = bookings.filter((b) => {
-    if (b.status !== "DEPOSIT_PENDING" || !b.depositDeadline) return false;
-    return new Date(b.depositDeadline).getTime() < now;
-  }).length;
-
-  const moveInsThisWeek = bookings.filter((b) => {
-    if (b.status !== "CONFIRMED" || !b.moveInDate) return false;
-    const d = new Date(b.moveInDate);
-    return d >= weekStart && d < weekEnd;
-  }).length;
-
-  const moveInsNext4Weeks = bookings.filter((b) => {
-    if (b.status !== "CONFIRMED" || !b.moveInDate) return false;
-    const d = new Date(b.moveInDate);
-    return d >= todayStart && d < in4Weeks;
-  }).length;
-
-  const staleLeads = bookings.filter(
-    (b) =>
-      b.status === "PENDING" &&
-      now - new Date(b.createdAt).getTime() > 14 * day
-  ).length;
+  // KPIs come from the server (see app/admin/bookings/page.tsx) so we keep
+  // the client render pure — React Compiler rejects Date.now() calls here.
+  const { depositSoon, depositOverdue, moveInsThisWeek, moveInsNext4Weeks, staleLeads } = kpis;
 
   async function cancelBooking(bookingId: string, reason: string) {
     setUpdating(bookingId);

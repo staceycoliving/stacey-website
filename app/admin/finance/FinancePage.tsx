@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 
@@ -655,10 +655,10 @@ function DepositsTab({ tenants }: { tenants: Tenant[] }) {
 // ─── DATEV Export ──────────────────────────────────────────
 
 function ExportTab({ locations }: { locations: Location[] }) {
-  const today = new Date().toISOString().slice(0, 10);
-  const monthAgo = new Date(Date.now() - 30 * 86_400_000).toISOString().slice(0, 10);
-  const [from, setFrom] = useState(monthAgo);
-  const [to, setTo] = useState(today);
+  const [from, setFrom] = useState(() =>
+    new Date(Date.now() - 30 * 86_400_000).toISOString().slice(0, 10)
+  );
+  const [to, setTo] = useState(() => new Date().toISOString().slice(0, 10));
   const [chart, setChart] = useState<"SKR03" | "SKR04">("SKR03");
   const [includeRent, setIncludeRent] = useState(true);
   const [includeFees, setIncludeFees] = useState(true);

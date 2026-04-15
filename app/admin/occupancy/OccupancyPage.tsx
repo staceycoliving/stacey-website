@@ -286,7 +286,6 @@ export default function OccupancyPage({
                         room={room}
                         viewStart={viewStart}
                         viewEnd={viewEnd}
-                        totalDays={totalDays}
                         weekHeaders={weekHeaders}
                         onTenantClick={(tenantId) =>
                           router.push(`/admin/tenants/${tenantId}`)
@@ -325,7 +324,6 @@ function RoomRow({
   room,
   viewStart,
   viewEnd,
-  totalDays,
   weekHeaders,
   onTenantClick,
   onBookingClick,
@@ -333,7 +331,6 @@ function RoomRow({
   room: Room;
   viewStart: Date;
   viewEnd: Date;
-  totalDays: number;
   weekHeaders: { offsetPx: number; widthPx: number; start: Date }[];
   onTenantClick: (tenantId: string) => void;
   onBookingClick: () => void;

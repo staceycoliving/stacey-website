@@ -1,4 +1,3 @@
-import { NextRequest } from "next/server";
 import { isAuthenticated } from "@/lib/admin-auth";
 import { prisma } from "@/lib/db";
 import { stripe } from "@/lib/stripe";
@@ -6,7 +5,7 @@ import { stripe } from "@/lib/stripe";
 // POST /api/admin/run-monthly-rent
 // Manually triggers the monthly rent collection (same logic as the cron)
 // Used for testing or to retry failed charges
-export async function POST(request: NextRequest) {
+export async function POST() {
   if (!(await isAuthenticated())) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -102,16 +101,17 @@ export async function POST(request: NextRequest) {
           },
         });
         charged++;
-      } catch (err: any) {
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
         await prisma.rentPayment.update({
           where: { id: rentPayment.id },
           data: {
             status: "FAILED",
             failedAt: new Date(),
-            failureReason: err.message,
+            failureReason: message,
           },
         });
-        errors.push(`${tenant.firstName} ${tenant.lastName}: ${err.message}`);
+        errors.push(`${tenant.firstName} ${tenant.lastName}: ${message}`);
       }
     }
   }
