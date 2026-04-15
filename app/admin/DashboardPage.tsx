@@ -24,6 +24,11 @@ import {
   Sparkles,
   RotateCcw,
   Send,
+  Pin,
+  Trash2,
+  Mail,
+  CheckCircle2,
+  XCircle,
 } from "lucide-react";
 
 type Dashboard = {
@@ -152,6 +157,23 @@ type Dashboard = {
     entityType: string | null;
     entityId: string | null;
   }[];
+  teamNotes: {
+    id: string;
+    content: string;
+    author: string | null;
+    sticky: boolean;
+    createdAt: string;
+  }[];
+  recentEmails: {
+    id: string;
+    templateKey: string;
+    recipient: string;
+    status: string;
+    triggeredBy: string;
+    sentAt: string;
+    entityType: string | null;
+    entityId: string | null;
+  }[];
 };
 
 function fmtEuro(cents: number) {
@@ -206,6 +228,8 @@ export default function DashboardPage({ data }: { data: Dashboard }) {
     funnel,
     openDefects,
     activityFeed,
+    teamNotes,
+    recentEmails,
   } = data;
   const actionRef = useRef<HTMLDivElement>(null);
 
@@ -304,6 +328,9 @@ export default function DashboardPage({ data }: { data: Dashboard }) {
           onClick={kpi.totalActionItems > 0 ? scrollToActions : undefined}
         />
       </div>
+
+      {/* Team pinboard — shared notes for async coordination */}
+      <PinboardSection notes={teamNotes} />
 
       {/* Booking conversion funnel for the current month */}
       <BookingFunnelSection funnel={funnel} />
@@ -609,6 +636,9 @@ export default function DashboardPage({ data }: { data: Dashboard }) {
           />
         </Card>
       </div>
+
+      {/* Recent emails — widget with quick link to full /admin/emails */}
+      <RecentEmailsSection emails={recentEmails} />
 
       {/* Activity feed — last 15 admin actions across the team */}
       <ActivityFeedSection items={activityFeed} />
@@ -1265,6 +1295,208 @@ function ActivityFeedSection({
                 </div>
                 <div className="text-[11px] text-gray tabular-nums flex-shrink-0">
                   {relativeTime(a.at)}
+                </div>
+              </Link>
+            );
+          })}
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+/** Team pinboard — inline add/delete/sticky. Sticky notes float to top;
+ *  otherwise newest first. Optimistic refresh via router.refresh(). */
+function PinboardSection({ notes }: { notes: Dashboard["teamNotes"] }) {
+  const router = useRouter();
+  const [content, setContent] = useState("");
+  const [author, setAuthor] = useState(() => {
+    if (typeof window === "undefined") return "";
+    try {
+      return window.localStorage.getItem("stacey-admin-note-author") ?? "";
+    } catch {
+      return "";
+    }
+  });
+  const [saving, setSaving] = useState(false);
+
+  async function add() {
+    if (!content.trim()) return;
+    setSaving(true);
+    try {
+      const res = await fetch("/api/admin/team-notes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content, author: author || undefined }),
+      });
+      if (res.ok) {
+        setContent("");
+        try {
+          if (author) window.localStorage.setItem("stacey-admin-note-author", author);
+        } catch {
+          /* ignore */
+        }
+        router.refresh();
+      }
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function toggleSticky(id: string, sticky: boolean) {
+    await fetch(`/api/admin/team-notes/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sticky: !sticky }),
+    });
+    router.refresh();
+  }
+
+  async function remove(id: string) {
+    if (!confirm("Delete this note?")) return;
+    await fetch(`/api/admin/team-notes/${id}`, { method: "DELETE" });
+    router.refresh();
+  }
+
+  return (
+    <div>
+      <div className="flex items-baseline justify-between mb-3">
+        <h2 className="text-sm font-semibold">Team pinboard</h2>
+        <span className="text-xs text-gray">{notes.length} notes</span>
+      </div>
+      <Card>
+        {/* Add form */}
+        <div className="p-3 border-b border-lightgray bg-background-alt/40">
+          <div className="flex gap-2 items-start">
+            <input
+              type="text"
+              value={author}
+              onChange={(e) => setAuthor(e.target.value)}
+              placeholder="Name"
+              className="w-24 px-2 py-1.5 border border-lightgray rounded-[5px] text-sm bg-white"
+            />
+            <input
+              type="text"
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") void add();
+              }}
+              placeholder="Was soll das Team wissen?"
+              className="flex-1 px-2 py-1.5 border border-lightgray rounded-[5px] text-sm bg-white"
+            />
+            <button
+              onClick={add}
+              disabled={saving || !content.trim()}
+              className="px-3 py-1.5 rounded-[5px] bg-black text-white text-sm hover:bg-black/90 disabled:opacity-40"
+            >
+              Add
+            </button>
+          </div>
+        </div>
+        {/* Notes list */}
+        {notes.length === 0 ? (
+          <div className="px-4 py-6 text-center text-sm text-gray">
+            Pinboard ist leer. Schreib was rein!
+          </div>
+        ) : (
+          <div className="divide-y divide-lightgray">
+            {notes.map((n) => (
+              <div
+                key={n.id}
+                className={`flex items-start gap-3 px-4 py-2.5 ${n.sticky ? "bg-yellow-50" : ""}`}
+              >
+                <button
+                  onClick={() => void toggleSticky(n.id, n.sticky)}
+                  className={`mt-1 ${n.sticky ? "text-orange-600" : "text-lightgray hover:text-gray"}`}
+                  title={n.sticky ? "Un-pin" : "Pin (stick to top)"}
+                >
+                  <Pin className={`w-3.5 h-3.5 ${n.sticky ? "fill-current" : ""}`} />
+                </button>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm text-black whitespace-pre-wrap break-words">
+                    {n.content}
+                  </div>
+                  <div className="text-[11px] text-gray mt-0.5">
+                    {n.author ? `${n.author} · ` : ""}
+                    {relativeTime(n.createdAt)}
+                  </div>
+                </div>
+                <button
+                  onClick={() => void remove(n.id)}
+                  className="text-gray hover:text-red-500 mt-1"
+                  aria-label="Delete note"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
+    </div>
+  );
+}
+
+/** Dashboard widget for the last 10 emails. Full log + quick-send at
+ *  /admin/emails. */
+function RecentEmailsSection({
+  emails,
+}: {
+  emails: Dashboard["recentEmails"];
+}) {
+  if (emails.length === 0) return null;
+  const labelFor = (key: string) =>
+    ({
+      welcome: "Welcome",
+      payment_setup: "Payment setup",
+      rent_reminder: "Rent reminder",
+      mahnung1: "1. Mahnung",
+      mahnung2: "2. Mahnung",
+      deposit_return: "Deposit settlement",
+    })[key] ?? key;
+  return (
+    <div>
+      <div className="flex items-baseline justify-between mb-3">
+        <h2 className="text-sm font-semibold">Recent emails</h2>
+        <Link
+          href="/admin/emails"
+          className="text-xs text-gray hover:text-black"
+        >
+          Full log + quick-send &rarr;
+        </Link>
+      </div>
+      <Card>
+        <div className="divide-y divide-lightgray">
+          {emails.map((e) => {
+            const href =
+              e.entityType === "tenant" && e.entityId
+                ? `/admin/tenants/${e.entityId}`
+                : "/admin/emails";
+            return (
+              <Link
+                key={e.id}
+                href={href}
+                className="flex items-center justify-between gap-3 px-4 py-2 hover:bg-background-alt"
+              >
+                <div className="flex items-center gap-2 flex-1 min-w-0">
+                  {e.status === "sent" ? (
+                    <CheckCircle2 className="w-3.5 h-3.5 text-green-700 flex-shrink-0" />
+                  ) : (
+                    <XCircle className="w-3.5 h-3.5 text-red-600 flex-shrink-0" />
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm text-black truncate">
+                      <span className="font-medium">{labelFor(e.templateKey)}</span>{" "}
+                      <span className="text-gray">→ {e.recipient}</span>
+                    </div>
+                    {e.triggeredBy === "manual_resend" && (
+                      <span className="text-[10px] text-blue-700">manual</span>
+                    )}
+                  </div>
+                </div>
+                <div className="text-[11px] text-gray tabular-nums flex-shrink-0">
+                  {relativeTime(e.sentAt)}
                 </div>
               </Link>
             );

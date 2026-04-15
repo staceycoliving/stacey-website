@@ -371,6 +371,43 @@ model WebhookEvent {
 
 // ─── AUDIT LOG ─────────────────────────────────────────────
 
+// Team pinboard — shared notes the admin team leaves for each other.
+// Not scoped to a specific tenant by default; optional tenantId link
+// lets admins attach a note to a tenant from their folio.
+model TeamNote {
+  id        String   @id @default(dbgenerated("gen_random_uuid()::text"))
+  content   String
+  author    String?  // display name — free text for now, no user auth yet
+  sticky    Boolean  @default(false)
+  tenantId  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([createdAt])
+  @@index([sticky])
+}
+
+// Log of every email sent (auto or manual). Feeds the dashboard widget
+// and the /admin/emails page.
+model SentEmail {
+  id          String   @id @default(dbgenerated("gen_random_uuid()::text"))
+  templateKey String
+  recipient   String
+  subject     String?
+  entityType  String?
+  entityId    String?
+  resendId    String?
+  status      String   @default("sent") // "sent" | "failed"
+  error       String?
+  triggeredBy String   @default("auto") // "auto" | "manual_resend" | "cron"
+  sentAt      DateTime @default(now())
+
+  @@index([sentAt])
+  @@index([recipient])
+  @@index([templateKey])
+  @@index([entityType, entityId])
+}
+
 model AuditLog {
   id         String   @id @default(cuid())
   at         DateTime @default(now())

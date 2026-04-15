@@ -49,6 +49,8 @@ export async function POST(request: NextRequest) {
   }
   const locationName = tenant.room?.apartment.location.name ?? "STACEY";
 
+  let logStatus: "sent" | "failed" = "sent";
+  let logError: string | null = null;
   try {
     switch (templateKey) {
       case "welcome":
@@ -169,11 +171,36 @@ export async function POST(request: NextRequest) {
     }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
+    logStatus = "failed";
+    logError = msg;
+    await prisma.sentEmail.create({
+      data: {
+        templateKey,
+        recipient: tenant.email,
+        entityType: "tenant",
+        entityId: tenantId,
+        status: logStatus,
+        error: logError,
+        triggeredBy: "manual_resend",
+      },
+    });
     return Response.json(
       { error: `Email send failed: ${msg}` },
       { status: 500 }
     );
   }
+
+  // Success path — log and audit
+  await prisma.sentEmail.create({
+    data: {
+      templateKey,
+      recipient: tenant.email,
+      entityType: "tenant",
+      entityId: tenantId,
+      status: logStatus,
+      triggeredBy: "manual_resend",
+    },
+  });
 
   await audit(request, {
     module: "email",

@@ -91,7 +91,7 @@ export default async function AdminDashboardPage() {
       }),
     ]);
 
-  // Batch 3: upcoming move-ins + recent audit + new bookings + defects + funnel
+  // Batch 3: upcoming move-ins + recent audit + new bookings + defects + funnel + pinboard + email log
   const startOfWeek = (() => {
     const d = new Date(todayStart);
     const day = d.getDay(); // 0=Sun
@@ -106,6 +106,8 @@ export default async function AdminDashboardPage() {
     bookingsThisWeek,
     openDefectsRaw,
     bookingFunnelThisMonth,
+    teamNotes,
+    recentEmails,
   ] = await Promise.all([
     prisma.tenant.findMany({
       where: { moveIn: { gte: todayStart, lte: in28Days } },
@@ -164,6 +166,18 @@ export default async function AdminDashboardPage() {
         signatureDocumentId: true,
         tenant: { select: { id: true } },
       },
+    }),
+
+    // Team pinboard — sticky first, then newest. Limit 20 for the widget.
+    prisma.teamNote.findMany({
+      orderBy: [{ sticky: "desc" }, { createdAt: "desc" }],
+      take: 20,
+    }),
+
+    // Recent sent emails — dashboard widget + quick link to /admin/emails
+    prisma.sentEmail.findMany({
+      orderBy: { sentAt: "desc" },
+      take: 10,
     }),
   ]);
 
@@ -672,6 +686,23 @@ export default async function AdminDashboardPage() {
           funnel,
           openDefects,
           activityFeed,
+          teamNotes: teamNotes.map((n) => ({
+            id: n.id,
+            content: n.content,
+            author: n.author,
+            sticky: n.sticky,
+            createdAt: n.createdAt,
+          })),
+          recentEmails: recentEmails.map((e) => ({
+            id: e.id,
+            templateKey: e.templateKey,
+            recipient: e.recipient,
+            status: e.status,
+            triggeredBy: e.triggeredBy,
+            sentAt: e.sentAt,
+            entityType: e.entityType,
+            entityId: e.entityId,
+          })),
         })
       )}
     />
