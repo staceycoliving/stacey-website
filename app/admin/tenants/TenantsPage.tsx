@@ -3,6 +3,7 @@
 import { useMemo, useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronDown, ChevronUp, MoreHorizontal } from "lucide-react";
+import WithdrawModal from "./WithdrawModal";
 
 type Location = {
   id: string;
@@ -100,16 +101,6 @@ function paymentStatus(t: Tenant): {
   return { label: "OK", tone: "ok" };
 }
 
-/** Days remaining in the 14-day Widerruf window (since deposit payment).
- *  Negative if the window has already passed. Null if no deposit on file yet. */
-function withdrawDaysLeft(t: Tenant): number | null {
-  const paidAt = t.booking?.depositPaidAt;
-  if (!paidAt) return null;
-  const ms = Date.now() - new Date(paidAt).getTime();
-  const daysSince = Math.floor(ms / (24 * 60 * 60 * 1000));
-  return 14 - daysSince;
-}
-
 function withdrawAvailable(t: Tenant): boolean {
   // Always show the action when there's a linked booking with a paid deposit —
   // expired window is handled by an extra warning step in the modal.
@@ -132,9 +123,10 @@ export default function TenantsPage({
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [sendingSetupId, setSendingSetupId] = useState<string | null>(null);
   const [confirmAction, setConfirmAction] = useState<
-    | { type: "terminate" | "remove" | "withdraw"; tenantId: string }
+    | { type: "terminate" | "remove"; tenantId: string }
     | null
   >(null);
+  const [withdrawTenantId, setWithdrawTenantId] = useState<string | null>(null);
   const [working, setWorking] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -270,34 +262,6 @@ export default function TenantsPage({
       });
       if (res.ok) router.refresh();
       else alert("Delete failed");
-    } finally {
-      setWorking(false);
-      setConfirmAction(null);
-    }
-  }
-
-  async function withdrawTenant(tenantId: string, confirmExpired = false) {
-    setWorking(true);
-    try {
-      const res = await fetch(`/api/admin/tenants/${tenantId}/withdraw`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ confirmExpired }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (res.ok) {
-        alert(
-          data.withinDeadline
-            ? "Widerruf processed. Deposit refunded, booking fee retained."
-            : "Widerruf processed (admin override after deadline)."
-        );
-        router.refresh();
-      } else if (data.error === "EXPIRED") {
-        // Will be caught by the modal flow below; shouldn't reach here.
-        alert(data.message ?? "Widerrufsfrist abgelaufen");
-      } else {
-        alert(`Withdraw failed: ${data.error ?? res.statusText}`);
-      }
     } finally {
       setWorking(false);
       setConfirmAction(null);
@@ -465,9 +429,10 @@ export default function TenantsPage({
                             )}
                             {withdrawAvailable(t) && (
                               <MenuItem
-                                onClick={() =>
-                                  setConfirmAction({ type: "withdraw", tenantId: t.id })
-                                }
+                                onClick={() => {
+                                  setWithdrawTenantId(t.id);
+                                  setOpenMenuId(null);
+                                }}
                                 tone="warn"
                               >
                                 Widerruf (14-day cancellation)
@@ -494,26 +459,36 @@ export default function TenantsPage({
         </div>
       </div>
 
-      {/* Confirm modal */}
+      {/* Confirm modal — terminate / remove only */}
       {confirmAction && (
         <ConfirmModal
           action={confirmAction}
-          tenant={tenants.find((t) => t.id === confirmAction.tenantId) ?? null}
           working={working}
-          onConfirm={(args) => {
+          onConfirm={() => {
             if (confirmAction.type === "terminate")
               return terminateTenant(confirmAction.tenantId);
             if (confirmAction.type === "remove")
               return removeTenant(confirmAction.tenantId);
-            if (confirmAction.type === "withdraw")
-              return withdrawTenant(
-                confirmAction.tenantId,
-                args?.confirmExpired ?? false
-              );
           }}
           onCancel={() => setConfirmAction(null)}
         />
       )}
+
+      {/* Widerruf modal */}
+      {withdrawTenantId &&
+        (() => {
+          const t = tenants.find((x) => x.id === withdrawTenantId);
+          if (!t) return null;
+          return (
+            <WithdrawModal
+              tenantId={t.id}
+              tenantName={`${t.firstName} ${t.lastName}`}
+              depositPaidAt={t.booking?.depositPaidAt ?? null}
+              onClose={() => setWithdrawTenantId(null)}
+              onSuccess={() => router.refresh()}
+            />
+          );
+        })()}
     </div>
   );
 }
@@ -582,143 +557,15 @@ function MenuItem({
 
 function ConfirmModal({
   action,
-  tenant,
   working,
   onConfirm,
   onCancel,
 }: {
-  action: { type: "terminate" | "remove" | "withdraw"; tenantId: string };
-  tenant: Tenant | null;
+  action: { type: "terminate" | "remove"; tenantId: string };
   working: boolean;
-  onConfirm: (args?: { confirmExpired?: boolean }) => void;
+  onConfirm: () => void;
   onCancel: () => void;
 }) {
-  // Special two-step flow for an expired Widerruf
-  const [expiredAcknowledged, setExpiredAcknowledged] = useState(false);
-
-  if (action.type === "withdraw") {
-    const daysLeft = tenant ? withdrawDaysLeft(tenant) : null;
-    const expired = daysLeft !== null && daysLeft < 0;
-    const noDeposit = daysLeft === null;
-
-    if (expired && !expiredAcknowledged) {
-      return (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-[5px] border-2 border-red-400 p-6 max-w-lg w-full">
-            <div className="flex items-center gap-2 mb-3">
-              <span className="text-2xl">⚠️</span>
-              <h3 className="font-bold text-red-700 text-lg">
-                Widerrufsfrist ist bereits abgelaufen
-              </h3>
-            </div>
-            <div className="space-y-2 text-sm">
-              <p className="text-black">
-                Die 14-tägige Widerrufsfrist (ab Kautionszahlung) ist seit{" "}
-                <strong>{Math.abs(daysLeft!)} Tagen</strong> abgelaufen.
-              </p>
-              <p className="text-gray">
-                Ein Widerruf ist <strong>rechtlich nicht mehr möglich</strong>.
-                Falls du trotzdem fortfahren willst, wird:
-              </p>
-              <ul className="list-disc list-inside text-gray text-xs space-y-1 ml-2">
-                <li>Die Kaution per Stripe zurücküberwiesen</li>
-                <li>Das Booking als CANCELLED markiert (Reason: &quot;admin override after deadline&quot;)</li>
-                <li>Der Tenant aus der DB gelöscht</li>
-                <li>Im Audit-Log als <code>withdraw_after_deadline</code> protokolliert</li>
-              </ul>
-              <p className="text-black mt-3 font-medium">
-                Bist du sicher, dass das gewollt ist?
-              </p>
-            </div>
-            <div className="flex justify-end gap-2 mt-6">
-              <button
-                onClick={onCancel}
-                className="px-3 py-1.5 text-sm border border-lightgray rounded-[5px] hover:bg-background-alt"
-              >
-                Abbrechen
-              </button>
-              <button
-                onClick={() => setExpiredAcknowledged(true)}
-                className="px-3 py-1.5 text-sm bg-red-600 text-white rounded-[5px] hover:bg-red-700"
-              >
-                Trotzdem fortfahren →
-              </button>
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    if (noDeposit) {
-      return (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-[5px] border border-lightgray p-6 max-w-md w-full">
-            <h3 className="font-bold text-black">Kein Widerruf möglich</h3>
-            <p className="text-sm text-gray mt-2">
-              Es liegt keine Kautionszahlung für diesen Mieter vor — Widerruf nicht anwendbar.
-            </p>
-            <div className="flex justify-end mt-6">
-              <button
-                onClick={onCancel}
-                className="px-3 py-1.5 text-sm border border-lightgray rounded-[5px] hover:bg-background-alt"
-              >
-                OK
-              </button>
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    // Within deadline (or expired & acknowledged) → standard confirm
-    return (
-      <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-[5px] border border-lightgray p-6 max-w-md w-full">
-          <h3 className="font-bold text-black">Widerruf bestätigen</h3>
-          <p className="text-sm text-gray mt-2">
-            {expiredAcknowledged ? (
-              <>
-                <strong className="text-red-700">
-                  ⚠️ Außerhalb der Widerrufsfrist (Admin-Override).
-                </strong>
-                <br />
-                Kaution wird per Stripe rückerstattet, Booking storniert, Tenant gelöscht.
-              </>
-            ) : (
-              <>
-                Innerhalb der 14-Tage-Widerrufsfrist ({daysLeft} Tag
-                {daysLeft === 1 ? "" : "e"} verbleibend).
-                <br />
-                Kaution wird per Stripe rückerstattet, Booking-Fee (€195) bleibt einbehalten,
-                Tenant wird gelöscht.
-              </>
-            )}
-          </p>
-          <div className="flex justify-end gap-2 mt-6">
-            <button
-              onClick={onCancel}
-              className="px-3 py-1.5 text-sm border border-lightgray rounded-[5px] hover:bg-background-alt"
-            >
-              Abbrechen
-            </button>
-            <button
-              onClick={() => onConfirm({ confirmExpired: expiredAcknowledged })}
-              disabled={working}
-              className={`px-3 py-1.5 text-sm rounded-[5px] disabled:opacity-50 ${
-                expiredAcknowledged
-                  ? "bg-red-600 text-white hover:bg-red-700"
-                  : "bg-black text-white hover:bg-black/90"
-              }`}
-            >
-              {working ? "..." : "Widerruf durchführen"}
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Generic confirm for terminate / remove
   const title =
     action.type === "terminate" ? "Terminate tenant?" : "Remove tenant?";
   const body =

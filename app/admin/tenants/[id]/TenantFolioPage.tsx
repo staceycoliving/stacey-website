@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Plus, Trash2, Edit2, X, Download } from "lucide-react";
+import WithdrawModal from "../WithdrawModal";
 
 type Location = {
   id: string;
@@ -172,7 +173,10 @@ export default function TenantFolioPage({
   tenant: Tenant;
   withdrawEligible: boolean;
 }) {
+  const router = useRouter();
   const [tab, setTab] = useState<TabId>("profile");
+  const [showWithdraw, setShowWithdraw] = useState(false);
+  const hasDeposit = Boolean(tenant.booking?.depositPaidAt);
 
   const openBalance = tenant.rentPayments.reduce(
     (sum, p) => sum + (p.amount - p.paidAmount),
@@ -239,9 +243,36 @@ export default function TenantFolioPage({
                 Widerruf period active
               </span>
             )}
+            {hasDeposit && (
+              <button
+                onClick={() => setShowWithdraw(true)}
+                className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-[5px] text-xs font-medium border ${
+                  withdrawEligible
+                    ? "border-orange-300 text-orange-700 hover:bg-orange-50"
+                    : "border-lightgray text-gray hover:bg-background-alt"
+                }`}
+                title={
+                  withdrawEligible
+                    ? "Innerhalb der 14-Tage-Frist seit Kautionszahlung"
+                    : "Frist abgelaufen — Override mit Warnung möglich"
+                }
+              >
+                Widerruf bearbeiten
+              </button>
+            )}
           </div>
         </div>
       </div>
+
+      {showWithdraw && (
+        <WithdrawModal
+          tenantId={tenant.id}
+          tenantName={`${tenant.firstName} ${tenant.lastName}`}
+          depositPaidAt={tenant.booking?.depositPaidAt ?? null}
+          onClose={() => setShowWithdraw(false)}
+          onSuccess={() => router.push("/admin/tenants")}
+        />
+      )}
 
       <div className="bg-white rounded-[5px] border border-lightgray overflow-hidden">
         <div className="border-b border-lightgray flex overflow-x-auto">
