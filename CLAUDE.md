@@ -6,46 +6,37 @@ Neuaufbau von stacey.de — modernes Coliving-Website mit Next.js.
 
 ## 🚨 Development & Deployment Workflow (WICHTIG — immer einhalten)
 
-**Kein Code ohne Preview.** Main branch = Live-Test-Domain (`stacey-website-one.vercel.app`). Bugs auf main sind direkt sichtbar.
+**Localhost zuerst. Immer.** Erst wenn eine Änderung dort sauber läuft, push auf `main` → Live-Test-Domain (`stacey-website-one.vercel.app`).
 
-### Feature-Branch Flow (Standard für nicht-triviale Arbeit)
+### Standard-Flow (für 95% der Änderungen)
 
-Für alles was über ein paar Zeilen hinausgeht (neue Features, Refactors, Page-Änderungen, neue API-Routes):
+1. **Claude implementiert lokal** — Code schreiben, `npx tsc --noEmit` checken
+2. **Claude hält den Dev-Server am Laufen** — `npm run dev` auf Port 3000 (im Hintergrund starten falls noch nicht läuft; bei Schema-Änderungen erst `npx prisma generate` und Dev-Server neu starten, sonst wird der alte Prisma-Client gecached)
+3. **Claude öffnet die relevante Seite in Matteos Chrome** — `open -a "Google Chrome" "http://localhost:3000/<pfad>"` direkt nach dem Fertigmachen
+4. **Matteo testet lokal** → Feedback → iterieren bis es passt (kein Push dazwischen)
+5. **Wenn alles gut: push direkt auf `main`** — Vercel deployed automatisch auf Live-Test-Domain
+6. **Nach ~60s Sanity-Check** — Claude testet kurz per curl dass die Live-Domain kein 500 wirft (z.B. via auth-cookie)
 
-1. **Local testen zuerst** — `npm run dev` auf `localhost:3000`, manuell durchklicken
-2. **Feature-Branch erstellen** — `git checkout -b feature/<kurzer-name>`
-3. **Pushen** — `git push -u origin feature/<kurzer-name>`
-4. **Preview-URL abrufen** — Vercel CLI: `vercel ls stacey-website | head -3` zeigt die neue Preview-URL (Typ: Preview), meistens innerhalb 1 Min ready
-5. **Preview-URL direkt in Chrome öffnen** — `open -a "Google Chrome" "<preview-url>"` (das soll Claude automatisch machen, sobald die Preview ready ist)
-6. **User testet** → gibt Feedback
-7. **Merge auf main** wenn alles passt — `git checkout main && git merge feature/<name> && git push` → Vercel deployed auf Live-Test-Domain
+### Wann Feature-Branch + Vercel-Preview (Ausnahme)
 
-### Direct-to-main (nur für echte Trivial-Fixes)
+Nur wenn der Change lokal **nicht vollständig testbar ist**:
+- Stripe-Webhooks die echte Stripe-Events brauchen
+- Yousign-Callbacks
+- apaleo-Webhook-Flows
+- env-abhängiges Verhalten (TEST_MODE_EMAILS, Production-vs-Dev-Key-Logik)
+- Cron-Verhalten gegen Production-Daten
 
-Harte Grenze: **max 1-2 Dateien, ohne Refactor, ohne Architektur-Änderung**.
-- Tippfehler in Text
-- CSS-Tweaks ohne Logik-Änderung
-- Offensichtliche einzeilige Bugfixes
-- Rollback eines gerade gepushten Commits
+Dann: `feature/<name>` branch → push → `vercel ls stacey-website | head -3` → Preview-URL via `open -a "Google Chrome" "<preview-url>"` automatisch in Matteos Chrome öffnen → testen → merge auf main.
 
-**NICHT direct-to-main** (auch wenn's "nur" ein Fix ist):
-- Lint-Fixes die Struktur ändern (z.B. Logik in Server Component verschieben)
-- Multi-File-Refactors, auch wenn kleine Line-Counts
-- Neue Funktionen, Props, Types
-- Schema-Änderungen (separate Regel unten)
-- CI-Fehler die nicht durch einen einzelnen Parameter/Import-Change lösbar sind
+### Schema-Änderungen (harte Regel, unabhängig vom Flow)
 
-Im Zweifel immer Feature-Branch. "Ich muss schnell die CI grün kriegen" ist KEIN Grund für direct-to-main — stattdessen `fix/…` Branch, push, Preview URL, merge.
-
-### Migrations-Regel (hart)
-
-- **Schema-Änderungen immer direkt auf main**, NIE in einem offenen Feature-Branch (weil es nur EINE Supabase-DB gibt — Feature-Branch-Code würde sofort gegen neue DB laufen und main-Code hätte altes Prisma-Schema).
-- Vor jeder Migration: SQL zusammen mit Matteo prüfen, dann `node scripts/run-migration.mjs prisma/migrations/.../migration.sql` gegen Prod-DB.
-- Rollback-Plan bereithalten (welche Spalten entfernt werden können im Worst-Case).
+- **Migrations immer direkt auf `main`**, NIE in einem offenen Feature-Branch (nur eine Supabase-DB → Branch-Code liefe gegen die bereits migrierte DB, main-Code hätte noch das alte Prisma-Schema).
+- Vor jeder Migration: SQL zusammen mit Matteo prüfen, dann `node scripts/run-migration.mjs prisma/migrations/…/migration.sql` gegen Prod-DB.
+- Nach jeder neuen Migration: `npx prisma generate` + Dev-Server neu starten, sonst arbeitet localhost mit dem alten Prisma-Client.
 
 ### DB-Setup-Hinweis
 
-`lib/db.ts` nutzt `DIRECT_URL` (nicht pgbouncer) für interactive transactions. `pg.Pool` hart auf `max: 3` + `idleTimeoutMillis: 10s` limitiert — sonst geht Supabase's Direct-Connection-Limit (~60) bei paralleler Last kaputt. Für query-heavy neue Pages: Prisma-Queries in kleine Batches splitten (`Promise.all` mit 3-4 Queries ok, 10+ nicht).
+`lib/db.ts` nutzt `DIRECT_URL` (nicht pgbouncer) für interactive transactions. `pg.Pool` mit `max: 5`, `connectionTimeoutMillis: 15_000`, `idleTimeoutMillis: 30_000` — gibt Supabase genug Puffer für Cold-Start-Handshake und hält gleichzeitig total concurrent connections weit unter dem ~60er Limit. Für query-heavy Pages: Prisma-Queries in Batches splitten (`Promise.all` mit 3-4 Queries ok, 10+ lieber in 2-3 sequentielle Batches aufteilen).
 
 ### Vor Go-Live auf stacey.de
 
