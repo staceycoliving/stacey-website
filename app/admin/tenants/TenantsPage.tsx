@@ -32,6 +32,7 @@ type Tenant = {
   stripeCustomerId: string | null;
   sepaMandateId: string | null;
   depositStatus: string;
+  depositAmount: number | null;
   room: {
     id: string;
     roomNumber: string;
@@ -457,6 +458,9 @@ export default function TenantsPage({
               tenantId={t.id}
               tenantName={`${t.firstName} ${t.lastName}`}
               depositPaidAt={t.booking?.depositPaidAt ?? null}
+              moveIn={t.moveIn}
+              monthlyRent={t.monthlyRent}
+              depositAmount={t.depositAmount ?? t.monthlyRent * 2}
               onClose={() => setWithdrawTenantId(null)}
               onSuccess={() => router.refresh()}
             />

@@ -265,6 +265,11 @@ model Booking {
   status             BookingStatus @default(PENDING)
   cancellationReason String?       // z.B. "Widerruf", "Deposit timeout", "Kundenwunsch"
 
+  // Widerruf-spezifisch (gesetzt vom withdraw route)
+  cancellationDate       DateTime?  // Wann der Widerruf bei uns einging
+  proRataRentRetained    Int?       // anteilige Miete einbehalten in Cent (wenn schon eingezogen)
+  depositRefundedAmount  Int?       // tatsächlich an Kunde refundeter Betrag in Cent
+
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 

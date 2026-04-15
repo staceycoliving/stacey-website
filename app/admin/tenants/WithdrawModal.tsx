@@ -7,22 +7,72 @@ interface WithdrawModalProps {
   tenantName: string;
   /** ISO timestamp when the deposit was paid — null if no deposit on file. */
   depositPaidAt: string | null;
+  /** ISO timestamp when the tenant moved in. Used for pro-rata calc. */
+  moveIn: string;
+  /** Monthly rent in cents — for pro-rata calculation. */
+  monthlyRent: number;
+  /** Deposit amount in cents — what would be refunded in full case. */
+  depositAmount: number;
   onClose: () => void;
   /** Called after a successful withdraw so caller can refresh / navigate. */
   onSuccess?: (info: {
     refunded: boolean;
     refundId: string | null;
     withinDeadline: boolean;
+    refundAmountCents: number;
+    proRataRentRetainedCents: number;
+    daysOccupied: number;
   }) => void;
 }
 
-/** Days remaining in the 14-day Widerruf window. Negative if window has passed.
- *  Null if no deposit payment recorded. */
-export function withdrawDaysLeft(depositPaidAt: string | null): number | null {
+function fmtEur(cents: number) {
+  return `€${(cents / 100).toFixed(2)}`;
+}
+
+function todayLocalISO(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+/** Days remaining in the 14-day Widerruf window measured from a given date.
+ *  Negative if window has passed. Null if no deposit payment recorded. */
+function daysLeftAt(depositPaidAt: string | null, atDate: Date): number | null {
   if (!depositPaidAt) return null;
-  const ms = Date.now() - new Date(depositPaidAt).getTime();
+  const ms = atDate.getTime() - new Date(depositPaidAt).getTime();
   const daysSince = Math.floor(ms / (24 * 60 * 60 * 1000));
   return 14 - daysSince;
+}
+
+/** Pro-rata rent retained: tenant moved in before cancellationDate, we keep
+ *  rent for days occupied. Uses actual days of the move-in month (matches
+ *  monthly-rent cron). */
+function calcProRata(args: {
+  moveIn: string;
+  cancellationDate: Date;
+  monthlyRentCents: number;
+}): { daysOccupied: number; proRataCents: number } {
+  const moveIn = new Date(args.moveIn);
+  moveIn.setHours(0, 0, 0, 0);
+  if (moveIn >= args.cancellationDate) {
+    return { daysOccupied: 0, proRataCents: 0 };
+  }
+  const msPerDay = 24 * 60 * 60 * 1000;
+  const daysOccupied = Math.max(
+    0,
+    Math.floor((args.cancellationDate.getTime() - moveIn.getTime()) / msPerDay)
+  );
+  if (daysOccupied === 0 || args.monthlyRentCents <= 0) {
+    return { daysOccupied: 0, proRataCents: 0 };
+  }
+  const daysInMoveInMonth = new Date(
+    moveIn.getFullYear(),
+    moveIn.getMonth() + 1,
+    0
+  ).getDate();
+  const proRataCents = Math.round(
+    (args.monthlyRentCents * daysOccupied) / daysInMoveInMonth
+  );
+  return { daysOccupied, proRataCents };
 }
 
 /**
@@ -35,15 +85,32 @@ export default function WithdrawModal({
   tenantId,
   tenantName,
   depositPaidAt,
+  moveIn,
+  monthlyRent,
+  depositAmount,
   onClose,
   onSuccess,
 }: WithdrawModalProps) {
   const [working, setWorking] = useState(false);
   const [expiredAcknowledged, setExpiredAcknowledged] = useState(false);
+  const [cancellationDateStr, setCancellationDateStr] = useState(todayLocalISO());
 
-  const daysLeft = withdrawDaysLeft(depositPaidAt);
+  // No deposit on file → can't refund anything via this flow
+  const noDeposit = !depositPaidAt;
+
+  // Parse the chosen cancellation date (start-of-day local)
+  const cancellationDate = new Date(cancellationDateStr + "T00:00:00");
+
+  const daysLeft = daysLeftAt(depositPaidAt, cancellationDate);
   const expired = daysLeft !== null && daysLeft < 0;
-  const noDeposit = daysLeft === null;
+
+  // Pro-rata calculation for live preview
+  const { daysOccupied, proRataCents } = calcProRata({
+    moveIn,
+    cancellationDate,
+    monthlyRentCents: monthlyRent,
+  });
+  const refundCents = Math.max(0, depositAmount - proRataCents);
 
   async function execute(confirmExpired: boolean) {
     setWorking(true);
@@ -51,19 +118,25 @@ export default function WithdrawModal({
       const res = await fetch(`/api/admin/tenants/${tenantId}/withdraw`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ confirmExpired }),
+        body: JSON.stringify({
+          confirmExpired,
+          cancellationDate: cancellationDateStr,
+        }),
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok) {
         alert(
           data.withinDeadline
-            ? "Widerruf processed. Deposit refunded, booking fee retained."
-            : "Widerruf processed (admin override after deadline)."
+            ? `Widerruf processed.\n\nRefund: ${fmtEur(data.refundAmountCents)} (${data.daysOccupied} day${data.daysOccupied === 1 ? "" : "s"} pro-rata retained: ${fmtEur(data.proRataRentRetainedCents)})\nBooking Fee €195 retained.`
+            : `Widerruf processed (admin override after deadline).\n\nRefund: ${fmtEur(data.refundAmountCents)}`
         );
         onSuccess?.({
           refunded: Boolean(data.refunded),
           refundId: data.refundId ?? null,
           withinDeadline: Boolean(data.withinDeadline),
+          refundAmountCents: data.refundAmountCents ?? 0,
+          proRataRentRetainedCents: data.proRataRentRetainedCents ?? 0,
+          daysOccupied: data.daysOccupied ?? 0,
         });
         onClose();
       } else {
@@ -107,6 +180,11 @@ export default function WithdrawModal({
           </h3>
         </div>
         <div className="space-y-2 text-sm">
+          <DateInput
+            label="Widerruf erhalten am"
+            value={cancellationDateStr}
+            onChange={setCancellationDateStr}
+          />
           <p className="text-black">
             Die 14-tägige Widerrufsfrist (ab Kautionszahlung) für{" "}
             <strong>{tenantName}</strong> ist seit{" "}
@@ -114,22 +192,14 @@ export default function WithdrawModal({
           </p>
           <p className="text-gray">
             Ein Widerruf ist <strong>rechtlich nicht mehr möglich</strong>.
-            Falls du trotzdem fortfahren willst, wird:
+            Falls du trotzdem fortfahren willst:
           </p>
           <ul className="list-disc list-inside text-gray text-xs space-y-1 ml-2">
-            <li>Die Kaution per Stripe zurücküberwiesen</li>
-            <li>
-              Das Booking als CANCELLED markiert (Reason: &quot;admin override
-              after deadline&quot;)
-            </li>
-            <li>Der Tenant aus der DB gelöscht</li>
-            <li>
-              Im Audit-Log als <code>withdraw_after_deadline</code> protokolliert
-            </li>
+            <li>Refund läuft per Stripe (mit Pro-rata-Abzug falls eingezogen)</li>
+            <li>Booking → CANCELLED, Reason: &quot;admin override after deadline&quot;</li>
+            <li>Tenant aus der DB gelöscht</li>
+            <li>Audit-Log: <code>withdraw_after_deadline</code></li>
           </ul>
-          <p className="text-black mt-3 font-medium">
-            Bist du sicher, dass das gewollt ist?
-          </p>
         </div>
         <div className="flex justify-end gap-2 mt-6">
           <button
@@ -153,32 +223,52 @@ export default function WithdrawModal({
   return (
     <Shell>
       <h3 className="font-bold text-black">Widerruf bestätigen</h3>
-      <p className="text-sm text-gray mt-2">
-        {expiredAcknowledged ? (
-          <>
-            <strong className="text-red-700">
-              ⚠️ Außerhalb der Widerrufsfrist (Admin-Override).
-            </strong>
-            <br />
-            Kaution wird per Stripe rückerstattet, Booking storniert,{" "}
-            <strong className="text-black">{tenantName}</strong> aus der DB
-            gelöscht.
-          </>
-        ) : (
-          <>
-            Innerhalb der 14-Tage-Widerrufsfrist (
-            <strong>
+      {expiredAcknowledged && (
+        <div className="mt-2 px-3 py-2 bg-red-50 border border-red-200 rounded-[5px] text-xs text-red-700">
+          ⚠️ Außerhalb der Widerrufsfrist — Admin-Override
+        </div>
+      )}
+
+      <div className="mt-3 space-y-3">
+        <DateInput
+          label="Widerruf erhalten am"
+          value={cancellationDateStr}
+          onChange={setCancellationDateStr}
+        />
+
+        {!expiredAcknowledged && daysLeft !== null && (
+          <p className="text-xs text-gray">
+            Innerhalb der 14-Tage-Frist —{" "}
+            <strong className="text-black">
               {daysLeft} Tag{daysLeft === 1 ? "" : "e"} verbleibend
-            </strong>
-            ).
-            <br />
-            Kaution wird per Stripe rückerstattet, Booking-Fee (€195) bleibt
-            einbehalten, <strong className="text-black">{tenantName}</strong>{" "}
-            wird gelöscht.
-          </>
+            </strong>{" "}
+            ab Kautionszahlung.
+          </p>
         )}
-      </p>
-      <div className="flex justify-end gap-2 mt-6">
+
+        {/* Calculation breakdown */}
+        <div className="border border-lightgray rounded-[5px] divide-y divide-lightgray text-sm">
+          <Row label="Kaution gezahlt" value={fmtEur(depositAmount)} muted />
+          {daysOccupied > 0 ? (
+            <Row
+              label={`Pro-rata Miete (${daysOccupied} Tag${daysOccupied === 1 ? "" : "e"} eingezogen)`}
+              value={`-${fmtEur(proRataCents)}`}
+              muted
+            />
+          ) : (
+            <Row label="Mieter noch nicht eingezogen" value="—" muted />
+          )}
+          <Row label="Refund an Kunde" value={fmtEur(refundCents)} highlight />
+        </div>
+
+        <p className="text-xs text-gray">
+          <strong className="text-black">{tenantName}</strong> wird gelöscht,
+          Booking als CANCELLED archiviert. Booking Fee €195 wurde bereits
+          vereinnahmt und bleibt unverändert.
+        </p>
+      </div>
+
+      <div className="flex justify-end gap-2 mt-5">
         <button
           onClick={onClose}
           className="px-3 py-1.5 text-sm border border-lightgray rounded-[5px] hover:bg-background-alt"
@@ -198,6 +288,52 @@ export default function WithdrawModal({
         </button>
       </div>
     </Shell>
+  );
+}
+
+function DateInput({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <label className="block">
+      <span className="block text-xs text-gray mb-1">{label}</span>
+      <input
+        type="date"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        max={todayLocalISO()}
+        className="w-full px-3 py-2 border border-lightgray rounded-[5px] text-sm bg-white"
+      />
+    </label>
+  );
+}
+
+function Row({
+  label,
+  value,
+  muted,
+  highlight,
+}: {
+  label: string;
+  value: string;
+  muted?: boolean;
+  highlight?: boolean;
+}) {
+  return (
+    <div
+      className={`flex items-center justify-between px-3 py-2 ${
+        highlight ? "bg-green-50 font-bold text-black" : muted ? "text-gray" : ""
+      }`}
+    >
+      <span className="text-xs">{label}</span>
+      <span className="tabular-nums text-sm">{value}</span>
+    </div>
   );
 }
 

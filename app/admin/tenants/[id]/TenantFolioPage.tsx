@@ -270,6 +270,9 @@ export default function TenantFolioPage({
           tenantId={tenant.id}
           tenantName={`${tenant.firstName} ${tenant.lastName}`}
           depositPaidAt={tenant.booking?.depositPaidAt ?? null}
+          moveIn={tenant.moveIn}
+          monthlyRent={tenant.monthlyRent}
+          depositAmount={tenant.depositAmount ?? tenant.monthlyRent * 2}
           onClose={() => setShowWithdraw(false)}
           onSuccess={() => router.push("/admin/tenants")}
         />
