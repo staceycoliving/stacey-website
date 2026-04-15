@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Plus, Trash2, Edit2, X, Download } from "lucide-react";
 import WithdrawModal from "../WithdrawModal";
+import DangerZone from "../DangerZone";
 
 type Location = {
   id: string;
@@ -300,6 +301,11 @@ export default function TenantFolioPage({
           {tab === "documents" && <DocumentsTab tenant={tenant} />}
         </div>
       </div>
+
+      <DangerZone
+        tenantId={tenant.id}
+        tenantName={`${tenant.firstName} ${tenant.lastName}`}
+      />
     </div>
   );
 }

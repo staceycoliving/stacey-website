@@ -123,7 +123,7 @@ export default function TenantsPage({
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [sendingSetupId, setSendingSetupId] = useState<string | null>(null);
   const [confirmAction, setConfirmAction] = useState<
-    | { type: "terminate" | "remove"; tenantId: string }
+    | { type: "terminate"; tenantId: string }
     | null
   >(null);
   const [withdrawTenantId, setWithdrawTenantId] = useState<string | null>(null);
@@ -246,22 +246,6 @@ export default function TenantsPage({
       });
       if (res.ok) router.refresh();
       else alert("Termination failed");
-    } finally {
-      setWorking(false);
-      setConfirmAction(null);
-    }
-  }
-
-  async function removeTenant(tenantId: string) {
-    setWorking(true);
-    try {
-      const res = await fetch("/api/admin/tenants", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tenantId }),
-      });
-      if (res.ok) router.refresh();
-      else alert("Delete failed");
     } finally {
       setWorking(false);
       setConfirmAction(null);
@@ -438,15 +422,6 @@ export default function TenantsPage({
                                 Widerruf (14-day cancellation)
                               </MenuItem>
                             )}
-                            <div className="border-t border-lightgray my-1" />
-                            <MenuItem
-                              onClick={() =>
-                                setConfirmAction({ type: "remove", tenantId: t.id })
-                              }
-                              tone="danger"
-                            >
-                              Remove tenant
-                            </MenuItem>
                           </div>
                         )}
                       </td>
@@ -467,8 +442,6 @@ export default function TenantsPage({
           onConfirm={() => {
             if (confirmAction.type === "terminate")
               return terminateTenant(confirmAction.tenantId);
-            if (confirmAction.type === "remove")
-              return removeTenant(confirmAction.tenantId);
           }}
           onCancel={() => setConfirmAction(null)}
         />
@@ -556,23 +529,19 @@ function MenuItem({
 }
 
 function ConfirmModal({
-  action,
   working,
   onConfirm,
   onCancel,
 }: {
-  action: { type: "terminate" | "remove"; tenantId: string };
+  action: { type: "terminate"; tenantId: string };
   working: boolean;
   onConfirm: () => void;
   onCancel: () => void;
 }) {
-  const title =
-    action.type === "terminate" ? "Terminate tenant?" : "Remove tenant?";
+  const title = "Terminate tenant?";
   const body =
-    action.type === "terminate"
-      ? "This sets notice today and moveOut 3 months from today (end of month)."
-      : "This permanently removes the tenant from the database. Only use for data cleanup.";
-  const cta = action.type === "terminate" ? "Terminate" : "Remove";
+    "This sets notice today and moveOut 3 months from today (end of month).";
+  const cta = "Terminate";
 
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">

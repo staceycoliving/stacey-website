@@ -40,21 +40,33 @@ export async function DELETE(request: NextRequest) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { tenantId } = await request.json();
+  const body = await request.json().catch(() => ({}));
+  const { tenantId, reason, reasonNote } = body;
 
   if (!tenantId) {
     return Response.json({ error: "tenantId required" }, { status: 400 });
   }
+  if (!reason || typeof reason !== "string") {
+    return Response.json(
+      { error: "reason required for hard-delete (data cleanup audit)" },
+      { status: 400 }
+    );
+  }
 
   const t = await prisma.tenant.findUnique({ where: { id: tenantId } });
+  if (!t) return Response.json({ error: "Tenant not found" }, { status: 404 });
+
   await prisma.tenant.delete({ where: { id: tenantId } });
+
+  const fullReason = reasonNote ? `${reason} — ${reasonNote.trim()}` : reason;
 
   await audit(request, {
     module: "tenant",
-    action: "delete",
+    action: "hard_delete",
     entityType: "tenant",
     entityId: tenantId,
-    summary: t ? `Deleted ${t.firstName} ${t.lastName}` : `Deleted tenant ${tenantId}`,
+    summary: `Hard-deleted ${t.firstName} ${t.lastName} (${reason})`,
+    metadata: { reason, reasonNote: reasonNote ?? null, fullReason },
   });
 
   return Response.json({ ok: true });

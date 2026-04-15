@@ -1,0 +1,12 @@
+import { Client } from "pg";
+import { config } from "dotenv";
+import { resolve, dirname } from "path";
+import { fileURLToPath } from "url";
+const __dirname = dirname(fileURLToPath(import.meta.url));
+config({ path: resolve(__dirname, "..", ".env.local") });
+const client = new Client({ connectionString: process.env.DIRECT_URL });
+await client.connect();
+const r = await client.query(`SELECT id, "firstName", "lastName" FROM "Tenant" WHERE "firstName" LIKE $1 ORDER BY "createdAt"`, ["🧪%"]);
+console.log(`Found ${r.rowCount} test tenants:`);
+for (const row of r.rows) console.log(`  ${row.id} → ${row.firstName} ${row.lastName}`);
+await client.end();
