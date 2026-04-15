@@ -114,9 +114,16 @@ export default function RoomsPage({
   locations: Location[];
 }) {
   const router = useRouter();
-  const [selectedLocationId, setSelectedLocationId] = useState(
-    locations[0]?.id || ""
-  );
+  // Accept ?location=<id> from links (e.g. from the pricing matrix). Fall
+  // back to the first location if no param or the id doesn't match.
+  const searchParams =
+    typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+  const initialLocationId = (() => {
+    const param = searchParams?.get("location");
+    if (param && locations.some((l) => l.id === param)) return param;
+    return locations[0]?.id || "";
+  })();
+  const [selectedLocationId, setSelectedLocationId] = useState(initialLocationId);
   const [modal, setModal] = useState<ModalState>({ kind: null });
 
   const allRooms = locations.flatMap((l) =>
