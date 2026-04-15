@@ -122,7 +122,8 @@ model Tenant {
   depositStatus       DepositStatus @default(PENDING)
   damagesAmount       Int           @default(0) // Mängel in Cent
   arrearsAmount       Int           @default(0) // Mietrückstände in Cent
-  depositRefundAmount Int?          // Kaution - Mängel - Rückstände
+  rentOverpaymentAmount Int         @default(0) // Mietüberzahlung in Cent (z.B. nach moveOut-Verkürzung)
+  depositRefundAmount Int?          // Kaution + Überzahlung - Mängel - Rückstände
   depositRefundIban   String?
   depositReturnedAt   DateTime?
 
@@ -149,15 +150,30 @@ model ExtraCharge {
   tenantId    String
   tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
-  description String   // z.B. "Schlüsselersatz", "Reinigung extra"
-  amount      Int      // Cent
+  description String   // z.B. "Schlüsselersatz", "Heizungsausfall"
+  amount      Int      // Cent (immer positiv — Vorzeichen ergibt sich aus type)
   month       DateTime? // Optional: welchem Monat zuordnen (null = einmalig)
   paidAt      DateTime? // Null = offen
+
+  type        ExtraChargeType   @default(CHARGE)   // CHARGE = Mieter schuldet uns, DISCOUNT = Nachlass
+  chargeOn    ExtraChargeTiming @default(NEXT_RENT) // NEXT_RENT = mit nächster Miete, DEPOSIT_SETTLEMENT = am Ende
+
+  stripePaymentIntentId String? // Gesetzt wenn via Monats-SEPA mit eingezogen wurde
 
   createdBy   String?  // Admin-User (erstmal optional)
   createdAt   DateTime @default(now())
 
   @@index([tenantId])
+}
+
+enum ExtraChargeType {
+  CHARGE
+  DISCOUNT
+}
+
+enum ExtraChargeTiming {
+  NEXT_RENT
+  DEPOSIT_SETTLEMENT
 }
 
 model RentAdjustment {

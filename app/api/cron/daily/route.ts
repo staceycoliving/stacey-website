@@ -374,6 +374,13 @@ async function handleRentReminders() {
   let mahnungen2 = 0;
   let terminations = 0;
 
+  // moveOut reconcile lives on the tenant PATCH route (lib/rent-charge.ts
+  // reconcileMoveOutPayment). It only adjusts RentPayment.amount — the
+  // overpayment surfaces in the deposit settlement, no Stripe refund. So
+  // there's no cron safety net needed: if an admin shortens moveOut after
+  // the cron already collected, the deposit page will pick up the credit
+  // automatically when it computes the settlement.
+
   // Find all unpaid rent payments — past months AND current month if the
   // tenant has already moved in. The chargeRentPayment helper will skip
   // anything not yet chargeable (today < moveIn).

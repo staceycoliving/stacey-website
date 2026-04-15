@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, Plus, Trash2, Edit2, X, Download } from "lucide-react";
 import WithdrawModal from "../WithdrawModal";
 import DangerZone from "../DangerZone";
+import MoveOutAdjustModal from "../MoveOutAdjustModal";
 
 type Location = {
   id: string;
@@ -61,6 +62,9 @@ type ExtraCharge = {
   month: string | null;
   paidAt: string | null;
   createdAt: string;
+  type: "CHARGE" | "DISCOUNT";
+  chargeOn: "NEXT_RENT" | "DEPOSIT_SETTLEMENT";
+  stripePaymentIntentId: string | null;
 };
 
 type RentAdjustment = {
@@ -179,12 +183,14 @@ export default function TenantFolioPage({
   const [showWithdraw, setShowWithdraw] = useState(false);
   const hasDeposit = Boolean(tenant.booking?.depositPaidAt);
 
+  // Only positive deltas count as "open" — overpayments are credit, not debt.
   const openBalance = tenant.rentPayments.reduce(
-    (sum, p) => sum + (p.amount - p.paidAmount),
+    (sum, p) => sum + Math.max(0, p.amount - p.paidAmount),
     0
   );
+  // Only open CHARGES count as debt — open DISCOUNTS are credit, not owed.
   const extraChargesOpen = tenant.extraCharges
-    .filter((c) => !c.paidAt)
+    .filter((c) => !c.paidAt && c.type === "CHARGE")
     .reduce((sum, c) => sum + c.amount, 0);
   const totalOpen = openBalance + extraChargesOpen;
 
@@ -417,7 +423,16 @@ function ProfileTab({ tenant }: { tenant: Tenant }) {
 // ─── Tab 2: Lease ──────────────────────────────────────────
 
 function LeaseTab({ tenant }: { tenant: Tenant }) {
+  const router = useRouter();
+  const [showMoveOutAdjust, setShowMoveOutAdjust] = useState(false);
   const addr = tenant.room.apartment.location.address;
+
+  // Pass all PAID/PARTIAL rents to the modal — it picks the right month
+  // based on whatever date the admin chooses.
+  const paidRents = tenant.rentPayments
+    .filter((r) => r.status === "PAID" || r.status === "PARTIAL")
+    .map((r) => ({ month: r.month, paidAmount: r.paidAmount }));
+
   return (
     <div className="space-y-2 max-w-2xl">
       <InfoRow label="Location" value={tenant.room.apartment.location.name} />
@@ -439,12 +454,39 @@ function LeaseTab({ tenant }: { tenant: Tenant }) {
       <InfoRow label="Monthly rent" value={fmtEuro(tenant.monthlyRent)} />
       <div className="border-t border-lightgray my-4" />
       <InfoRow label="Move-in" value={fmtDate(tenant.moveIn)} />
-      <InfoRow label="Move-out" value={fmtDate(tenant.moveOut)} />
+      <div className="flex items-start text-sm">
+        <div className="w-40 text-gray flex-shrink-0">Move-out</div>
+        <div className="flex-1 text-black flex items-center gap-3">
+          <span>{fmtDate(tenant.moveOut)}</span>
+          <button
+            onClick={() => setShowMoveOutAdjust(true)}
+            className="text-xs text-gray hover:text-black underline"
+          >
+            anpassen
+          </button>
+        </div>
+      </div>
       <InfoRow label="Notice" value={fmtDate(tenant.notice)} />
       {tenant.booking?.bookingFeePaidAt && (
         <InfoRow
           label="Booking fee paid"
           value={fmtDate(tenant.booking.bookingFeePaidAt)}
+        />
+      )}
+
+      {showMoveOutAdjust && (
+        <MoveOutAdjustModal
+          tenantId={tenant.id}
+          tenantName={`${tenant.firstName} ${tenant.lastName}`}
+          monthlyRentCents={tenant.monthlyRent}
+          moveIn={tenant.moveIn}
+          currentMoveOut={tenant.moveOut}
+          paidRents={paidRents}
+          onClose={() => setShowMoveOutAdjust(false)}
+          onSuccess={() => {
+            setShowMoveOutAdjust(false);
+            router.refresh();
+          }}
         />
       )}
     </div>
@@ -458,14 +500,23 @@ function PaymentsTab({ tenant }: { tenant: Tenant }) {
   const [showCharge, setShowCharge] = useState(false);
   const [showAdjust, setShowAdjust] = useState(false);
 
-  const totalExpected = tenant.rentPayments.reduce((s, p) => s + p.amount, 0);
   const totalPaid = tenant.rentPayments.reduce((s, p) => s + p.paidAmount, 0);
-  const openRent = totalExpected - totalPaid;
-  const openExtras = tenant.extraCharges
-    .filter((c) => !c.paidAt)
-    .reduce((s, c) => s + c.amount, 0);
+  // Split open vs credit: positive deltas are arrears, negative are credit
+  // (e.g. moveOut shortened after rent was already collected).
+  const openRent = tenant.rentPayments.reduce(
+    (s, p) => s + Math.max(0, p.amount - p.paidAmount),
+    0
+  );
+  const rentCredit = tenant.rentPayments.reduce(
+    (s, p) => s + Math.max(0, p.paidAmount - p.amount),
+    0
+  );
 
   async function toggleChargePaid(chargeId: string, paid: boolean) {
+    const msg = paid
+      ? "Diese Forderung manuell als beglichen markieren? Verwende das nur, wenn der Betrag anders schon verrechnet wurde (z.B. Banküberweisung, bar)."
+      : "Diese Forderung wieder als offen markieren? Damit landet sie wieder im nächsten Einzug oder der Kautionsauszahlung.";
+    if (!confirm(msg)) return;
     const res = await fetch(
       `/api/admin/tenants/${tenant.id}/extra-charges/${chargeId}`,
       {
@@ -488,9 +539,19 @@ function PaymentsTab({ tenant }: { tenant: Tenant }) {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div
+        className={`grid grid-cols-1 gap-4 ${rentCredit > 0 ? "md:grid-cols-4" : "md:grid-cols-3"}`}
+      >
         <SummaryBox label="Total paid" value={fmtEuro(totalPaid)} />
         <SummaryBox label="Open rent" value={fmtEuro(openRent)} tone={openRent > 0 ? "warn" : "ok"} />
+        {rentCredit > 0 && (
+          <SummaryBox
+            label="Rent credit"
+            value={`+${fmtEuro(rentCredit)}`}
+            tone="ok"
+            sub="Verrechnung b. Endabrechnung"
+          />
+        )}
         <SummaryBox label="Deposit" value={fmtEuro(tenant.depositAmount)} sub={tenant.depositStatus} />
       </div>
 
@@ -521,13 +582,25 @@ function PaymentsTab({ tenant }: { tenant: Tenant }) {
               ) : (
                 tenant.rentPayments.map((p) => {
                   const delta = p.amount - p.paidAmount;
+                  const deltaCls =
+                    delta > 0
+                      ? "text-red-600"
+                      : delta < 0
+                        ? "text-green-700 font-medium"
+                        : "text-gray";
+                  const deltaLabel =
+                    delta > 0
+                      ? fmtEuro(delta)
+                      : delta < 0
+                        ? `+${fmtEuro(-delta)}`
+                        : "—";
                   return (
                     <tr key={p.id} className="border-t border-lightgray/50">
                       <td className="px-3 py-2">{fmtMonth(p.month)}</td>
                       <td className="px-3 py-2 text-right tabular-nums">{fmtEuro(p.amount)}</td>
                       <td className="px-3 py-2 text-right tabular-nums">{fmtEuro(p.paidAmount)}</td>
-                      <td className={`px-3 py-2 text-right tabular-nums ${delta > 0 ? "text-red-600" : "text-gray"}`}>
-                        {delta > 0 ? fmtEuro(delta) : "—"}
+                      <td className={`px-3 py-2 text-right tabular-nums ${deltaCls}`}>
+                        {deltaLabel}
                       </td>
                       <td className="px-3 py-2">
                         <PaymentStatusBadge status={p.status} />
@@ -543,12 +616,12 @@ function PaymentsTab({ tenant }: { tenant: Tenant }) {
 
       <div>
         <div className="flex items-center justify-between mb-2">
-          <h3 className="text-sm font-semibold">Extra charges</h3>
+          <h3 className="text-sm font-semibold">Adjustments</h3>
           <button
             onClick={() => setShowCharge(true)}
             className="inline-flex items-center gap-1 text-xs text-gray hover:text-black"
           >
-            <Plus className="w-3.5 h-3.5" /> Add charge
+            <Plus className="w-3.5 h-3.5" /> Add adjustment
           </button>
         </div>
         {tenant.extraCharges.length === 0 ? (
@@ -559,45 +632,76 @@ function PaymentsTab({ tenant }: { tenant: Tenant }) {
               <thead className="bg-background-alt">
                 <tr>
                   <th className="px-3 py-2 text-left text-xs text-gray uppercase">Date</th>
+                  <th className="px-3 py-2 text-left text-xs text-gray uppercase">Type</th>
                   <th className="px-3 py-2 text-left text-xs text-gray uppercase">Description</th>
+                  <th className="px-3 py-2 text-left text-xs text-gray uppercase">When</th>
                   <th className="px-3 py-2 text-right text-xs text-gray uppercase">Amount</th>
                   <th className="px-3 py-2 text-left text-xs text-gray uppercase">Status</th>
                   <th className="px-3 py-2 w-8"></th>
                 </tr>
               </thead>
               <tbody>
-                {tenant.extraCharges.map((c) => (
-                  <tr key={c.id} className="border-t border-lightgray/50">
-                    <td className="px-3 py-2">{fmtDate(c.createdAt)}</td>
-                    <td className="px-3 py-2">{c.description}</td>
-                    <td className="px-3 py-2 text-right tabular-nums">{fmtEuro(c.amount)}</td>
-                    <td className="px-3 py-2">
-                      <button
-                        onClick={() => toggleChargePaid(c.id, !c.paidAt)}
-                        className={`inline-block px-2 py-0.5 rounded-[5px] text-xs font-semibold ${c.paidAt ? "bg-green-100 text-green-700" : "bg-orange-100 text-orange-700"}`}
+                {tenant.extraCharges.map((c) => {
+                  const isDiscount = c.type === "DISCOUNT";
+                  return (
+                    <tr key={c.id} className="border-t border-lightgray/50">
+                      <td className="px-3 py-2">{fmtDate(c.createdAt)}</td>
+                      <td className="px-3 py-2">
+                        <span
+                          className={`inline-block px-2 py-0.5 rounded-[5px] text-xs font-semibold ${
+                            isDiscount
+                              ? "bg-green-100 text-green-700"
+                              : "bg-red-100 text-red-700"
+                          }`}
+                        >
+                          {isDiscount ? "Discount" : "Charge"}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2">{c.description}</td>
+                      <td className="px-3 py-2 text-xs text-gray">
+                        {c.chargeOn === "NEXT_RENT" ? "Next rent" : "At move-out"}
+                      </td>
+                      <td
+                        className={`px-3 py-2 text-right tabular-nums ${
+                          isDiscount ? "text-green-700" : "text-red-600"
+                        }`}
                       >
-                        {c.paidAt ? "Paid" : "Open"}
-                      </button>
-                    </td>
-                    <td className="px-3 py-2">
-                      <button
-                        onClick={() => deleteCharge(c.id)}
-                        className="text-gray hover:text-red-500"
-                        aria-label="Delete charge"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                        {isDiscount ? "+" : "−"}
+                        {fmtEuro(c.amount)}
+                      </td>
+                      <td className="px-3 py-2">
+                        {c.stripePaymentIntentId ? (
+                          <span
+                            className="inline-block px-2 py-0.5 rounded-[5px] text-xs font-semibold bg-green-100 text-green-700"
+                            title={`Mit Miete verrechnet via Stripe (PI ${c.stripePaymentIntentId.slice(-8)}) — nicht manuell änderbar`}
+                          >
+                            Mit Miete ✓
+                          </span>
+                        ) : (
+                          <button
+                            onClick={() => toggleChargePaid(c.id, !c.paidAt)}
+                            className={`inline-block px-2 py-0.5 rounded-[5px] text-xs font-semibold ${c.paidAt ? "bg-green-100 text-green-700" : "bg-orange-100 text-orange-700"} hover:opacity-80`}
+                            title={c.paidAt ? "Wieder als offen markieren" : "Manuell als beglichen markieren"}
+                          >
+                            {c.paidAt ? "Settled" : "Open"}
+                          </button>
+                        )}
+                      </td>
+                      <td className="px-3 py-2">
+                        <button
+                          onClick={() => deleteCharge(c.id)}
+                          className="text-gray hover:text-red-500"
+                          aria-label="Delete adjustment"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
-        )}
-        {openExtras > 0 && (
-          <p className="text-xs text-gray mt-2">
-            Open extras: {fmtEuro(openExtras)}
-          </p>
         )}
       </div>
 
@@ -660,14 +764,31 @@ function DepositTab({ tenant }: { tenant: Tenant }) {
     (s, d) => s + d.deductionAmount,
     0
   );
+  // Split arrears (positive deltas) from credit (negative deltas).
   const openRent = tenant.rentPayments.reduce(
-    (s, p) => s + (p.amount - p.paidAmount),
+    (s, p) => s + Math.max(0, p.amount - p.paidAmount),
     0
   );
-  const openExtras = tenant.extraCharges
-    .filter((c) => !c.paidAt)
+  const rentCredit = tenant.rentPayments.reduce(
+    (s, p) => s + Math.max(0, p.paidAmount - p.amount),
+    0
+  );
+  // Only DEPOSIT_SETTLEMENT adjustments land in the deposit refund math.
+  // NEXT_RENT items flow through the monthly SEPA instead. Charges count
+  // as debt (subtracted), Discounts count as credit (added).
+  const openCharges = tenant.extraCharges
+    .filter((c) => !c.paidAt && c.type === "CHARGE" && c.chargeOn === "DEPOSIT_SETTLEMENT")
     .reduce((s, c) => s + c.amount, 0);
-  const settlement = (tenant.depositAmount ?? 0) - totalDefects - openRent - openExtras;
+  const openDiscounts = tenant.extraCharges
+    .filter((c) => !c.paidAt && c.type === "DISCOUNT" && c.chargeOn === "DEPOSIT_SETTLEMENT")
+    .reduce((s, c) => s + c.amount, 0);
+  const settlement =
+    (tenant.depositAmount ?? 0) +
+    rentCredit +
+    openDiscounts -
+    totalDefects -
+    openRent -
+    openCharges;
 
   async function deleteDefect(defectId: string) {
     if (!confirm("Delete this defect entry?")) return;
@@ -680,10 +801,27 @@ function DepositTab({ tenant }: { tenant: Tenant }) {
 
   return (
     <div className="space-y-6 max-w-3xl">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
         <SummaryBox label="Deposit" value={fmtEuro(tenant.depositAmount)} sub={tenant.depositStatus} />
+        {rentCredit > 0 && (
+          <SummaryBox
+            label="Rent credit"
+            value={`+${fmtEuro(rentCredit)}`}
+            tone="ok"
+          />
+        )}
+        {openDiscounts > 0 && (
+          <SummaryBox
+            label="Discounts"
+            value={`+${fmtEuro(openDiscounts)}`}
+            tone="ok"
+          />
+        )}
         <SummaryBox label="Defects" value={`-${fmtEuro(totalDefects)}`} />
-        <SummaryBox label="Open rent" value={`-${fmtEuro(openRent + openExtras)}`} />
+        <SummaryBox
+          label="Open rent + charges"
+          value={`-${fmtEuro(openRent + openCharges)}`}
+        />
         <SummaryBox
           label="Settlement"
           value={fmtEuro(settlement)}
@@ -949,6 +1087,10 @@ function ExtraChargeModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const [type, setType] = useState<"CHARGE" | "DISCOUNT">("CHARGE");
+  const [chargeOn, setChargeOn] = useState<"NEXT_RENT" | "DEPOSIT_SETTLEMENT">(
+    "NEXT_RENT"
+  );
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
   const [saving, setSaving] = useState(false);
@@ -964,7 +1106,7 @@ function ExtraChargeModal({
       const res = await fetch(`/api/admin/tenants/${tenantId}/extra-charges`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ description, amount: cents }),
+        body: JSON.stringify({ description, amount: cents, type, chargeOn }),
       });
       if (res.ok) onSaved();
       else alert("Save failed");
@@ -973,13 +1115,37 @@ function ExtraChargeModal({
     }
   }
 
+  const isDiscount = type === "DISCOUNT";
   return (
-    <Modal title="Add extra charge" onClose={onClose}>
+    <Modal title="Add adjustment" onClose={onClose}>
+      <div className="mb-3">
+        <div className="block text-xs text-gray mb-1">Type</div>
+        <div className="inline-flex rounded-[5px] border border-lightgray overflow-hidden">
+          <button
+            type="button"
+            onClick={() => setType("CHARGE")}
+            className={`px-3 py-1.5 text-sm ${type === "CHARGE" ? "bg-black text-white" : "bg-white text-gray hover:bg-background-alt"}`}
+          >
+            Charge (Mieter schuldet)
+          </button>
+          <button
+            type="button"
+            onClick={() => setType("DISCOUNT")}
+            className={`px-3 py-1.5 text-sm ${type === "DISCOUNT" ? "bg-green-700 text-white" : "bg-white text-gray hover:bg-background-alt"}`}
+          >
+            Discount (Nachlass)
+          </button>
+        </div>
+      </div>
       <FormInput
-        label="Description"
+        label={isDiscount ? "Grund" : "Description"}
         value={description}
         onChange={setDescription}
-        placeholder="z.B. Schlüsselersatz"
+        placeholder={
+          isDiscount
+            ? "z.B. Heizungsausfall 3 Tage"
+            : "z.B. Schlüsselersatz"
+        }
       />
       <FormInput
         label="Amount (€)"
@@ -988,6 +1154,25 @@ function ExtraChargeModal({
         placeholder="50.00"
         type="number"
       />
+      <div className="mb-3">
+        <div className="block text-xs text-gray mb-1">When</div>
+        <div className="inline-flex rounded-[5px] border border-lightgray overflow-hidden">
+          <button
+            type="button"
+            onClick={() => setChargeOn("NEXT_RENT")}
+            className={`px-3 py-1.5 text-sm ${chargeOn === "NEXT_RENT" ? "bg-black text-white" : "bg-white text-gray hover:bg-background-alt"}`}
+          >
+            Mit nächster Miete
+          </button>
+          <button
+            type="button"
+            onClick={() => setChargeOn("DEPOSIT_SETTLEMENT")}
+            className={`px-3 py-1.5 text-sm ${chargeOn === "DEPOSIT_SETTLEMENT" ? "bg-black text-white" : "bg-white text-gray hover:bg-background-alt"}`}
+          >
+            Erst bei Auszug
+          </button>
+        </div>
+      </div>
       <ModalActions onCancel={onClose} onSave={save} saving={saving} />
     </Modal>
   );

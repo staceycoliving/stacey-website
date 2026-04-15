@@ -81,7 +81,16 @@ export async function POST(request: NextRequest) {
         const metadata = pi.metadata || {};
 
         if (metadata.type === "long_stay_rent") {
-          await handleRentPaymentSucceeded(metadata.rentPaymentId, pi.id, pi.amount_received);
+          const rentAmount = metadata.rentAmount ? Number(metadata.rentAmount) : pi.amount_received;
+          const bundledAdjustmentIds = metadata.bundledAdjustmentIds
+            ? (JSON.parse(metadata.bundledAdjustmentIds) as string[])
+            : [];
+          await handleRentPaymentSucceeded(
+            metadata.rentPaymentId,
+            pi.id,
+            rentAmount,
+            bundledAdjustmentIds
+          );
         }
         break;
       }
@@ -760,20 +769,39 @@ async function handlePaymentSetupCompleted(tenantId: string, session: any) {
 async function handleRentPaymentSucceeded(
   rentPaymentId: string,
   paymentIntentId: string,
-  amountReceived: number
+  /** The pure rent portion, not the bundled PI total. Adjustments have
+   *  their own amount records, we just link them with paidAt=now. */
+  rentAmount: number,
+  bundledAdjustmentIds: string[]
 ) {
-  await prisma.rentPayment.update({
-    where: { id: rentPaymentId },
-    data: {
-      status: "PAID",
-      paidAmount: amountReceived,
-      paidAt: new Date(),
-      stripePaymentIntentId: paymentIntentId,
-    },
-  });
+  await prisma.$transaction([
+    prisma.rentPayment.update({
+      where: { id: rentPaymentId },
+      data: {
+        status: "PAID",
+        paidAmount: rentAmount,
+        paidAt: new Date(),
+        stripePaymentIntentId: paymentIntentId,
+      },
+    }),
+    ...bundledAdjustmentIds.map((id) =>
+      prisma.extraCharge.update({
+        where: { id },
+        data: { paidAt: new Date() },
+      })
+    ),
+  ]);
   logEvent(
-    { scope: "stripe-webhook", tags: { handler: "rent-paid", rentPaymentId, amountEur: (amountReceived / 100).toFixed(2) } },
-    "rent payment marked as PAID",
+    {
+      scope: "stripe-webhook",
+      tags: {
+        handler: "rent-paid",
+        rentPaymentId,
+        rentEur: (rentAmount / 100).toFixed(2),
+        bundledAdjustments: bundledAdjustmentIds.length,
+      },
+    },
+    "rent payment + bundled adjustments marked as PAID",
   );
 }
 

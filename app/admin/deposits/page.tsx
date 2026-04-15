@@ -18,13 +18,20 @@ export default async function AdminDepositsPage() {
           apartment: { include: { location: true } },
         },
       },
+      // Include unpaid rents (for arrears) AND any PAID rents with
+      // paidAmount > amount (overpayment from moveOut reconcile).
       rentPayments: {
-        where: { status: { in: ["PENDING", "FAILED", "PARTIAL"] } },
-        select: { id: true, amount: true, paidAmount: true, month: true },
+        where: {
+          OR: [
+            { status: { in: ["PENDING", "FAILED", "PARTIAL"] } },
+            { status: "PAID" }, // filtered to overpayment in computeBreakdown
+          ],
+        },
+        select: { id: true, amount: true, paidAmount: true, month: true, status: true },
       },
       extraCharges: {
-        where: { paidAt: null },
-        select: { id: true, description: true, amount: true },
+        where: { paidAt: null, chargeOn: "DEPOSIT_SETTLEMENT" },
+        select: { id: true, description: true, amount: true, type: true },
       },
       defects: {
         select: { id: true, description: true, deductionAmount: true, createdAt: true },

@@ -208,11 +208,15 @@ interface DepositReturnData {
   depositAmount: number;
   damagesAmount: number;
   arrearsAmount: number;
+  /** Pro-rata rent the tenant overpaid (e.g. shortened stay). Optional —
+   *  omit or pass 0 for tenants without any overpayment. */
+  overpaymentAmount?: number;
   refundAmount: number;
   iban: string;
 }
 
 export async function sendDepositReturnNotification(data: DepositReturnData) {
+  const overpayment = data.overpaymentAmount ?? 0;
   const html = layout(`
     <h2 style="margin:0 0 8px;font-size:22px;font-weight:700;">Deposit settlement</h2>
     <p style="margin:0 0 24px;color:#555;font-size:15px;line-height:1.5;">
@@ -220,6 +224,9 @@ export async function sendDepositReturnNotification(data: DepositReturnData) {
     </p>
     ${detailTable(
       detailRow("Security deposit", `€${(data.depositAmount / 100).toFixed(2)}`) +
+      (overpayment > 0
+        ? detailRow("Rent credit (pro-rata)", `+ €${(overpayment / 100).toFixed(2)}`)
+        : "") +
       detailRow("Damages", data.damagesAmount > 0 ? `- €${(data.damagesAmount / 100).toFixed(2)}` : "€0.00") +
       detailRow("Rent arrears", data.arrearsAmount > 0 ? `- €${(data.arrearsAmount / 100).toFixed(2)}` : "€0.00") +
       detailRow("<strong>Refund amount</strong>", `<strong>€${(data.refundAmount / 100).toFixed(2)}</strong>`, { highlight: "green" })

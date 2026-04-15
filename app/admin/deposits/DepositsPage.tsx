@@ -5,8 +5,19 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Mail, ExternalLink } from "lucide-react";
 
-type RentPay = { id: string; amount: number; paidAmount: number; month: string };
-type ExtraCharge = { id: string; description: string; amount: number };
+type RentPay = {
+  id: string;
+  amount: number;
+  paidAmount: number;
+  month: string;
+  status: string;
+};
+type ExtraCharge = {
+  id: string;
+  description: string;
+  amount: number;
+  type: "CHARGE" | "DISCOUNT";
+};
 type Defect = {
   id: string;
   description: string;
@@ -64,13 +75,33 @@ function daysSince(iso: string | null): number | null {
 function computeBreakdown(t: Tenant) {
   const deposit = t.depositAmount ?? 0;
   const defects = t.defects.reduce((s, d) => s + d.deductionAmount, 0);
-  const openRent = t.rentPayments.reduce(
-    (s, r) => s + (r.amount - r.paidAmount),
-    0
-  );
-  const openExtras = t.extraCharges.reduce((s, c) => s + c.amount, 0);
-  const settlement = deposit - defects - openRent - openExtras;
-  return { deposit, defects, openRent, openExtras, settlement };
+  // Unpaid rent (PENDING/FAILED/PARTIAL) → arrears
+  const openRent = t.rentPayments
+    .filter((r) => r.status !== "PAID")
+    .reduce((s, r) => s + Math.max(0, r.amount - r.paidAmount), 0);
+  // PAID rent where paidAmount > amount → overpayment (e.g. moveOut shortened)
+  const overpayment = t.rentPayments
+    .filter((r) => r.status === "PAID")
+    .reduce((s, r) => s + Math.max(0, r.paidAmount - r.amount), 0);
+  // Only DEPOSIT_SETTLEMENT adjustments land here (server-side already
+  // filtered in page.tsx). Split into charges (debt) vs discounts (credit).
+  const openCharges = t.extraCharges
+    .filter((c) => c.type === "CHARGE")
+    .reduce((s, c) => s + c.amount, 0);
+  const openDiscounts = t.extraCharges
+    .filter((c) => c.type === "DISCOUNT")
+    .reduce((s, c) => s + c.amount, 0);
+  const settlement =
+    deposit + overpayment + openDiscounts - defects - openRent - openCharges;
+  return {
+    deposit,
+    defects,
+    openRent,
+    openCharges,
+    openDiscounts,
+    overpayment,
+    settlement,
+  };
 }
 
 export default function DepositsPage({ tenants }: { tenants: Tenant[] }) {
@@ -251,8 +282,8 @@ export default function DepositsPage({ tenants }: { tenants: Tenant[] }) {
                           )}
                         </td>
                         <td className="px-4 py-3 text-right tabular-nums text-red-600">
-                          {breakdown.openRent + breakdown.openExtras > 0
-                            ? `-${fmtEur(breakdown.openRent + breakdown.openExtras)}`
+                          {breakdown.openRent + breakdown.openCharges > 0
+                            ? `-${fmtEur(breakdown.openRent + breakdown.openCharges)}`
                             : "—"}
                         </td>
                         <td className={`px-4 py-3 text-right tabular-nums font-semibold ${breakdown.settlement >= 0 ? "text-green-700" : "text-red-700"}`}>
@@ -329,9 +360,23 @@ function SettlementPanel({
         </div>
         <div className="space-y-1 text-sm">
           <BreakdownRow label="Deposit" value={fmtEur(breakdown.deposit)} />
+          {breakdown.overpayment > 0 && (
+            <BreakdownRow
+              label="Rent credit"
+              value={`+${fmtEur(breakdown.overpayment)}`}
+              tone="credit"
+            />
+          )}
+          {breakdown.openDiscounts > 0 && (
+            <BreakdownRow
+              label="Discounts"
+              value={`+${fmtEur(breakdown.openDiscounts)}`}
+              tone="credit"
+            />
+          )}
           <BreakdownRow label="Defects" value={`-${fmtEur(breakdown.defects)}`} tone={breakdown.defects > 0 ? "danger" : undefined} />
           <BreakdownRow label="Open rent" value={`-${fmtEur(breakdown.openRent)}`} tone={breakdown.openRent > 0 ? "danger" : undefined} />
-          <BreakdownRow label="Open extras" value={`-${fmtEur(breakdown.openExtras)}`} tone={breakdown.openExtras > 0 ? "danger" : undefined} />
+          <BreakdownRow label="Open charges" value={`-${fmtEur(breakdown.openCharges)}`} tone={breakdown.openCharges > 0 ? "danger" : undefined} />
           <div className="border-t border-lightgray pt-1 mt-1 flex items-center justify-between font-bold">
             <span>Settlement</span>
             <span className={breakdown.settlement >= 0 ? "text-green-700" : "text-red-700"}>
@@ -366,29 +411,65 @@ function SettlementPanel({
             ))}
           </ul>
         )}
-        {(tenant.rentPayments.length > 0 || tenant.extraCharges.length > 0) && (
-          <>
-            <div className="text-xs text-gray uppercase tracking-wide mb-2">
-              Open items
-            </div>
-            <ul className="text-sm space-y-1">
-              {tenant.rentPayments.map((r) => (
-                <li key={r.id} className="flex justify-between gap-2 text-xs">
-                  <span>Rent {new Date(r.month).toLocaleDateString("de-DE", { month: "short", year: "numeric" })}</span>
-                  <span className="tabular-nums text-red-600">
-                    -{fmtEur(r.amount - r.paidAmount)}
-                  </span>
-                </li>
-              ))}
-              {tenant.extraCharges.map((c) => (
-                <li key={c.id} className="flex justify-between gap-2 text-xs">
-                  <span>{c.description}</span>
-                  <span className="tabular-nums text-red-600">-{fmtEur(c.amount)}</span>
-                </li>
-              ))}
-            </ul>
-          </>
-        )}
+        {(() => {
+          const openRents = tenant.rentPayments.filter(
+            (r) => r.status !== "PAID" && r.amount - r.paidAmount > 0
+          );
+          const overpaidRents = tenant.rentPayments.filter(
+            (r) => r.status === "PAID" && r.paidAmount > r.amount
+          );
+          if (
+            openRents.length === 0 &&
+            tenant.extraCharges.length === 0 &&
+            overpaidRents.length === 0
+          ) {
+            return null;
+          }
+          return (
+            <>
+              <div className="text-xs text-gray uppercase tracking-wide mb-2">
+                Open items
+              </div>
+              <ul className="text-sm space-y-1">
+                {openRents.map((r) => (
+                  <li key={r.id} className="flex justify-between gap-2 text-xs">
+                    <span>Rent {new Date(r.month).toLocaleDateString("de-DE", { month: "short", year: "numeric" })}</span>
+                    <span className="tabular-nums text-red-600">
+                      -{fmtEur(r.amount - r.paidAmount)}
+                    </span>
+                  </li>
+                ))}
+                {tenant.extraCharges.map((c) => {
+                  const isDiscount = c.type === "DISCOUNT";
+                  return (
+                    <li key={c.id} className="flex justify-between gap-2 text-xs">
+                      <span>
+                        {isDiscount ? "Discount: " : ""}
+                        {c.description}
+                      </span>
+                      <span
+                        className={`tabular-nums ${isDiscount ? "text-green-700" : "text-red-600"}`}
+                      >
+                        {isDiscount ? "+" : "-"}
+                        {fmtEur(c.amount)}
+                      </span>
+                    </li>
+                  );
+                })}
+                {overpaidRents.map((r) => (
+                  <li key={r.id} className="flex justify-between gap-2 text-xs">
+                    <span>
+                      Rent {new Date(r.month).toLocaleDateString("de-DE", { month: "short", year: "numeric" })} — credit
+                    </span>
+                    <span className="tabular-nums text-green-700">
+                      +{fmtEur(r.paidAmount - r.amount)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </>
+          );
+        })()}
       </div>
 
       {/* Actions */}
@@ -464,16 +545,18 @@ function BreakdownRow({
 }: {
   label: string;
   value: string;
-  tone?: "danger";
+  tone?: "danger" | "credit";
 }) {
+  const colorClass =
+    tone === "danger"
+      ? "text-red-600"
+      : tone === "credit"
+        ? "text-green-700"
+        : "text-black";
   return (
     <div className="flex justify-between items-center">
       <span className="text-gray">{label}</span>
-      <span
-        className={`tabular-nums ${tone === "danger" ? "text-red-600" : "text-black"}`}
-      >
-        {value}
-      </span>
+      <span className={`tabular-nums ${colorClass}`}>{value}</span>
     </div>
   );
 }

@@ -9,9 +9,13 @@ import { audit } from "@/lib/audit";
  *
  * Actions:
  *  - set_iban           — store IBAN for refund transfer
- *  - calculate_refund   — recompute deposit – defects – open rent – open extras
+ *  - calculate_refund   — recompute deposit + overpayment – defects – open rent – open extras
  *  - send_settlement    — send settlement email (does NOT mark as transferred)
  *  - mark_transferred   — set depositStatus = RETURNED + depositReturnedAt
+ *
+ * Overpayment: aggregated across all PAID rent payments where paidAmount > amount.
+ * Source is the moveOut reconcile that lowers RentPayment.amount (e.g. tenant
+ * shortened stay after the cron already collected the full month).
  */
 export async function PATCH(request: NextRequest) {
   if (!(await isAuthenticated())) {
@@ -27,9 +31,7 @@ export async function PATCH(request: NextRequest) {
   const tenant = await prisma.tenant.findUnique({
     where: { id: tenantId },
     include: {
-      rentPayments: {
-        where: { status: { in: ["PENDING", "FAILED", "PARTIAL"] } },
-      },
+      rentPayments: true, // need both unpaid (arrears) and PAID (for overpayment)
       extraCharges: { where: { paidAt: null } },
       defects: true,
       room: { include: { apartment: { include: { location: true } } } },
@@ -52,35 +54,77 @@ export async function PATCH(request: NextRequest) {
     return Response.json({ id: updated.id, depositRefundIban: updated.depositRefundIban });
   }
 
-  // ─── calculate_refund ─────────────────────────────────────
-  if (action === "calculate_refund") {
-    const arrearsAmount = tenant.rentPayments.reduce(
-      (sum, rp) => sum + (rp.amount - rp.paidAmount),
+  // Aggregate the same totals for both calculate_refund and send_settlement —
+  // refund = max(0, deposit + overpayment + discounts − defects − arrears − charges).
+  // Adjustments with chargeOn=NEXT_RENT are ignored here (they flow through
+  // the monthly SEPA instead); only DEPOSIT_SETTLEMENT entries count.
+  function computeTotals() {
+    const unpaidRows = tenant!.rentPayments.filter((rp) =>
+      ["PENDING", "FAILED", "PARTIAL"].includes(rp.status)
+    );
+    const arrearsAmount = unpaidRows.reduce(
+      (sum, rp) => sum + Math.max(0, rp.amount - rp.paidAmount),
       0
     );
-    const extrasAmount = tenant.extraCharges.reduce((sum, c) => sum + c.amount, 0);
-    const defectsAmount = tenant.defects.reduce(
+    const overpaymentAmount = tenant!.rentPayments
+      .filter((rp) => rp.status === "PAID")
+      .reduce((sum, rp) => sum + Math.max(0, rp.paidAmount - rp.amount), 0);
+    const depositBoundAdj = tenant!.extraCharges.filter(
+      (c) => c.chargeOn === "DEPOSIT_SETTLEMENT"
+    );
+    const chargesAmount = depositBoundAdj
+      .filter((c) => c.type === "CHARGE")
+      .reduce((sum, c) => sum + c.amount, 0);
+    const discountsAmount = depositBoundAdj
+      .filter((c) => c.type === "DISCOUNT")
+      .reduce((sum, c) => sum + c.amount, 0);
+    const defectsAmount = tenant!.defects.reduce(
       (sum, d) => sum + d.deductionAmount,
       0
     );
-    const deposit = tenant.depositAmount ?? 0;
-    const refund = Math.max(0, deposit - defectsAmount - arrearsAmount - extrasAmount);
+    const deposit = tenant!.depositAmount ?? 0;
+    const refund = Math.max(
+      0,
+      deposit +
+        overpaymentAmount +
+        discountsAmount -
+        defectsAmount -
+        arrearsAmount -
+        chargesAmount
+    );
+    return {
+      deposit,
+      defectsAmount,
+      arrearsAmount,
+      chargesAmount,
+      discountsAmount,
+      overpaymentAmount,
+      refund,
+    };
+  }
+
+  // ─── calculate_refund ─────────────────────────────────────
+  if (action === "calculate_refund") {
+    const t = computeTotals();
 
     await prisma.tenant.update({
       where: { id: tenantId },
       data: {
-        damagesAmount: defectsAmount, // keep tenant.damagesAmount in sync
-        arrearsAmount: arrearsAmount + extrasAmount,
-        depositRefundAmount: refund,
+        damagesAmount: t.defectsAmount, // keep tenant.damagesAmount in sync
+        arrearsAmount: t.arrearsAmount + t.chargesAmount,
+        rentOverpaymentAmount: t.overpaymentAmount,
+        depositRefundAmount: t.refund,
       },
     });
 
     return Response.json({
-      depositAmount: deposit,
-      damagesAmount: defectsAmount,
-      arrearsAmount,
-      extrasAmount,
-      refundAmount: refund,
+      depositAmount: t.deposit,
+      damagesAmount: t.defectsAmount,
+      arrearsAmount: t.arrearsAmount,
+      chargesAmount: t.chargesAmount,
+      discountsAmount: t.discountsAmount,
+      overpaymentAmount: t.overpaymentAmount,
+      refundAmount: t.refund,
     });
   }
 
@@ -90,25 +134,15 @@ export async function PATCH(request: NextRequest) {
       return Response.json({ error: "Set IBAN first" }, { status: 400 });
     }
 
-    // Recompute totals so the email is always consistent
-    const arrearsAmount = tenant.rentPayments.reduce(
-      (sum, rp) => sum + (rp.amount - rp.paidAmount),
-      0
-    );
-    const extrasAmount = tenant.extraCharges.reduce((sum, c) => sum + c.amount, 0);
-    const defectsAmount = tenant.defects.reduce(
-      (sum, d) => sum + d.deductionAmount,
-      0
-    );
-    const deposit = tenant.depositAmount ?? 0;
-    const refund = Math.max(0, deposit - defectsAmount - arrearsAmount - extrasAmount);
+    const t = computeTotals();
 
     await prisma.tenant.update({
       where: { id: tenantId },
       data: {
-        damagesAmount: defectsAmount,
-        arrearsAmount: arrearsAmount + extrasAmount,
-        depositRefundAmount: refund,
+        damagesAmount: t.defectsAmount,
+        arrearsAmount: t.arrearsAmount + t.chargesAmount,
+        rentOverpaymentAmount: t.overpaymentAmount,
+        depositRefundAmount: t.refund,
       },
     });
 
@@ -117,10 +151,11 @@ export async function PATCH(request: NextRequest) {
         firstName: tenant.firstName,
         email: tenant.email,
         locationName: tenant.room.apartment.location.name,
-        depositAmount: deposit,
-        damagesAmount: defectsAmount,
-        arrearsAmount: arrearsAmount + extrasAmount,
-        refundAmount: refund,
+        depositAmount: t.deposit,
+        damagesAmount: t.defectsAmount,
+        arrearsAmount: t.arrearsAmount + t.chargesAmount,
+        overpaymentAmount: t.overpaymentAmount + t.discountsAmount,
+        refundAmount: t.refund,
         iban: tenant.depositRefundIban,
       });
     } catch (err) {
@@ -136,7 +171,13 @@ export async function PATCH(request: NextRequest) {
       entityType: "tenant",
       entityId: tenantId,
       summary: `Sent settlement email to ${tenant.firstName} ${tenant.lastName}`,
-      metadata: { refundAmount: refund, iban: tenant.depositRefundIban },
+      metadata: {
+        refundAmount: t.refund,
+        overpaymentAmount: t.overpaymentAmount,
+        discountsAmount: t.discountsAmount,
+        chargesAmount: t.chargesAmount,
+        iban: tenant.depositRefundIban,
+      },
     });
 
     return Response.json({ ok: true, sentTo: tenant.email });
