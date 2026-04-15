@@ -273,6 +273,9 @@ export default function TenantFolioPage({
           moveIn={tenant.moveIn}
           monthlyRent={tenant.monthlyRent}
           depositAmount={tenant.depositAmount ?? tenant.monthlyRent * 2}
+          paidRentsCents={tenant.rentPayments
+            .filter((r) => r.status === "PAID")
+            .reduce((sum, r) => sum + r.paidAmount, 0)}
           onClose={() => setShowWithdraw(false)}
           onSuccess={() => router.push("/admin/tenants")}
         />

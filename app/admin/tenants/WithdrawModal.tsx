@@ -11,17 +11,18 @@ interface WithdrawModalProps {
   moveIn: string;
   /** Monthly rent in cents — for pro-rata calculation. */
   monthlyRent: number;
-  /** Deposit amount in cents — what would be refunded in full case. */
+  /** Deposit amount in cents — what was actually paid as deposit. */
   depositAmount: number;
+  /** Sum of all PAID RentPayments in cents — already collected from the tenant. */
+  paidRentsCents: number;
   onClose: () => void;
   /** Called after a successful withdraw so caller can refresh / navigate. */
   onSuccess?: (info: {
     refunded: boolean;
-    refundId: string | null;
-    withinDeadline: boolean;
-    refundAmountCents: number;
+    actuallyRefundedCents: number;
     proRataRentRetainedCents: number;
     daysOccupied: number;
+    withinDeadline: boolean;
   }) => void;
 }
 
@@ -43,9 +44,9 @@ function daysLeftAt(depositPaidAt: string | null, atDate: Date): number | null {
   return 14 - daysSince;
 }
 
-/** Pro-rata rent retained: tenant moved in before cancellationDate, we keep
- *  rent for days occupied. Uses actual days of the move-in month (matches
- *  monthly-rent cron). */
+/** Pro-rata rent retained for the days actually occupied. Days INCLUSIVE
+ *  on both ends — move-in day AND cancellation day count as full days
+ *  (matches the monthly-rent cron's startDay/endDay logic). */
 function calcProRata(args: {
   moveIn: string;
   cancellationDate: Date;
@@ -53,14 +54,12 @@ function calcProRata(args: {
 }): { daysOccupied: number; proRataCents: number } {
   const moveIn = new Date(args.moveIn);
   moveIn.setHours(0, 0, 0, 0);
-  if (moveIn >= args.cancellationDate) {
+  if (moveIn > args.cancellationDate) {
     return { daysOccupied: 0, proRataCents: 0 };
   }
   const msPerDay = 24 * 60 * 60 * 1000;
-  const daysOccupied = Math.max(
-    0,
-    Math.floor((args.cancellationDate.getTime() - moveIn.getTime()) / msPerDay)
-  );
+  const daysOccupied =
+    Math.max(0, Math.floor((args.cancellationDate.getTime() - moveIn.getTime()) / msPerDay)) + 1;
   if (daysOccupied === 0 || args.monthlyRentCents <= 0) {
     return { daysOccupied: 0, proRataCents: 0 };
   }
@@ -88,6 +87,7 @@ export default function WithdrawModal({
   moveIn,
   monthlyRent,
   depositAmount,
+  paidRentsCents,
   onClose,
   onSuccess,
 }: WithdrawModalProps) {
@@ -110,7 +110,8 @@ export default function WithdrawModal({
     cancellationDate,
     monthlyRentCents: monthlyRent,
   });
-  const refundCents = Math.max(0, depositAmount - proRataCents);
+  const totalCollectedCents = depositAmount + paidRentsCents;
+  const refundCents = Math.max(0, totalCollectedCents - proRataCents);
 
   async function execute(confirmExpired: boolean) {
     setWorking(true);
@@ -125,18 +126,24 @@ export default function WithdrawModal({
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok) {
+        const days = data.daysOccupied ?? 0;
         alert(
-          data.withinDeadline
-            ? `Widerruf processed.\n\nRefund: ${fmtEur(data.refundAmountCents)} (${data.daysOccupied} day${data.daysOccupied === 1 ? "" : "s"} pro-rata retained: ${fmtEur(data.proRataRentRetainedCents)})\nBooking Fee €195 retained.`
-            : `Widerruf processed (admin override after deadline).\n\nRefund: ${fmtEur(data.refundAmountCents)}`
+          [
+            `Widerruf processed${data.withinDeadline ? "" : " (admin override after deadline)"}.`,
+            "",
+            `Refund: ${fmtEur(data.actuallyRefundedCents)} across ${data.refunds?.length ?? 0} Stripe payment(s).`,
+            days > 0
+              ? `Pro-rata retained for ${days} day${days === 1 ? "" : "s"}: ${fmtEur(data.proRataRentRetainedCents)}.`
+              : "Tenant had not moved in — no rent retained.",
+            "Booking Fee €195 retained (non-refundable).",
+          ].join("\n")
         );
         onSuccess?.({
           refunded: Boolean(data.refunded),
-          refundId: data.refundId ?? null,
-          withinDeadline: Boolean(data.withinDeadline),
-          refundAmountCents: data.refundAmountCents ?? 0,
+          actuallyRefundedCents: data.actuallyRefundedCents ?? 0,
           proRataRentRetainedCents: data.proRataRentRetainedCents ?? 0,
           daysOccupied: data.daysOccupied ?? 0,
+          withinDeadline: Boolean(data.withinDeadline),
         });
         onClose();
       } else {
@@ -249,20 +256,28 @@ export default function WithdrawModal({
         {/* Calculation breakdown */}
         <div className="border border-lightgray rounded-[5px] divide-y divide-lightgray text-sm">
           <Row label="Kaution gezahlt" value={fmtEur(depositAmount)} muted />
+          {paidRentsCents > 0 && (
+            <Row
+              label="Bezahlte Mieten (bereits eingezogen)"
+              value={`+${fmtEur(paidRentsCents)}`}
+              muted
+            />
+          )}
           {daysOccupied > 0 ? (
             <Row
-              label={`Pro-rata Miete (${daysOccupied} Tag${daysOccupied === 1 ? "" : "e"} eingezogen)`}
+              label={`Pro-rata Miete (${daysOccupied} Tag${daysOccupied === 1 ? "" : "e"} gewohnt, einbehalten)`}
               value={`-${fmtEur(proRataCents)}`}
               muted
             />
           ) : (
-            <Row label="Mieter noch nicht eingezogen" value="—" muted />
+            <Row label="Mieter noch nicht eingezogen — keine Miete einbehalten" value="—" muted />
           )}
           <Row label="Refund an Kunde" value={fmtEur(refundCents)} highlight />
         </div>
 
         <p className="text-xs text-gray">
-          <strong className="text-black">{tenantName}</strong> wird gelöscht,
+          Refund wird auf die Stripe-Zahlungen verteilt (Kaution zuerst, dann
+          Mieten in chronologischer Reihenfolge). <strong className="text-black">{tenantName}</strong> wird gelöscht,
           Booking als CANCELLED archiviert. Booking Fee €195 wurde bereits
           vereinnahmt und bleibt unverändert.
         </p>

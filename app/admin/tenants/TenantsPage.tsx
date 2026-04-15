@@ -48,6 +48,7 @@ type Tenant = {
     };
   };
   rentPayments: RentPaymentSummary[];
+  paidRentsCents: number;
   booking: {
     id: string;
     depositPaidAt: string | null;
@@ -461,6 +462,7 @@ export default function TenantsPage({
               moveIn={t.moveIn}
               monthlyRent={t.monthlyRent}
               depositAmount={t.depositAmount ?? t.monthlyRent * 2}
+              paidRentsCents={t.paidRentsCents}
               onClose={() => setWithdrawTenantId(null)}
               onSuccess={() => router.refresh()}
             />

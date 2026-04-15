@@ -40,6 +40,7 @@ async function seedTestTenant({
   lastName,
   email,
   daysSinceDepositPaid,
+  paidFirstRent = false,
 }) {
   const bookingId = cuid();
   const tenantId = cuid();
@@ -114,6 +115,40 @@ async function seedTestTenant({
       ]
     );
 
+    // Optional: seed a PAID first-month rent for the move-in month
+    // (simulates the tenant's first SEPA charge that landed the day they moved in)
+    if (paidFirstRent) {
+      const monthStart = new Date(moveIn.getFullYear(), moveIn.getMonth(), 1);
+      const monthEnd = new Date(moveIn.getFullYear(), moveIn.getMonth() + 1, 0);
+      const daysInMonth = monthEnd.getDate();
+      const startDay = moveIn.getDate();
+      const rentDays = daysInMonth - startDay + 1;
+      const proRataAmount = Math.round((rent * rentDays) / daysInMonth);
+
+      await client.query(
+        `
+        INSERT INTO "RentPayment" (
+          id, "tenantId", month, amount, "paidAmount", status,
+          "stripePaymentIntentId", "paidAt",
+          "createdAt", "updatedAt"
+        ) VALUES (
+          $1, $2, $3, $4, $4, 'PAID',
+          $5, $6, NOW(), NOW()
+        )
+      `,
+        [
+          cuid(),
+          tenantId,
+          monthStart,
+          proRataAmount,
+          // Fake PI id — Stripe refund will fail on this, but we can still
+          // exercise the calculation flow up to the refund call.
+          "pi_test_" + cuid().slice(-12),
+          moveIn,
+        ]
+      );
+    }
+
     await client.query("COMMIT");
     return { tenantId, bookingId, room: room.location_name + " #" + room.roomNumber };
   } catch (err) {
@@ -132,6 +167,7 @@ try {
     lastName: "Widerruf",
     email: "test-within-widerruf@example.com",
     daysSinceDepositPaid: 3,
+    paidFirstRent: true, // already paid first month's pro-rata rent
   });
 
   const expired = await seedTestTenant({
@@ -140,6 +176,7 @@ try {
     lastName: "Widerruf",
     email: "test-expired-widerruf@example.com",
     daysSinceDepositPaid: 20,
+    paidFirstRent: true,
   });
 
   console.log("\n✅ Seeded 2 test tenants:\n");
