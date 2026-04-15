@@ -92,18 +92,11 @@ export default async function AdminDashboardPage() {
     ]);
 
   // Batch 3: upcoming move-ins + recent audit + new bookings + defects + funnel + pinboard + email log
-  const startOfWeek = (() => {
-    const d = new Date(todayStart);
-    const day = d.getDay(); // 0=Sun
-    const diff = day === 0 ? -6 : 1 - day; // make Monday start
-    d.setDate(d.getDate() + diff);
-    return d;
-  })();
   const [
     moveInsUpcoming,
     recentAudit,
     bookingsToday,
-    bookingsThisWeek,
+    bookingsLast30Days,
     openDefectsRaw,
     bookingFunnelThisMonth,
     teamNotes,
@@ -127,9 +120,11 @@ export default async function AdminDashboardPage() {
       select: { id: true, bookingFeePaidAt: true, monthlyRent: true },
     }),
 
-    // Bookings created this week (Mon-Sun)
+    // Bookings created in the last 30 days (rolling window)
     prisma.booking.findMany({
-      where: { createdAt: { gte: startOfWeek } },
+      where: {
+        createdAt: { gte: new Date(todayStart.getTime() - 30 * 24 * 60 * 60 * 1000) },
+      },
       select: { id: true, bookingFeePaidAt: true, monthlyRent: true },
     }),
 
@@ -155,16 +150,24 @@ export default async function AdminDashboardPage() {
       orderBy: { createdAt: "desc" },
     }),
 
-    // Booking conversion funnel — counts of bookings created THIS MONTH at
-    // each stage of the funnel. Gives admins a view of conversion health.
+    // Booking conversion funnel — bookings created in the last 30 days
+    // (rolling window). We also fetch 30-60d back for the previous-period
+    // rate comparison. Stops at Deposit paid because everything after
+    // (waiting for move-in) is outside admin influence.
     prisma.booking.findMany({
-      where: { createdAt: { gte: currentMonthStart, lt: nextMonthStart } },
+      where: {
+        createdAt: { gte: new Date(todayStart.getTime() - 60 * 24 * 60 * 60 * 1000) },
+      },
       select: {
         id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        createdAt: true,
+        signatureDocumentId: true,
         bookingFeePaidAt: true,
         depositPaidAt: true,
-        signatureDocumentId: true,
-        tenant: { select: { id: true } },
+        moveInDate: true,
       },
     }),
 
@@ -522,20 +525,107 @@ export default async function AdminDashboardPage() {
     todayCount: bookingsToday.length,
     todayFeesCollected:
       bookingsToday.filter((b) => b.bookingFeePaidAt).length * BOOKING_FEE_CENTS,
-    weekCount: bookingsThisWeek.length,
-    weekFeesCollected:
-      bookingsThisWeek.filter((b) => b.bookingFeePaidAt).length * BOOKING_FEE_CENTS,
+    last30Count: bookingsLast30Days.length,
+    last30FeesCollected:
+      bookingsLast30Days.filter((b) => b.bookingFeePaidAt).length * BOOKING_FEE_CENTS,
   };
 
-  // Conversion funnel — count how far this month's bookings made it.
+  // Conversion funnel — split the 60-day window into the current and
+  // previous 30-day cohorts. Current is used for the balance bars +
+  // stuck-people lists; previous only supplies the comparison rate.
+  const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+  const cutoff30 = new Date(todayStart.getTime() - THIRTY_DAYS_MS);
+  const current30 = bookingFunnelThisMonth.filter(
+    (b) => new Date(b.createdAt).getTime() >= cutoff30.getTime()
+  );
+  const previous30 = bookingFunnelThisMonth.filter(
+    (b) => new Date(b.createdAt).getTime() < cutoff30.getTime()
+  );
+
+  function daysSinceUntilNow(d: Date | null): number {
+    if (!d) return 0;
+    return Math.floor((todayStart.getTime() - new Date(d).getTime()) / (24 * 60 * 60 * 1000));
+  }
+  function median(nums: number[]): number | null {
+    if (nums.length === 0) return null;
+    const sorted = [...nums].sort((a, b) => a - b);
+    const mid = Math.floor(sorted.length / 2);
+    return sorted.length % 2 === 0
+      ? Math.round((sorted[mid - 1] + sorted[mid]) / 2)
+      : sorted[mid];
+  }
+  function maxOrNull(nums: number[]): number | null {
+    return nums.length === 0 ? null : Math.max(...nums);
+  }
+
+  type FunnelPerson = {
+    id: string;
+    name: string;
+    email: string;
+    moveInDate: string | null;
+    daysInStage: number;
+  };
+  function mapPeople(
+    list: typeof current30,
+    pickTimestamp: (b: (typeof current30)[number]) => Date | null
+  ): FunnelPerson[] {
+    return list
+      .map((b) => ({
+        id: b.id,
+        name: `${b.firstName} ${b.lastName}`,
+        email: b.email,
+        moveInDate: b.moveInDate?.toISOString() ?? null,
+        daysInStage: daysSinceUntilNow(pickTimestamp(b)),
+      }))
+      .sort((a, b) => b.daysInStage - a.daysInStage); // oldest first
+  }
+
+  // "Stuck" = reached this stage but not the next one. The final stage
+  // (Deposit paid) is a done-state — no stuck list because the wait for
+  // move-in isn't something the admin can speed up.
+  const stuckStarted = current30.filter(
+    (b) => !b.signatureDocumentId && !b.bookingFeePaidAt && !b.depositPaidAt
+  );
+  const stuckSigned = current30.filter(
+    (b) => b.signatureDocumentId && !b.bookingFeePaidAt && !b.depositPaidAt
+  );
+  const stuckFeePaid = current30.filter(
+    (b) => b.bookingFeePaidAt && !b.depositPaidAt
+  );
+
+  // Previous period "made it to Deposit paid" rate for the trend badge.
+  // That's our true north — every stage before is just a leading indicator.
+  const previousRate =
+    previous30.length > 0
+      ? previous30.filter((b) => b.depositPaidAt).length / previous30.length
+      : null;
+
   const funnel = {
-    total: bookingFunnelThisMonth.length,
-    bookingFeePaid: bookingFunnelThisMonth.filter((b) => b.bookingFeePaidAt)
-      .length,
-    contractSigned: bookingFunnelThisMonth.filter((b) => b.signatureDocumentId)
-      .length,
-    depositPaid: bookingFunnelThisMonth.filter((b) => b.depositPaidAt).length,
-    convertedToTenant: bookingFunnelThisMonth.filter((b) => b.tenant).length,
+    total: current30.length,
+    agreementSigned: current30.filter((b) => b.signatureDocumentId).length,
+    bookingFeePaid: current30.filter((b) => b.bookingFeePaidAt).length,
+    depositPaid: current30.filter((b) => b.depositPaidAt).length,
+    previousDepositRate: previousRate,
+    stages: {
+      started: {
+        stuckCount: stuckStarted.length,
+        oldestDays: maxOrNull(stuckStarted.map((b) => daysSinceUntilNow(b.createdAt))),
+        medianDays: median(stuckStarted.map((b) => daysSinceUntilNow(b.createdAt))),
+        people: mapPeople(stuckStarted, (b) => b.createdAt),
+      },
+      signed: {
+        stuckCount: stuckSigned.length,
+        oldestDays: maxOrNull(stuckSigned.map((b) => daysSinceUntilNow(b.createdAt))),
+        medianDays: median(stuckSigned.map((b) => daysSinceUntilNow(b.createdAt))),
+        people: mapPeople(stuckSigned, (b) => b.createdAt),
+      },
+      feePaid: {
+        stuckCount: stuckFeePaid.length,
+        oldestDays: maxOrNull(stuckFeePaid.map((b) => daysSinceUntilNow(b.bookingFeePaidAt))),
+        medianDays: median(stuckFeePaid.map((b) => daysSinceUntilNow(b.bookingFeePaidAt))),
+        people: mapPeople(stuckFeePaid, (b) => b.bookingFeePaidAt),
+      },
+    },
   };
 
   const openDefects = openDefectsRaw.map((d) => ({

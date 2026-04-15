@@ -31,6 +31,21 @@ import {
   XCircle,
 } from "lucide-react";
 
+type FunnelPerson = {
+  id: string;
+  name: string;
+  email: string;
+  moveInDate: string | null;
+  daysInStage: number;
+};
+
+type FunnelStage = {
+  stuckCount: number;
+  oldestDays: number | null;
+  medianDays: number | null;
+  people: FunnelPerson[];
+};
+
 type Dashboard = {
   kpi: {
     occupancy3Months: {
@@ -127,15 +142,20 @@ type Dashboard = {
   newBookings: {
     todayCount: number;
     todayFeesCollected: number;
-    weekCount: number;
-    weekFeesCollected: number;
+    last30Count: number;
+    last30FeesCollected: number;
   };
   funnel: {
     total: number;
+    agreementSigned: number;
     bookingFeePaid: number;
-    contractSigned: number;
     depositPaid: number;
-    convertedToTenant: number;
+    previousDepositRate: number | null;
+    stages: {
+      started: FunnelStage;
+      signed: FunnelStage;
+      feePaid: FunnelStage;
+    };
   };
   openDefects: {
     id: string;
@@ -1103,7 +1123,10 @@ function NewBookingsCard({
   newBookings: Dashboard["newBookings"];
 }) {
   return (
-    <div className="bg-white rounded-[5px] border border-lightgray p-4">
+    <Link
+      href="/admin/bookings"
+      className="bg-white rounded-[5px] border border-lightgray p-4 block hover:border-black transition-colors"
+    >
       <div className="flex items-center gap-2 text-xs text-gray uppercase tracking-wide">
         <Sparkles className="w-4 h-4" />
         New bookings
@@ -1119,40 +1142,132 @@ function NewBookingsCard({
           </div>
         </div>
         <div>
-          <div className="text-[10px] uppercase tracking-wide text-gray">This week</div>
+          <div className="text-[10px] uppercase tracking-wide text-gray">Last 30 days</div>
           <div className="text-xl font-bold text-black tabular-nums mt-0.5">
-            {newBookings.weekCount}
+            {newBookings.last30Count}
           </div>
           <div className="text-[11px] text-gray tabular-nums mt-0.5">
-            +{fmtEuro(newBookings.weekFeesCollected)} fees
+            +{fmtEuro(newBookings.last30FeesCollected)} fees
           </div>
         </div>
       </div>
-    </div>
+    </Link>
   );
 }
 
-/** Booking conversion funnel for the current month. Visualises how many
- *  bookings made it to each stage. Drop-offs between stages reveal where
- *  people churn. */
+/** Booking conversion funnel for the last 30 days, with:
+ *  - Subtitle showing current tenant-rate vs previous 30-day period.
+ *  - Per-stage tooltip revealing oldest + median days stuck there.
+ *  - Click a stage → expands a list of the people currently stuck in
+ *    that stage, each with a quick action relevant to that stage
+ *    (resend email / open booking). */
 function BookingFunnelSection({
   funnel,
 }: {
   funnel: Dashboard["funnel"];
 }) {
+  const router = useRouter();
+  const [openStage, setOpenStage] = useState<string | null>(null);
+  const [busyPerson, setBusyPerson] = useState<string | null>(null);
+
   if (funnel.total === 0) return null;
-  const stages = [
-    { key: "total", label: "Started", count: funnel.total },
-    { key: "feePaid", label: "Booking fee paid", count: funnel.bookingFeePaid },
-    { key: "signed", label: "Contract signed", count: funnel.contractSigned },
-    { key: "depositPaid", label: "Deposit paid", count: funnel.depositPaid },
-    { key: "converted", label: "Tenant", count: funnel.convertedToTenant },
+
+  type Stage = {
+    key: "started" | "signed" | "feePaid" | "depositPaid";
+    label: string;
+    count: number;
+    // Only the first 3 stages have a stuck-list (the 4th is the done-state).
+    stage: FunnelStage | null;
+    // Which email template is most useful to push folks FROM this stage
+    // to the next one. null → no email action, just "open" link.
+    pushTemplate: string | null;
+    isTerminal?: boolean;
+  };
+  const stages: Stage[] = [
+    {
+      key: "started",
+      label: "Started",
+      count: funnel.total,
+      stage: funnel.stages.started,
+      pushTemplate: null, // no fee reminder template yet — admin opens booking manually
+    },
+    {
+      key: "signed",
+      label: "Agreement signed",
+      count: funnel.agreementSigned,
+      stage: funnel.stages.signed,
+      pushTemplate: null, // next step is Fee paid; we don't have a "pay the fee" reminder
+    },
+    {
+      key: "feePaid",
+      label: "Booking fee paid",
+      count: funnel.bookingFeePaid,
+      stage: funnel.stages.feePaid,
+      pushTemplate: "deposit_reminder",
+    },
+    {
+      key: "depositPaid",
+      label: "Deposit paid",
+      count: funnel.depositPaid,
+      stage: null, // terminal — waiting for move-in is not a stuck state
+      pushTemplate: null,
+      isTerminal: true,
+    },
   ];
+
+  // Deposit-paid rate is the true conversion (last admin-influenced stage).
+  const currentRate = funnel.total > 0 ? funnel.depositPaid / funnel.total : 0;
+  const prevRate = funnel.previousDepositRate;
+  const delta = prevRate !== null ? (currentRate - prevRate) * 100 : null;
+  const trendLabel =
+    delta === null
+      ? null
+      : delta > 0.5
+        ? { text: `↑ ${delta.toFixed(0)}pp vs prev 30d`, cls: "text-green-700" }
+        : delta < -0.5
+          ? { text: `↓ ${Math.abs(delta).toFixed(0)}pp vs prev 30d`, cls: "text-red-600" }
+          : { text: "flat vs prev 30d", cls: "text-gray" };
+
+  async function sendPush(template: string, bookingId: string) {
+    if (
+      !confirm(
+        `${template === "deposit_reminder" ? "Deposit reminder" : template} an diesen Mieter senden?`
+      )
+    )
+      return;
+    setBusyPerson(bookingId);
+    try {
+      const res = await fetch("/api/admin/emails/resend-booking", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bookingId, templateKey: template }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        alert(`✓ Gesendet an ${data.sentTo}`);
+        router.refresh();
+      } else {
+        alert(`Fehler: ${data.error ?? res.statusText}`);
+      }
+    } finally {
+      setBusyPerson(null);
+    }
+  }
+
   return (
     <div>
-      <h2 className="text-sm font-semibold mb-3">
-        Booking funnel · this month
-      </h2>
+      <div className="flex items-baseline justify-between mb-3 flex-wrap gap-2">
+        <h2 className="text-sm font-semibold">Booking funnel · last 30 days</h2>
+        <div className="text-xs text-gray tabular-nums flex items-center gap-2">
+          <span>
+            <strong className="text-black">
+              {Math.round(currentRate * 100)}%
+            </strong>{" "}
+            deposit-paid rate
+          </span>
+          {trendLabel && <span className={trendLabel.cls}>{trendLabel.text}</span>}
+        </div>
+      </div>
       <Card>
         <div className="p-4">
           <div className="flex items-stretch gap-1">
@@ -1163,32 +1278,178 @@ function BookingFunnelSection({
                 next && s.count > 0
                   ? Math.round(((s.count - next.count) / s.count) * 100)
                   : 0;
-              return (
-                <div key={s.key} className="flex-1 min-w-0 flex flex-col">
-                  <div className="text-[10px] uppercase tracking-wide text-gray truncate">
+              const isOpen = openStage === s.key;
+              const canExpand = !s.isTerminal && s.stage !== null;
+
+              const tooltip = (() => {
+                if (s.isTerminal) return "Done — waiting for move-in";
+                if (!s.stage) return "";
+                const parts: string[] = [];
+                if (s.stage.stuckCount > 0) {
+                  parts.push(`${s.stage.stuckCount} currently here`);
+                }
+                if (s.stage.oldestDays !== null) {
+                  parts.push(`oldest ${s.stage.oldestDays}d`);
+                }
+                if (s.stage.medianDays !== null) {
+                  parts.push(`median ${s.stage.medianDays}d`);
+                }
+                return parts.length > 0
+                  ? parts.join(" · ")
+                  : "Click to see people";
+              })();
+
+              // "% of started" — always relative to the top of the funnel so
+              // it's easy to compare stages horizontally.
+              const pctOfStarted =
+                funnel.total > 0
+                  ? Math.round((s.count / funnel.total) * 100)
+                  : 0;
+
+              const barContent = (
+                <>
+                  <div className="text-[10px] uppercase tracking-wide text-gray truncate flex items-center gap-1">
                     {s.label}
+                    {canExpand &&
+                      (isOpen ? (
+                        <ChevronDown className="w-3 h-3" />
+                      ) : (
+                        <ChevronRight className="w-3 h-3" />
+                      ))}
                   </div>
                   <div
-                    className="mt-1 relative rounded-[5px] bg-background-alt overflow-hidden"
+                    className={`mt-1 relative rounded-[5px] overflow-hidden ${
+                      isOpen
+                        ? "ring-2 ring-black"
+                        : s.isTerminal
+                          ? "bg-[#FCB0C0]/20"
+                          : "bg-background-alt"
+                    }`}
                     style={{ height: 36 }}
                   >
                     <div
-                      className="absolute inset-y-0 left-0 bg-black"
+                      className={`absolute inset-y-0 left-0 ${s.isTerminal ? "bg-[#FCB0C0]" : "bg-black"}`}
                       style={{ width: `${pct}%` }}
                     />
-                    <div className="absolute inset-0 flex items-center justify-center text-sm font-bold text-white mix-blend-difference">
+                    <div
+                      className={`absolute inset-0 flex items-center justify-center text-sm font-bold ${
+                        s.isTerminal ? "text-black" : "text-white mix-blend-difference"
+                      }`}
+                    >
                       {s.count}
                     </div>
                   </div>
-                  {next && (
-                    <div className="text-[10px] text-gray mt-0.5 tabular-nums">
-                      {dropOff > 0 ? `−${dropOff}% drop` : "→"}
-                    </div>
-                  )}
-                </div>
+                  <div className="text-[10px] text-gray mt-0.5 tabular-nums flex items-center gap-1">
+                    <span className="font-semibold text-black">
+                      {pctOfStarted}%
+                    </span>
+                    <span>of started</span>
+                    {s.stage && s.stage.stuckCount > 0 && (
+                      <span className="ml-auto text-orange-600 font-medium">
+                        {s.stage.stuckCount} stuck
+                        {s.stage.medianDays !== null && ` · ~${s.stage.medianDays}d`}
+                      </span>
+                    )}
+                    {s.isTerminal && (
+                      <span className="ml-auto text-black font-medium">goal</span>
+                    )}
+                  </div>
+                </>
+              );
+
+              if (!canExpand) {
+                return (
+                  <div
+                    key={s.key}
+                    className="flex-1 min-w-0 flex flex-col"
+                    title={tooltip}
+                  >
+                    {barContent}
+                  </div>
+                );
+              }
+              return (
+                <button
+                  key={s.key}
+                  type="button"
+                  onClick={() =>
+                    setOpenStage((v) => (v === s.key ? null : s.key))
+                  }
+                  className="flex-1 min-w-0 flex flex-col text-left cursor-pointer"
+                  title={tooltip}
+                >
+                  {barContent}
+                </button>
               );
             })}
           </div>
+
+          {/* Expanded stage drawer — only for non-terminal stages */}
+          {openStage && (() => {
+            const s = stages.find((x) => x.key === openStage);
+            if (!s || !s.stage) return null;
+            if (s.stage.people.length === 0) {
+              return (
+                <div className="mt-4 pt-4 border-t border-lightgray text-sm text-gray">
+                  Niemand in Stage &ldquo;{s.label}&rdquo; stuck. ✓
+                </div>
+              );
+            }
+            const stuck = s.stage.people.length;
+            const total = s.count;
+            const movedOn = Math.max(0, total - stuck);
+            return (
+              <div className="mt-4 pt-4 border-t border-lightgray">
+                <div className="text-xs text-gray mb-2 px-1">
+                  <strong className="text-black">{stuck} stuck</strong> here
+                  {total > 0 && movedOn > 0 && (
+                    <>
+                      {" "}
+                      · {movedOn} of {total} already moved on to the next stage
+                    </>
+                  )}
+                </div>
+                <div className="divide-y divide-lightgray/60 border border-lightgray/50 rounded-[5px]">
+                  {s.stage.people.map((p) => (
+                    <div
+                      key={p.id}
+                      className="flex items-center gap-3 px-3 py-2"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium text-black truncate">
+                          {p.name}
+                        </div>
+                        <div className="text-[11px] text-gray truncate">
+                          {p.email}
+                          {p.moveInDate && ` · move-in ${fmtDate(p.moveInDate)}`}
+                        </div>
+                      </div>
+                      <div className="text-[11px] text-gray tabular-nums flex-shrink-0">
+                        {p.daysInStage}d
+                      </div>
+                      {s.pushTemplate && (
+                        <button
+                          onClick={() => sendPush(s.pushTemplate!, p.id)}
+                          disabled={busyPerson === p.id}
+                          className="px-2 py-1 text-xs rounded-[5px] border border-lightgray bg-white hover:border-black disabled:opacity-40"
+                          title="Send reminder"
+                        >
+                          {busyPerson === p.id ? "…" : "Send reminder"}
+                        </button>
+                      )}
+                      <Link
+                        href="/admin/bookings"
+                        className="p-1 text-gray hover:text-black"
+                        aria-label="Open in bookings"
+                      >
+                        <ArrowRight className="w-4 h-4" />
+                      </Link>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
         </div>
       </Card>
     </div>
