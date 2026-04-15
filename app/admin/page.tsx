@@ -18,6 +18,9 @@ export default async function AdminDashboardPage() {
   const in7Days = new Date(todayStart.getTime() + 7 * 24 * 60 * 60 * 1000);
   const in24h = new Date(now.getTime() + 24 * 60 * 60 * 1000);
   const in28Days = new Date(todayStart.getTime() + 28 * 24 * 60 * 60 * 1000);
+  const in90Days = new Date(todayStart.getTime() + 90 * 24 * 60 * 60 * 1000);
+  const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1);
 
   // Split into smaller batches so we don't overwhelm the connection pool.
   // The admin dashboard is read-heavy; each query is tiny, but running 10
@@ -103,6 +106,122 @@ export default async function AdminDashboardPage() {
     }),
   ]);
 
+  // Batch 4: rent (base + bundled adjustments) + notice pipeline
+  const [currentMonthRents, noticePipelineRaw] = await Promise.all([
+    prisma.rentPayment.findMany({
+      where: {
+        month: { gte: currentMonthStart, lt: nextMonthStart },
+      },
+      select: {
+        id: true,
+        amount: true,
+        paidAmount: true,
+        status: true,
+        tenantId: true,
+        stripePaymentIntentId: true,
+      },
+    }),
+
+    // Notice pipeline: tenants leaving within the next 90 days. We filter
+    // in code to keep only rooms WITHOUT a replacement booking in the
+    // pipeline — those are the real revenue-at-risk items.
+    prisma.tenant.findMany({
+      where: {
+        moveOut: { gte: todayStart, lte: in90Days },
+      },
+      include: {
+        room: {
+          include: {
+            apartment: { include: { location: true } },
+            bookings: {
+              where: {
+                stayType: "LONG",
+                status: { in: ACTIVE_BOOKING_STATUSES },
+              },
+            },
+          },
+        },
+      },
+      orderBy: { moveOut: "asc" },
+    }),
+  ]);
+
+  // Bundled NEXT_RENT adjustments linked to any of this month's rent
+  // PaymentIntents. Same PI → same cycle → counts in this month's rent.
+  const currentMonthRentPIs = currentMonthRents
+    .map((r) => r.stripePaymentIntentId)
+    .filter((id): id is string => Boolean(id));
+  const bundledAdjustments =
+    currentMonthRentPIs.length > 0
+      ? await prisma.extraCharge.findMany({
+          where: {
+            chargeOn: "NEXT_RENT",
+            stripePaymentIntentId: { in: currentMonthRentPIs },
+          },
+          select: {
+            amount: true,
+            type: true,
+            paidAt: true,
+            stripePaymentIntentId: true,
+          },
+        })
+      : [];
+
+  // ─── Monatsmiete (current month) ──────────────────────────────────
+  const baseRentExpected = currentMonthRents.reduce((s, r) => s + r.amount, 0);
+  const baseRentCollected = currentMonthRents.reduce(
+    (s, r) => s + r.paidAmount,
+    0
+  );
+  const adjExpectedSigned = bundledAdjustments.reduce(
+    (s, a) => s + (a.type === "DISCOUNT" ? -a.amount : a.amount),
+    0
+  );
+  // Adjustments are only "collected" once paidAt is set (set by the
+  // webhook when Stripe confirms the bundled PI).
+  const adjCollectedSigned = bundledAdjustments
+    .filter((a) => a.paidAt)
+    .reduce((s, a) => s + (a.type === "DISCOUNT" ? -a.amount : a.amount), 0);
+
+  const rentExpectedCents = baseRentExpected + adjExpectedSigned;
+  const rentCollectedCents = baseRentCollected + adjCollectedSigned;
+  const rentOpenCents = Math.max(0, rentExpectedCents - rentCollectedCents);
+  const rentTenantsWithOpen = new Set(
+    currentMonthRents
+      .filter((r) => r.status !== "PAID" && r.amount > r.paidAmount)
+      .map((r) => r.tenantId)
+  ).size;
+
+  // ─── Notice pipeline: keep only rooms without replacement ───────────
+  const noticePipeline = noticePipelineRaw
+    .filter((t) => {
+      if (!t.moveOut || !t.room) return false;
+      const outDate = new Date(t.moveOut).getTime();
+      // Any active booking on this room with moveInDate > current moveOut
+      // means a replacement is already lined up — exclude from pipeline.
+      return !t.room.bookings.some((b) => {
+        if (!b.moveInDate) return false;
+        return new Date(b.moveInDate).getTime() > outDate;
+      });
+    })
+    .map((t) => {
+      const outMs = new Date(t.moveOut!).getTime();
+      const daysAway = Math.max(
+        0,
+        Math.floor((outMs - todayStart.getTime()) / (24 * 60 * 60 * 1000))
+      );
+      return {
+        id: t.id,
+        name: `${t.firstName} ${t.lastName}`,
+        moveOut: t.moveOut,
+        room: t.room
+          ? `${t.room.apartment.location.name} · ${t.room.roomNumber}`
+          : "—",
+        monthlyRent: t.monthlyRent,
+        daysAway,
+      };
+    });
+
   // ─── KPIs ────────────────────────────────────────────────────────────
   // A room is "currently occupied" only if a tenant lives there AND their
   // moveOut isn't already in the past — otherwise the room is functionally
@@ -115,6 +234,33 @@ export default async function AdminDashboardPage() {
 
   const activeRooms = roomsAll.filter((r) => r.status === "ACTIVE");
   const occupiedRooms = activeRooms.filter(isCurrentlyOccupied);
+
+  // Occupancy snapshot at an arbitrary date: tenant whose window covers
+  // the date, or else an active booking (DEPOSIT_PENDING) that has
+  // already reserved the room for that period.
+  function isRoomOccupiedAt(
+    r: (typeof roomsAll)[number],
+    snapshotDate: Date
+  ): boolean {
+    const tenant = r.tenant;
+    if (tenant) {
+      const mIn = new Date(tenant.moveIn);
+      mIn.setHours(0, 0, 0, 0);
+      const mOut = tenant.moveOut ? new Date(tenant.moveOut) : null;
+      if (mOut) mOut.setHours(0, 0, 0, 0);
+      if (mIn.getTime() <= snapshotDate.getTime()) {
+        if (!mOut || mOut.getTime() > snapshotDate.getTime()) return true;
+      }
+    }
+    // Future booking covers this date? (bookings don't have an end date
+    // in our model — treat them as indefinitely reserved from moveInDate.)
+    return r.bookings.some((b) => {
+      if (!b.moveInDate) return false;
+      const bIn = new Date(b.moveInDate);
+      bIn.setHours(0, 0, 0, 0);
+      return bIn.getTime() <= snapshotDate.getTime();
+    });
+  }
 
   const openRentAmount =
     (openRentSum._sum.amount ?? 0) - (openRentSum._sum.paidAmount ?? 0);
@@ -209,6 +355,7 @@ export default async function AdminDashboardPage() {
     return {
       name: loc.name,
       slug: loc.slug,
+      city: loc.city,
       occupied: occ,
       total: locRooms.length,
       pct,
@@ -227,16 +374,56 @@ export default async function AdminDashboardPage() {
       data={JSON.parse(
         JSON.stringify({
           kpi: {
-            occupancy: {
-              occupied: occupiedRooms.length,
-              total: activeRooms.length,
-              pct: activeRooms.length
-                ? Math.round((occupiedRooms.length / activeRooms.length) * 100)
-                : 0,
+            occupancy3Months: [
+              // Current = live snapshot (today)
+              {
+                label: "Jetzt",
+                date: todayStart,
+              },
+              // Future months = 1st-of-month snapshot (start-of-month baseline)
+              {
+                label: new Date(
+                  now.getFullYear(),
+                  now.getMonth() + 1,
+                  1
+                ).toLocaleDateString("de-DE", { month: "short" }),
+                date: new Date(now.getFullYear(), now.getMonth() + 1, 1),
+              },
+              {
+                label: new Date(
+                  now.getFullYear(),
+                  now.getMonth() + 2,
+                  1
+                ).toLocaleDateString("de-DE", { month: "short" }),
+                date: new Date(now.getFullYear(), now.getMonth() + 2, 1),
+              },
+            ].map((snap) => {
+              const occ = activeRooms.filter((r) =>
+                isRoomOccupiedAt(r, snap.date)
+              ).length;
+              const total = activeRooms.length;
+              return {
+                label: snap.label,
+                occupied: occ,
+                total,
+                free: total - occ,
+                pct: total ? Math.round((occ / total) * 100) : 0,
+              };
+            }),
+            monthlyRent: {
+              monthLabel: currentMonthStart.toLocaleDateString("de-DE", {
+                month: "long",
+                year: "numeric",
+              }),
+              expectedCents: rentExpectedCents,
+              collectedCents: rentCollectedCents,
+              openCents: rentOpenCents,
+              tenantsWithOpen: rentTenantsWithOpen,
             },
             openRentAmount,
             totalActionItems,
           },
+          noticePipeline,
           availabilityByLocation,
           actionItems: {
             depositTimeoutSoon: depositTimeoutSoon.map((b) => ({
