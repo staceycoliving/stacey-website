@@ -198,7 +198,7 @@ export default function TenantFolioPage({
     if (tenant.rentPayments.some((p) => p.status === "FAILED"))
       return { label: "Overdue", tone: "bg-red-100 text-red-700" };
     if (!tenant.sepaMandateId)
-      return { label: "No SEPA", tone: "bg-orange-100 text-orange-700" };
+      return { label: "No payment", tone: "bg-orange-100 text-orange-700" };
     if (tenant.moveOut && new Date(tenant.moveOut) < new Date())
       return { label: "Moved out", tone: "bg-gray-100 text-gray-700" };
     if (tenant.notice)
@@ -1038,7 +1038,7 @@ function DocumentsTab({ tenant }: { tenant: Tenant }) {
         }
       />
       <DocRow
-        label="SEPA mandate"
+        label="Payment method"
         available={Boolean(tenant.sepaMandateId)}
         detail={tenant.sepaMandateId ? tenant.sepaMandateId : "Not set up"}
       />

@@ -18,7 +18,7 @@ export async function sendPaymentSetupLink(data: PaymentSetupEmail) {
     </p>
     ${ctaButton("Set up payment method", data.setupUrl)}
     <p style="font-size:13px;color:#888;margin-top:16px;">
-      You can choose between credit/debit card, SEPA Direct Debit, or other methods available in your country.
+      You can choose between card, SEPA Direct Debit, or other payment methods available in your country.
       After setup, your rent will be automatically charged on the 1st of each month.
     </p>
   `);

@@ -96,7 +96,7 @@ export async function sendDepositConfirmation(data: DepositConfirmationEmail) {
         <div style="text-align:center;">
           <a href="${data.paymentSetupUrl}" style="background:#1A1A1A;color:#fff;padding:14px 32px;border-radius:5px;text-decoration:none;font-weight:600;font-size:15px;display:inline-block;">Set up payment method</a>
         </div>
-        <p style="margin:12px 0 0;font-size:12px;color:#888;text-align:center;">SEPA Direct Debit, card, and other methods available.</p>
+        <p style="margin:12px 0 0;font-size:12px;color:#888;text-align:center;">Card, SEPA, and other payment methods available.</p>
       `, { pink: true })
     : "";
 

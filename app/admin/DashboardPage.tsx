@@ -280,7 +280,7 @@ export default function DashboardPage({ data }: { data: Dashboard }) {
               <ActionRow
                 key={`sepa-${t.id}`}
                 accent="warn"
-                label="No SEPA mandate yet"
+                label="No payment method yet"
                 detail={`${t.name} · ${t.room} · move-in ${fmtDate(t.moveIn)}`}
                 href={`/admin/tenants/${t.id}`}
               />

@@ -95,7 +95,7 @@ function paymentStatus(t: Tenant): {
 } {
   const hasFailed = t.rentPayments.some((p) => p.status === "FAILED");
   if (hasFailed) return { label: "Overdue", tone: "danger" };
-  if (!t.sepaMandateId) return { label: "No SEPA", tone: "warn" };
+  if (!t.sepaMandateId) return { label: "No payment", tone: "warn" };
   const hasOpen = t.rentPayments.some(
     (p) => p.status === "PENDING" || p.status === "PROCESSING" || p.status === "PARTIAL"
   );

@@ -21,7 +21,7 @@ export async function sendRentReminder(data: RentReminderData) {
     <h2 style="margin:0 0 8px;font-size:22px;font-weight:700;">Rent payment issue</h2>
     <p style="margin:0 0 24px;color:#555;font-size:15px;line-height:1.5;">
       Hi ${data.firstName}, we couldn't collect your rent for STACEY ${data.locationName}.
-      This usually happens when a card has expired or a SEPA mandate was revoked.
+      This usually happens when your payment method has expired or is no longer valid.
     </p>
     ${detailTable(
       detailRow("Location", `STACEY ${data.locationName}`) +
