@@ -22,10 +22,20 @@ Für alles was über ein paar Zeilen hinausgeht (neue Features, Refactors, Page-
 
 ### Direct-to-main (nur für echte Trivial-Fixes)
 
-- Tippfehler
+Harte Grenze: **max 1-2 Dateien, ohne Refactor, ohne Architektur-Änderung**.
+- Tippfehler in Text
 - CSS-Tweaks ohne Logik-Änderung
 - Offensichtliche einzeilige Bugfixes
-- Im Zweifel: Feature-Branch.
+- Rollback eines gerade gepushten Commits
+
+**NICHT direct-to-main** (auch wenn's "nur" ein Fix ist):
+- Lint-Fixes die Struktur ändern (z.B. Logik in Server Component verschieben)
+- Multi-File-Refactors, auch wenn kleine Line-Counts
+- Neue Funktionen, Props, Types
+- Schema-Änderungen (separate Regel unten)
+- CI-Fehler die nicht durch einen einzelnen Parameter/Import-Change lösbar sind
+
+Im Zweifel immer Feature-Branch. "Ich muss schnell die CI grün kriegen" ist KEIN Grund für direct-to-main — stattdessen `fix/…` Branch, push, Preview URL, merge.
 
 ### Migrations-Regel (hart)
 
