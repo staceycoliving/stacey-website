@@ -1,10 +1,17 @@
 import { isAuthenticated } from "@/lib/admin-auth";
 import { prisma } from "@/lib/db";
-import { stripe } from "@/lib/stripe";
+import { ensureRentPayment, chargeRentPayment } from "@/lib/rent-charge";
 
-// POST /api/admin/run-monthly-rent
-// Manually triggers the monthly rent collection (same logic as the cron)
-// Used for testing or to retry failed charges
+/**
+ * POST /api/admin/run-monthly-rent
+ *
+ * Manually triggers the monthly rent collection for the current month.
+ * Same logic as the cron, but only for tenants with a SEPA mandate set up
+ * (skip legacy tenants without Stripe customer).
+ *
+ * Charge timing: we still respect the move-in-day rule — `chargeRentPayment`
+ * skips with "skipped_too_early" if today is before the tenant's move-in.
+ */
 export async function POST() {
   if (!(await isAuthenticated())) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
@@ -13,20 +20,23 @@ export async function POST() {
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-  const daysInMonth = monthEnd.getDate();
 
-  // Manual button: only charge tenants who actually have payment method set up.
-  // This avoids creating empty RentPayment records for legacy tenants without
-  // Stripe customer setup. The real monthly cron processes ALL active tenants.
   const tenants = await prisma.tenant.findMany({
     where: {
-      OR: [
-        { moveOut: null },
-        { moveOut: { gt: monthStart } },
-      ],
+      OR: [{ moveOut: null }, { moveOut: { gt: monthStart } }],
       moveIn: { lte: monthEnd },
       stripeCustomerId: { not: null },
       sepaMandateId: { not: null },
+    },
+    select: {
+      id: true,
+      firstName: true,
+      lastName: true,
+      monthlyRent: true,
+      moveIn: true,
+      moveOut: true,
+      stripeCustomerId: true,
+      sepaMandateId: true,
     },
   });
 
@@ -36,88 +46,37 @@ export async function POST() {
   const errors: string[] = [];
 
   for (const tenant of tenants) {
-    const existing = await prisma.rentPayment.findUnique({
-      where: { tenantId_month: { tenantId: tenant.id, month: monthStart } },
+    const rent = await ensureRentPayment(prisma, {
+      tenantId: tenant.id,
+      monthStart,
+      monthEnd,
+      moveIn: tenant.moveIn,
+      moveOut: tenant.moveOut,
+      fullRentCents: tenant.monthlyRent,
     });
-    if (existing) {
+    if (!rent) {
       skipped++;
       continue;
     }
-
-    const fullRent = tenant.monthlyRent;
-    if (fullRent <= 0) {
+    if (rent.status !== "PENDING") {
+      // Already PROCESSING / PAID / FAILED — leave alone
       skipped++;
       continue;
     }
-
-    // Pro-rata calculation
-    const moveInDate = new Date(tenant.moveIn);
-    const moveOutDate = tenant.moveOut ? new Date(tenant.moveOut) : null;
-    let startDay = 1;
-    let endDay = daysInMonth;
-    if (moveInDate.getFullYear() === now.getFullYear() && moveInDate.getMonth() === now.getMonth()) {
-      startDay = moveInDate.getDate();
-    }
-    if (moveOutDate && moveOutDate.getFullYear() === now.getFullYear() && moveOutDate.getMonth() === now.getMonth()) {
-      endDay = moveOutDate.getDate();
-    }
-    const rentDays = endDay - startDay + 1;
-    const amount = rentDays >= daysInMonth
-      ? fullRent
-      : Math.round(fullRent * rentDays / daysInMonth);
-
-    const rentPayment = await prisma.rentPayment.create({
-      data: {
-        tenantId: tenant.id,
-        month: monthStart,
-        amount,
-        status: "PENDING",
-      },
-    });
     created++;
 
-    if (tenant.stripeCustomerId && tenant.sepaMandateId) {
-      try {
-        const pi = await stripe.paymentIntents.create({
-          amount,
-          currency: "eur",
-          customer: tenant.stripeCustomerId,
-          payment_method: tenant.sepaMandateId,
-          off_session: true,
-          confirm: true,
-          metadata: {
-            type: "long_stay_rent",
-            tenantId: tenant.id,
-            rentPaymentId: rentPayment.id,
-            month: monthStart.toISOString(),
-          },
-        });
-
-        await prisma.rentPayment.update({
-          where: { id: rentPayment.id },
-          data: {
-            status: "PROCESSING",
-            stripePaymentIntentId: pi.id,
-          },
-        });
-        charged++;
-      } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
-        await prisma.rentPayment.update({
-          where: { id: rentPayment.id },
-          data: {
-            status: "FAILED",
-            failedAt: new Date(),
-            failureReason: message,
-          },
-        });
-        errors.push(`${tenant.firstName} ${tenant.lastName}: ${message}`);
-      }
-    }
+    const result = await chargeRentPayment(prisma, {
+      rentPayment: rent,
+      tenant,
+      triggerLabel: "manual_run",
+    });
+    if (result === "charged") charged++;
+    if (result === "failed")
+      errors.push(`${tenant.firstName} ${tenant.lastName}: charge failed`);
   }
 
   return Response.json({
-    month: monthStart.toISOString().split("T")[0],
+    month: monthStart.toISOString().slice(0, 7),
     total: tenants.length,
     created,
     charged,

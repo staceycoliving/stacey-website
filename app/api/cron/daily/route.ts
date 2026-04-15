@@ -16,6 +16,7 @@ import {
 } from "@/lib/email";
 import { stripe } from "@/lib/stripe";
 import { getReservations, createInvoiceAndGetPdf } from "@/lib/apaleo";
+import { chargeRentPayment } from "@/lib/rent-charge";
 import { locations } from "@/lib/data";
 import { isTestMode, canSendEmail, logSkipped } from "@/lib/test-mode";
 import { env } from "@/lib/env";
@@ -373,11 +374,12 @@ async function handleRentReminders() {
   let mahnungen2 = 0;
   let terminations = 0;
 
-  // Find all unpaid rent payments from past months
+  // Find all unpaid rent payments — past months AND current month if the
+  // tenant has already moved in. The chargeRentPayment helper will skip
+  // anything not yet chargeable (today < moveIn).
   const unpaidRents = await prisma.rentPayment.findMany({
     where: {
       status: { in: ["PENDING", "FAILED"] },
-      month: { lt: now },
       tenant: { bookingId: { not: null } }, // Only frontend-booked tenants (skip legacy)
     },
     include: {
@@ -392,54 +394,45 @@ async function handleRentReminders() {
     orderBy: { month: "asc" },
   });
 
-  // ── Step 3a: Daily SEPA retry for all FAILED/PENDING payments ──
+  // ── Step 3a: SEPA retry / first-rent-on-move-in-day charge ──
+  // Same loop covers two cases:
+  //   1. Failed past charges → daily retry (throttled to 1× / day)
+  //   2. PENDING current-month rent for tenants who set up SEPA before
+  //      move-in → fires on the actual move-in day
   for (const rent of unpaidRents) {
     const tenant = rent.tenant;
     if (!tenant.stripeCustomerId || !tenant.sepaMandateId) continue;
 
-    // Don't retry if we already tried today
+    // Throttle: don't retry if we already tried today
     if (rent.lastRetryAt) {
-      const hoursSinceRetry = (now.getTime() - rent.lastRetryAt.getTime()) / (1000 * 60 * 60);
-      if (hoursSinceRetry < 20) continue; // At most once per day
+      const hoursSinceRetry =
+        (now.getTime() - rent.lastRetryAt.getTime()) / (1000 * 60 * 60);
+      if (hoursSinceRetry < 20) continue;
     }
 
     retried++;
-    try {
-      const pi = await stripe.paymentIntents.create({
-        amount: rent.amount,
-        currency: "eur",
-        customer: tenant.stripeCustomerId,
-        payment_method: tenant.sepaMandateId,
-        off_session: true,
-        confirm: true,
-        metadata: {
-          type: "long_stay_rent",
-          tenantId: tenant.id,
-          rentPaymentId: rent.id,
-          month: rent.month.toISOString(),
-          retry: "true",
-        },
-      });
-
-      await prisma.rentPayment.update({
-        where: { id: rent.id },
-        data: {
-          status: "PROCESSING",
-          stripePaymentIntentId: pi.id,
-          lastRetryAt: now,
-        },
-      });
-      retriedSuccess++;
-    } catch (err: any) {
+    const result = await chargeRentPayment(prisma, {
+      rentPayment: rent,
+      tenant,
+      triggerLabel: "daily_cron",
+    });
+    if (result === "charged") retriedSuccess++;
+    if (result === "skipped_too_early") {
+      // First-month rent before the move-in date — leave it for the next
+      // daily run (the throttle uses lastRetryAt so we re-evaluate freely).
+      continue;
+    }
+    if (result === "failed" || result === "skipped_no_sepa") {
+      // Touch lastRetryAt so we don't hammer Stripe / the same row again.
       await prisma.rentPayment.update({
         where: { id: rent.id },
         data: { lastRetryAt: now },
       });
-      // Silent — the reminder emails below handle communication
     }
   }
 
-  // Re-fetch after retries (some may have moved to PROCESSING)
+  // Re-fetch after retries (some may have moved to PROCESSING).
+  // The follow-up reminder/Mahnung logic only applies to *past* months.
   const stillUnpaid = await prisma.rentPayment.findMany({
     where: {
       status: { in: ["PENDING", "FAILED"] },

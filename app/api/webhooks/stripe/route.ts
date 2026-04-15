@@ -12,6 +12,7 @@ import {
 } from "@/lib/email";
 import { downloadSignedDocument } from "@/lib/yousign";
 import { uploadLongstayDocument } from "@/lib/google-drive";
+import { ensureRentPayment, chargeRentPayment, isChargeableNow } from "@/lib/rent-charge";
 
 const DEPOSIT_DEADLINE_HOURS = 48;
 
@@ -432,6 +433,23 @@ async function handleDepositPaid(bookingId: string) {
       },
     });
     createdTenantId = tenant.id;
+
+    // Create the first RentPayment for the move-in month right away. The
+    // monthly cron only runs on the 1st, so a tenant confirmed mid-month
+    // would otherwise never get a record for that month. Status PENDING —
+    // we don't charge here; the daily cron picks it up on the move-in day.
+    const moveIn = new Date(booking.moveInDate!);
+    moveIn.setHours(0, 0, 0, 0);
+    const monthStart = new Date(moveIn.getFullYear(), moveIn.getMonth(), 1);
+    const monthEnd = new Date(moveIn.getFullYear(), moveIn.getMonth() + 1, 0);
+    await ensureRentPayment(tx, {
+      tenantId: tenant.id,
+      monthStart,
+      monthEnd,
+      moveIn,
+      moveOut: null,
+      fullRentCents: tenant.monthlyRent,
+    });
   });
 
   // Generate payment setup link (so we can include it in the confirmation email)
@@ -696,54 +714,38 @@ async function handlePaymentSetupCompleted(tenantId: string, session: any) {
     }
   }
 
-  // Auto-charge any outstanding rent now that a payment method is available
+  // Auto-charge any outstanding rent now that a payment method is available.
+  // BUT: never charge before the tenant's move-in date — even if the rent
+  // record exists. The first month is created the moment the deposit hits
+  // (handleDepositPaid) and waits until move-in day to charge.
   try {
     const unpaidRents = await prisma.rentPayment.findMany({
       where: {
         tenantId,
         status: { in: ["PENDING", "FAILED"] },
-        month: { lt: new Date() },
       },
       orderBy: { month: "asc" },
     });
 
+    const refreshedTenant = await prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        stripeCustomerId: true,
+        sepaMandateId: true,
+        moveIn: true,
+      },
+    });
+    if (!refreshedTenant) return;
+
     for (const rent of unpaidRents) {
-      try {
-        const pi = await stripe.paymentIntents.create({
-          amount: rent.amount,
-          currency: "eur",
-          customer: tenant.stripeCustomerId!,
-          payment_method: paymentMethodId,
-          off_session: true,
-          confirm: true,
-          metadata: {
-            type: "long_stay_rent",
-            tenantId,
-            rentPaymentId: rent.id,
-            month: rent.month.toISOString(),
-            autoCharge: "payment_method_updated",
-          },
-        });
-
-        await prisma.rentPayment.update({
-          where: { id: rent.id },
-          data: {
-            status: "PROCESSING",
-            stripePaymentIntentId: pi.id,
-            lastRetryAt: new Date(),
-          },
-        });
-
-        logEvent(
-          { scope: "stripe-webhook", tags: { tenantId, rentPaymentId: rent.id } },
-          `auto-charged outstanding rent after payment method update`,
-        );
-      } catch (chargeErr) {
-        reportError(chargeErr, {
-          scope: "stripe-webhook",
-          tags: { stage: "auto-charge-outstanding", tenantId, rentPaymentId: rent.id },
-        });
-      }
+      await chargeRentPayment(prisma, {
+        rentPayment: rent,
+        tenant: refreshedTenant,
+        triggerLabel: "payment_method_updated",
+      });
     }
   } catch (err) {
     reportError(err, {
