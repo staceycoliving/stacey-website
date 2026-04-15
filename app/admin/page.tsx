@@ -106,8 +106,9 @@ export default async function AdminDashboardPage() {
     }),
   ]);
 
-  // Batch 4: rent (base + bundled adjustments) + notice pipeline
-  const [currentMonthRents, noticePipelineRaw] = await Promise.all([
+  // Batch 4: rent (base + bundled adjustments) + notice pipeline + more action items
+  const [currentMonthRents, noticePipelineRaw, dunningCandidates] =
+    await Promise.all([
     prisma.rentPayment.findMany({
       where: {
         month: { gte: currentMonthStart, lt: nextMonthStart },
@@ -143,6 +144,17 @@ export default async function AdminDashboardPage() {
         },
       },
       orderBy: { moveOut: "asc" },
+    }),
+
+    // Dunning candidates: unpaid rent in a past or current month where
+    // the appropriate reminder/mahnung hasn't been sent yet. We fetch all
+    // candidates and categorise in code (reminder 1 / mahnung 1 / mahnung 2).
+    prisma.rentPayment.findMany({
+      where: {
+        status: { in: ["FAILED", "PARTIAL", "PENDING"] },
+        month: { lte: todayStart },
+      },
+      include: { tenant: true },
     }),
   ]);
 
@@ -191,6 +203,28 @@ export default async function AdminDashboardPage() {
       .filter((r) => r.status !== "PAID" && r.amount > r.paidAmount)
       .map((r) => r.tenantId)
   ).size;
+
+  // ─── Dunning buckets ────────────────────────────────────────────────
+  // For each unpaid rent, figure out which stage is due now based on
+  // days since the month started. Only the most severe stage per rent
+  // (don't show reminder AND mahnung for the same row).
+  const dunningReminder1: typeof dunningCandidates = [];
+  const dunningMahnung1: typeof dunningCandidates = [];
+  const dunningMahnung2: typeof dunningCandidates = [];
+  for (const r of dunningCandidates) {
+    const monthStart = new Date(r.month);
+    monthStart.setHours(0, 0, 0, 0);
+    const daysOpen = Math.floor(
+      (todayStart.getTime() - monthStart.getTime()) / (24 * 60 * 60 * 1000)
+    );
+    if (daysOpen >= 30 && !r.mahnung2SentAt) {
+      dunningMahnung2.push(r);
+    } else if (daysOpen >= 14 && !r.mahnung1SentAt) {
+      dunningMahnung1.push(r);
+    } else if (daysOpen >= 3 && !r.reminder1SentAt) {
+      dunningReminder1.push(r);
+    }
+  }
 
   // ─── Notice pipeline: keep only rooms without replacement ───────────
   const noticePipeline = noticePipelineRaw
@@ -367,7 +401,10 @@ export default async function AdminDashboardPage() {
     depositTimeoutSoon.length +
     failedRents.length +
     settlementsPending.length +
-    missingSepa.length;
+    missingSepa.length +
+    dunningReminder1.length +
+    dunningMahnung1.length +
+    dunningMahnung2.length;
 
   return (
     <DashboardPage
@@ -454,6 +491,27 @@ export default async function AdminDashboardPage() {
               room: t.room
                 ? `${t.room.apartment.location.name} · ${t.room.roomNumber}`
                 : "—",
+            })),
+            dunningReminder1: dunningReminder1.map((r) => ({
+              id: r.id,
+              tenantId: r.tenantId,
+              tenantName: `${r.tenant.firstName} ${r.tenant.lastName}`,
+              month: r.month,
+              amount: r.amount - r.paidAmount,
+            })),
+            dunningMahnung1: dunningMahnung1.map((r) => ({
+              id: r.id,
+              tenantId: r.tenantId,
+              tenantName: `${r.tenant.firstName} ${r.tenant.lastName}`,
+              month: r.month,
+              amount: r.amount - r.paidAmount,
+            })),
+            dunningMahnung2: dunningMahnung2.map((r) => ({
+              id: r.id,
+              tenantId: r.tenantId,
+              tenantName: `${r.tenant.firstName} ${r.tenant.lastName}`,
+              month: r.month,
+              amount: r.amount - r.paidAmount,
             })),
           },
           schedule: {

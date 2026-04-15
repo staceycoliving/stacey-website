@@ -71,6 +71,27 @@ type Dashboard = {
       moveIn: string;
       room: string;
     }[];
+    dunningReminder1: {
+      id: string;
+      tenantId: string;
+      tenantName: string;
+      month: string;
+      amount: number;
+    }[];
+    dunningMahnung1: {
+      id: string;
+      tenantId: string;
+      tenantName: string;
+      month: string;
+      amount: number;
+    }[];
+    dunningMahnung2: {
+      id: string;
+      tenantId: string;
+      tenantName: string;
+      month: string;
+      amount: number;
+    }[];
   };
   noticePipeline: {
     id: string;
@@ -207,100 +228,144 @@ export default function DashboardPage({ data }: { data: Dashboard }) {
         />
       </div>
 
-      {/* Action Items — grouped by urgency */}
+      {/* Action Items — grouped by urgency + type-legend overview */}
       <div ref={actionRef}>
-        <h2 className="text-sm font-semibold mb-3">
-          Action items
-          {kpi.totalActionItems > 0 && ` · ${kpi.totalActionItems}`}
-        </h2>
-        {kpi.totalActionItems === 0 ? (
-          <Card>
-            <div className="px-4 py-6 text-center text-sm text-gray">
-              All clear. ✨
-            </div>
-          </Card>
-        ) : (
-          (() => {
-            // Bucket each item by urgency so the admin reads top-down.
-            type Row = {
-              key: string;
-              accent: "info" | "warn" | "danger";
-              label: string;
-              detail: string;
-              href: string;
+        <div className="flex items-baseline justify-between mb-3 gap-3 flex-wrap">
+          <h2 className="text-sm font-semibold">
+            Action items
+            {kpi.totalActionItems > 0 && ` · ${kpi.totalActionItems}`}
+          </h2>
+          <ActionTypesLegend items={actionItems} />
+        </div>
+        {(() => {
+          // Bucket each item by urgency so the admin reads top-down.
+          type Row = {
+            key: string;
+            accent: "info" | "warn" | "danger";
+            label: string;
+            detail: string;
+            href: string;
+            // Sort key within its bucket — smaller = more urgent first.
+            sortKey: number;
+          };
+          const today: Row[] = [];
+          const thisWeek: Row[] = [];
+          const older: Row[] = [];
+          const nowTs = Date.now();
+
+          // Deposit deadlines are always <24h per query → Today. Sort by
+          // hours left ascending.
+          for (const b of actionItems.depositTimeoutSoon) {
+            const h = hoursUntil(b.deadline) ?? 99;
+            today.push({
+              key: `dep-${b.id}`,
+              accent: "warn",
+              label: "Deposit deadline soon",
+              detail: `${b.name} · ${h}h left`,
+              href: "/admin/bookings",
+              sortKey: h,
+            });
+          }
+          // Mahnung 2 — most severe, always Today + danger.
+          for (const r of actionItems.dunningMahnung2) {
+            const monthTs = new Date(r.month).getTime();
+            const daysOpen = Math.floor((nowTs - monthTs) / (24 * 60 * 60 * 1000));
+            today.push({
+              key: `m2-${r.id}`,
+              accent: "danger",
+              label: "2. Mahnung + Kündigungsandrohung due",
+              detail: `${r.tenantName} · ${fmtMonth(r.month)} · ${fmtEuro(r.amount)} · ${daysOpen}d overdue`,
+              href: `/admin/tenants/${r.tenantId}`,
+              sortKey: -daysOpen, // most overdue first
+            });
+          }
+          // Mahnung 1 → Today, warn.
+          for (const r of actionItems.dunningMahnung1) {
+            const monthTs = new Date(r.month).getTime();
+            const daysOpen = Math.floor((nowTs - monthTs) / (24 * 60 * 60 * 1000));
+            today.push({
+              key: `m1-${r.id}`,
+              accent: "warn",
+              label: "1. Mahnung due",
+              detail: `${r.tenantName} · ${fmtMonth(r.month)} · ${fmtEuro(r.amount)} · ${daysOpen}d overdue`,
+              href: `/admin/tenants/${r.tenantId}`,
+              sortKey: -daysOpen + 100, // after M2
+            });
+          }
+          // Reminder 1 → This week, info.
+          for (const r of actionItems.dunningReminder1) {
+            const monthTs = new Date(r.month).getTime();
+            const daysOpen = Math.floor((nowTs - monthTs) / (24 * 60 * 60 * 1000));
+            thisWeek.push({
+              key: `r1-${r.id}`,
+              accent: "info",
+              label: "Zahlungserinnerung due",
+              detail: `${r.tenantName} · ${fmtMonth(r.month)} · ${fmtEuro(r.amount)} · ${daysOpen}d open`,
+              href: `/admin/tenants/${r.tenantId}`,
+              sortKey: -daysOpen,
+            });
+          }
+          // Failed rents: this month → Today; older → Older bucket.
+          for (const r of actionItems.failedRents) {
+            const monthTs = new Date(r.month).getTime();
+            const daysOld = Math.floor((nowTs - monthTs) / (24 * 60 * 60 * 1000));
+            const row: Row = {
+              key: `rent-${r.id}`,
+              accent: "danger",
+              label: "Failed rent charge",
+              detail: `${r.tenantName} · ${fmtMonth(r.month)} · ${fmtEuro(
+                r.amount
+              )}${r.failureReason ? ` · ${r.failureReason}` : ""}`,
+              href: `/admin/tenants/${r.tenantId}`,
+              sortKey: -daysOld,
             };
-            const today: Row[] = [];
-            const thisWeek: Row[] = [];
-            const older: Row[] = [];
-
-            // Deposit deadlines are always <24h per query → Today.
-            for (const b of actionItems.depositTimeoutSoon) {
-              const h = hoursUntil(b.deadline);
-              today.push({
-                key: `dep-${b.id}`,
-                accent: "warn",
-                label: "Deposit deadline soon",
-                detail: `${b.name} · ${h !== null ? `${h}h left` : ""}`,
-                href: "/admin/bookings",
-              });
-            }
-            // Failed rents: this month → Today; older → Older bucket.
-            const nowTs = Date.now();
-            for (const r of actionItems.failedRents) {
-              const monthTs = new Date(r.month).getTime();
-              const daysOld = Math.floor(
-                (nowTs - monthTs) / (24 * 60 * 60 * 1000)
-              );
-              const row: Row = {
-                key: `rent-${r.id}`,
-                accent: "danger",
-                label: "Failed rent charge",
-                detail: `${r.tenantName} · ${fmtMonth(r.month)} · ${fmtEuro(
-                  r.amount
-                )}${r.failureReason ? ` · ${r.failureReason}` : ""}`,
-                href: `/admin/tenants/${r.tenantId}`,
-              };
-              if (daysOld <= 30) today.push(row);
-              else older.push(row);
-            }
-            // Missing payment method: moveIn in ≤3d → Today; else → This week.
-            for (const t of actionItems.missingSepa) {
-              const days = Math.floor(
-                (new Date(t.moveIn).getTime() - nowTs) / (24 * 60 * 60 * 1000)
-              );
-              const row: Row = {
-                key: `pay-${t.id}`,
-                accent: "warn",
-                label: "No payment method yet",
-                detail: `${t.name} · ${t.room} · move-in ${fmtDate(t.moveIn)}`,
-                href: `/admin/tenants/${t.id}`,
-              };
-              if (days <= 3) today.push(row);
-              else thisWeek.push(row);
-            }
-            // Settlements: <14d → This week; 14-30d → This week warn; >30d → Older (danger).
-            for (const t of actionItems.settlementsPending) {
-              const d = daysSince(t.moveOut) ?? 0;
-              const row: Row = {
-                key: `settle-${t.id}`,
-                accent: d > 30 ? "danger" : d > 14 ? "warn" : "info",
-                label: "Deposit settlement pending",
-                detail: `${t.name} · ${t.room} · moved out ${d}d ago`,
-                href: `/admin/tenants/${t.id}`,
-              };
-              if (d > 30) older.push(row);
-              else thisWeek.push(row);
-            }
-
-            return (
-              <div className="space-y-3">
-                <ActionBucket title="Today" items={today} />
-                <ActionBucket title="This week" items={thisWeek} />
-                <ActionBucket title="Older" items={older} />
-              </div>
+            if (daysOld <= 30) today.push(row);
+            else older.push(row);
+          }
+          // Missing payment method: moveIn in ≤3d → Today; else → This week.
+          for (const t of actionItems.missingSepa) {
+            const days = Math.floor(
+              (new Date(t.moveIn).getTime() - nowTs) / (24 * 60 * 60 * 1000)
             );
-          })()
-        )}
+            const row: Row = {
+              key: `pay-${t.id}`,
+              accent: "warn",
+              label: "No payment method yet",
+              detail: `${t.name} · ${t.room} · move-in ${fmtDate(t.moveIn)}`,
+              href: `/admin/tenants/${t.id}`,
+              sortKey: days, // soonest move-in first
+            };
+            if (days <= 3) today.push(row);
+            else thisWeek.push(row);
+          }
+          // Settlements: <14d → This week; 14-30d → This week warn; >30d → Older (danger).
+          for (const t of actionItems.settlementsPending) {
+            const d = daysSince(t.moveOut) ?? 0;
+            const row: Row = {
+              key: `settle-${t.id}`,
+              accent: d > 30 ? "danger" : d > 14 ? "warn" : "info",
+              label: "Deposit settlement pending",
+              detail: `${t.name} · ${t.room} · moved out ${d}d ago`,
+              href: `/admin/tenants/${t.id}`,
+              sortKey: -d,
+            };
+            if (d > 30) older.push(row);
+            else thisWeek.push(row);
+          }
+
+          // Sort each bucket by sortKey (urgent first).
+          today.sort((a, b) => a.sortKey - b.sortKey);
+          thisWeek.sort((a, b) => a.sortKey - b.sortKey);
+          older.sort((a, b) => a.sortKey - b.sortKey);
+
+          return (
+            <div className="space-y-3">
+              <ActionBucket title="Today" items={today} emptyDone />
+              <ActionBucket title="This week" items={thisWeek} emptyDone />
+              <ActionBucket title="Older" items={older} />
+            </div>
+          );
+        })()}
       </div>
 
       {/* Notice pipeline — revenue at risk in next 90 days */}
@@ -907,6 +972,7 @@ function Card({ children }: { children: React.ReactNode }) {
 function ActionBucket({
   title,
   items,
+  emptyDone,
 }: {
   title: string;
   items: {
@@ -916,12 +982,38 @@ function ActionBucket({
     detail: string;
     href: string;
   }[];
+  /** When true and items is empty, render a cheerful "done" card instead
+   *  of hiding the bucket. Good for "Today" / "This week" so admins see
+   *  positive completion. */
+  emptyDone?: boolean;
 }) {
-  if (items.length === 0) return null;
+  if (items.length === 0) {
+    if (!emptyDone) return null;
+    return (
+      <div>
+        <div className="text-[11px] uppercase tracking-wider text-gray font-semibold mb-1.5 px-1">
+          {title} · 0
+        </div>
+        <Card>
+          <div className="px-4 py-3 text-sm text-green-700 flex items-center gap-2">
+            <span className="text-base">✓</span> All caught up.
+          </div>
+        </Card>
+      </div>
+    );
+  }
+  const urgent = items.filter((i) => i.accent === "danger").length;
   return (
     <div>
-      <div className="text-[11px] uppercase tracking-wider text-gray font-semibold mb-1.5 px-1">
-        {title} · {items.length}
+      <div className="text-[11px] uppercase tracking-wider text-gray font-semibold mb-1.5 px-1 flex items-center gap-1.5">
+        <span>
+          {title} · {items.length}
+        </span>
+        {urgent > 0 && (
+          <span className="normal-case tracking-normal text-red-600 font-semibold">
+            ({urgent} urgent)
+          </span>
+        )}
       </div>
       <Card>
         <div className="divide-y divide-lightgray">
@@ -936,6 +1028,40 @@ function ActionBucket({
           ))}
         </div>
       </Card>
+    </div>
+  );
+}
+
+/** Small inline overview of every action type we monitor with live
+ *  counts. Gives admins a one-glance "what's being watched" without
+ *  hunting through the buckets below. Zeros intentionally shown —
+ *  seeing "0" confirms the system is checking. */
+function ActionTypesLegend({
+  items,
+}: {
+  items: Dashboard["actionItems"];
+}) {
+  const types: { label: string; count: number; accent: string }[] = [
+    { label: "Deposit deadline", count: items.depositTimeoutSoon.length, accent: "bg-orange-100 text-orange-700" },
+    { label: "2. Mahnung", count: items.dunningMahnung2.length, accent: "bg-red-100 text-red-700" },
+    { label: "1. Mahnung", count: items.dunningMahnung1.length, accent: "bg-orange-100 text-orange-700" },
+    { label: "Zahlungserinnerung", count: items.dunningReminder1.length, accent: "bg-yellow-100 text-yellow-700" },
+    { label: "Failed rent", count: items.failedRents.length, accent: "bg-red-100 text-red-700" },
+    { label: "No payment method", count: items.missingSepa.length, accent: "bg-orange-100 text-orange-700" },
+    { label: "Settlement pending", count: items.settlementsPending.length, accent: "bg-blue-100 text-blue-700" },
+  ];
+  return (
+    <div className="flex items-center gap-1.5 flex-wrap">
+      {types.map((t) => (
+        <span
+          key={t.label}
+          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-[5px] text-[10px] font-medium ${t.count > 0 ? t.accent : "bg-background-alt text-gray"}`}
+          title={`${t.label} (${t.count})`}
+        >
+          {t.label}
+          <span className="tabular-nums">{t.count}</span>
+        </span>
+      ))}
     </div>
   );
 }
