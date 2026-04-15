@@ -19,18 +19,12 @@ export default async function AdminDashboardPage() {
   const in24h = new Date(now.getTime() + 24 * 60 * 60 * 1000);
   const in28Days = new Date(todayStart.getTime() + 28 * 24 * 60 * 60 * 1000);
 
-  const [
-    locations,
-    roomsAll,
-    tenantsActive,
-    failedRents,
-    pendingRents,
-    depositTimeoutSoon,
-    settlementsPending,
-    missingSepa,
-    moveInsUpcoming,
-    moveOutsUpcoming,
-  ] = await Promise.all([
+  // Split into smaller batches so we don't overwhelm the connection pool.
+  // The admin dashboard is read-heavy; each query is tiny, but running 10
+  // in parallel against Supabase's direct-connection limit has bitten us.
+
+  // Batch 1: core inventory + raw rent stats
+  const [locations, roomsAll, openRentSum] = await Promise.all([
     prisma.location.findMany({
       where: { stayType: "LONG" },
       orderBy: { name: "asc" },
@@ -49,56 +43,59 @@ export default async function AdminDashboardPage() {
       },
     }),
 
-    prisma.tenant.findMany({
-      include: {
-        room: { include: { apartment: { include: { location: true } } } },
-      },
-    }),
-
-    prisma.rentPayment.findMany({
-      where: { status: "FAILED" },
-      include: { tenant: true },
-      orderBy: { month: "desc" },
-    }),
-
-    prisma.rentPayment.findMany({
-      where: { status: { in: ["PENDING", "FAILED", "PROCESSING", "PARTIAL"] } },
-    }),
-
-    prisma.booking.findMany({
+    // Aggregate instead of loading every unpaid RentPayment row
+    prisma.rentPayment.aggregate({
       where: {
-        status: "DEPOSIT_PENDING",
-        depositDeadline: { lte: in24h, gte: now },
+        status: { in: ["PENDING", "FAILED", "PROCESSING", "PARTIAL"] },
       },
-      orderBy: { depositDeadline: "asc" },
+      _sum: { amount: true, paidAmount: true },
     }),
+  ]);
 
-    prisma.tenant.findMany({
-      where: {
-        moveOut: { lt: todayStart },
-        depositStatus: "RECEIVED",
-      },
-      include: { room: { include: { apartment: { include: { location: true } } } } },
-      orderBy: { moveOut: "asc" },
-    }),
+  // Batch 2: action items (4 small queries)
+  const [failedRents, depositTimeoutSoon, settlementsPending, missingSepa] =
+    await Promise.all([
+      prisma.rentPayment.findMany({
+        where: { status: "FAILED" },
+        include: { tenant: true },
+        orderBy: { month: "desc" },
+      }),
 
-    prisma.tenant.findMany({
-      where: {
-        sepaMandateId: null,
-        moveIn: { gte: todayStart, lte: in7Days },
-      },
-      include: { room: { include: { apartment: { include: { location: true } } } } },
-      orderBy: { moveIn: "asc" },
-    }),
+      prisma.booking.findMany({
+        where: {
+          status: "DEPOSIT_PENDING",
+          depositDeadline: { lte: in24h, gte: now },
+        },
+        orderBy: { depositDeadline: "asc" },
+      }),
 
-    // Move-ins in the next 4 weeks
+      prisma.tenant.findMany({
+        where: {
+          moveOut: { lt: todayStart },
+          depositStatus: "RECEIVED",
+        },
+        include: { room: { include: { apartment: { include: { location: true } } } } },
+        orderBy: { moveOut: "asc" },
+      }),
+
+      prisma.tenant.findMany({
+        where: {
+          sepaMandateId: null,
+          moveIn: { gte: todayStart, lte: in7Days },
+        },
+        include: { room: { include: { apartment: { include: { location: true } } } } },
+        orderBy: { moveIn: "asc" },
+      }),
+    ]);
+
+  // Batch 3: upcoming schedule
+  const [moveInsUpcoming, moveOutsUpcoming] = await Promise.all([
     prisma.tenant.findMany({
       where: { moveIn: { gte: todayStart, lte: in28Days } },
       include: { room: { include: { apartment: { include: { location: true } } } } },
       orderBy: { moveIn: "asc" },
     }),
 
-    // Move-outs in the next 4 weeks
     prisma.tenant.findMany({
       where: { moveOut: { gte: todayStart, lte: in28Days } },
       include: { room: { include: { apartment: { include: { location: true } } } } },
@@ -119,10 +116,8 @@ export default async function AdminDashboardPage() {
   const activeRooms = roomsAll.filter((r) => r.status === "ACTIVE");
   const occupiedRooms = activeRooms.filter(isCurrentlyOccupied);
 
-  const openRentAmount = pendingRents.reduce(
-    (sum, r) => sum + (r.amount - r.paidAmount),
-    0
-  );
+  const openRentAmount =
+    (openRentSum._sum.amount ?? 0) - (openRentSum._sum.paidAmount ?? 0);
 
   // ─── Occupancy + availability by location/category ──────────────────
   //
