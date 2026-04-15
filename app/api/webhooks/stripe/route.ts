@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { stripe } from "@/lib/stripe";
-import { prisma } from "@/lib/db";
+import { prismaDirect as prisma } from "@/lib/db";
 import { env } from "@/lib/env";
 import { reportError, logEvent, logWarn } from "@/lib/observability";
 import {

@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { prisma } from "@/lib/db";
+import { prismaDirect as prisma } from "@/lib/db";
 import { RoomCategory, BookingStatus } from "@/lib/generated/prisma/client";
 import {
   sendShortStayConfirmation,

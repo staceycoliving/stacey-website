@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { isAuthenticated } from "@/lib/admin-auth";
-import { prisma } from "@/lib/db";
+import { prismaDirect as prisma } from "@/lib/db";
 import { Prisma } from "@/lib/generated/prisma/client";
 import { stripe } from "@/lib/stripe";
 import { reportError, logEvent } from "@/lib/observability";
