@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Home,
   Calendar,
@@ -11,6 +12,18 @@ import {
   LogOut,
   Copy,
   ExternalLink,
+  CreditCard,
+  Clock,
+  BellRing,
+  MailWarning,
+  AlertOctagon,
+  UserX,
+  PiggyBank,
+  ChevronDown,
+  ChevronRight,
+  Sparkles,
+  RotateCcw,
+  Send,
 } from "lucide-react";
 
 type Dashboard = {
@@ -93,18 +106,52 @@ type Dashboard = {
       amount: number;
     }[];
   };
-  noticePipeline: {
+  vacancyPipeline: {
     id: string;
-    name: string;
-    moveOut: string | null;
+    kind: "vacant_now" | "leaving_soon";
+    label: string;
     room: string;
+    category: string;
     monthlyRent: number;
+    moveOut: string | null;
     daysAway: number;
   }[];
   schedule: {
     moveIns: { id: string; name: string; date: string | null; room: string }[];
-    moveOuts: { id: string; name: string; date: string | null; room: string }[];
   };
+  newBookings: {
+    todayCount: number;
+    todayFeesCollected: number;
+    weekCount: number;
+    weekFeesCollected: number;
+  };
+  funnel: {
+    total: number;
+    bookingFeePaid: number;
+    contractSigned: number;
+    depositPaid: number;
+    convertedToTenant: number;
+  };
+  openDefects: {
+    id: string;
+    description: string;
+    amount: number;
+    createdAt: string;
+    photos: number;
+    tenantId: string;
+    tenantName: string;
+    room: string;
+    movedOut: boolean;
+  }[];
+  activityFeed: {
+    id: string;
+    at: string;
+    module: string;
+    action: string;
+    summary: string | null;
+    entityType: string | null;
+    entityId: string | null;
+  }[];
 };
 
 function fmtEuro(cents: number) {
@@ -149,7 +196,17 @@ function daysSince(iso: string | null) {
 }
 
 export default function DashboardPage({ data }: { data: Dashboard }) {
-  const { kpi, availabilityByLocation, actionItems, schedule, noticePipeline } = data;
+  const {
+    kpi,
+    availabilityByLocation,
+    actionItems,
+    schedule,
+    vacancyPipeline,
+    newBookings,
+    funnel,
+    openDefects,
+    activityFeed,
+  } = data;
   const actionRef = useRef<HTMLDivElement>(null);
 
   // All bookable dates across every location/category — same logic as the
@@ -169,6 +226,52 @@ export default function DashboardPage({ data }: { data: Dashboard }) {
   const [locationFilter, setLocationFilter] = useState<string>(""); // slug or ""
   const [personsFilter, setPersonsFilter] = useState<1 | 2>(1);
 
+  // Action-items UI state — persisted across reloads via localStorage
+  const [hiddenTypes, setHiddenTypes] = useState<Set<ActionTypeKey>>(new Set());
+  const [olderCollapsed, setOlderCollapsed] = useState<boolean>(true);
+
+  // Hydrate from localStorage on first render. Wrapped in try/catch so
+  // server render / private-mode / quota errors don't break the page.
+  useEffect(() => {
+    try {
+      const rawFilters = window.localStorage.getItem(LS_KEY_ACTION_FILTERS);
+      if (rawFilters) {
+        const parsed = JSON.parse(rawFilters) as string[];
+        setHiddenTypes(new Set(parsed as ActionTypeKey[]));
+      }
+      const rawCollapsed = window.localStorage.getItem(LS_KEY_OLDER_COLLAPSED);
+      if (rawCollapsed !== null) setOlderCollapsed(rawCollapsed === "1");
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  function toggleType(t: ActionTypeKey) {
+    setHiddenTypes((prev) => {
+      const next = new Set(prev);
+      if (next.has(t)) next.delete(t);
+      else next.add(t);
+      try {
+        window.localStorage.setItem(
+          LS_KEY_ACTION_FILTERS,
+          JSON.stringify(Array.from(next))
+        );
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  }
+
+  function setOlderCollapsedPersisted(v: boolean) {
+    setOlderCollapsed(v);
+    try {
+      window.localStorage.setItem(LS_KEY_OLDER_COLLAPSED, v ? "1" : "0");
+    } catch {
+      /* ignore */
+    }
+  }
+
   function scrollToActions() {
     actionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
@@ -187,10 +290,11 @@ export default function DashboardPage({ data }: { data: Dashboard }) {
         </p>
       </div>
 
-      {/* KPI Cards: 3 */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      {/* KPI Cards: 4 */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <OccupancyCard snapshots={kpi.occupancy3Months} />
         <MonthlyRentCard rent={kpi.monthlyRent} />
+        <NewBookingsCard newBookings={newBookings} />
         <KpiCard
           icon={<ClipboardList className="w-4 h-4" />}
           label="Action items"
@@ -200,6 +304,9 @@ export default function DashboardPage({ data }: { data: Dashboard }) {
           onClick={kpi.totalActionItems > 0 ? scrollToActions : undefined}
         />
       </div>
+
+      {/* Booking conversion funnel for the current month */}
+      <BookingFunnelSection funnel={funnel} />
 
       {/* Availability */}
       <div>
@@ -235,23 +342,36 @@ export default function DashboardPage({ data }: { data: Dashboard }) {
             Action items
             {kpi.totalActionItems > 0 && ` · ${kpi.totalActionItems}`}
           </h2>
-          <ActionTypesLegend items={actionItems} />
+          <ActionTypesLegend
+            items={actionItems}
+            hiddenTypes={hiddenTypes}
+            onToggleType={toggleType}
+          />
         </div>
         {(() => {
           // Bucket each item by urgency so the admin reads top-down.
+          type RowAction =
+            | { kind: "retryRent"; rentPaymentId: string }
+            | { kind: "markSent"; rentPaymentId: string; stage: "reminder1" | "mahnung1" | "mahnung2" };
           type Row = {
             key: string;
+            type: ActionTypeKey;
             accent: "info" | "warn" | "danger";
             label: string;
             detail: string;
+            hoverDetail?: string;
             href: string;
-            // Sort key within its bucket — smaller = more urgent first.
             sortKey: number;
+            tenantKey?: string;
+            tenantName?: string;
+            isNewToday?: boolean;
+            actions?: RowAction[];
           };
           const today: Row[] = [];
           const thisWeek: Row[] = [];
           const older: Row[] = [];
           const nowTs = Date.now();
+          const ONE_DAY = 24 * 60 * 60 * 1000;
 
           // Deposit deadlines are always <24h per query → Today. Sort by
           // hours left ascending.
@@ -259,189 +379,297 @@ export default function DashboardPage({ data }: { data: Dashboard }) {
             const h = hoursUntil(b.deadline) ?? 99;
             today.push({
               key: `dep-${b.id}`,
+              type: "depositDeadline",
               accent: "warn",
               label: "Deposit deadline soon",
               detail: `${b.name} · ${h}h left`,
+              hoverDetail: `Kaution-Deadline läuft in ${h}h ab. Bei Nichtzahlung verfällt die Reservierung.`,
               href: "/admin/bookings",
               sortKey: h,
+              tenantKey: `b-${b.id}`,
+              tenantName: b.name,
+              isNewToday: h <= 24,
             });
           }
-          // Mahnung 2 — most severe, always Today + danger.
           for (const r of actionItems.dunningMahnung2) {
-            const monthTs = new Date(r.month).getTime();
-            const daysOpen = Math.floor((nowTs - monthTs) / (24 * 60 * 60 * 1000));
+            const daysOpen = Math.floor((nowTs - new Date(r.month).getTime()) / ONE_DAY);
             today.push({
               key: `m2-${r.id}`,
+              type: "mahnung2",
               accent: "danger",
-              label: "2. Mahnung + Kündigungsandrohung due",
+              label: "2. Mahnung + Kündigungsandrohung",
               detail: `${r.tenantName} · ${fmtMonth(r.month)} · ${fmtEuro(r.amount)} · ${daysOpen}d overdue`,
+              hoverDetail: `Miete seit ${daysOpen} Tagen offen. Letzte Mahnungs-Stufe vor Kündigung.`,
               href: `/admin/tenants/${r.tenantId}`,
-              sortKey: -daysOpen, // most overdue first
+              sortKey: -daysOpen,
+              tenantKey: `t-${r.tenantId}`,
+              tenantName: r.tenantName,
+              isNewToday: daysOpen === 30,
+              actions: [{ kind: "markSent", rentPaymentId: r.id, stage: "mahnung2" }],
             });
           }
-          // Mahnung 1 → Today, warn.
           for (const r of actionItems.dunningMahnung1) {
-            const monthTs = new Date(r.month).getTime();
-            const daysOpen = Math.floor((nowTs - monthTs) / (24 * 60 * 60 * 1000));
+            const daysOpen = Math.floor((nowTs - new Date(r.month).getTime()) / ONE_DAY);
             today.push({
               key: `m1-${r.id}`,
+              type: "mahnung1",
               accent: "warn",
               label: "1. Mahnung due",
               detail: `${r.tenantName} · ${fmtMonth(r.month)} · ${fmtEuro(r.amount)} · ${daysOpen}d overdue`,
+              hoverDetail: `Miete seit ${daysOpen} Tagen offen. Erste formelle Mahnung fällig.`,
               href: `/admin/tenants/${r.tenantId}`,
-              sortKey: -daysOpen + 100, // after M2
+              sortKey: -daysOpen + 100,
+              tenantKey: `t-${r.tenantId}`,
+              tenantName: r.tenantName,
+              isNewToday: daysOpen === 14,
+              actions: [{ kind: "markSent", rentPaymentId: r.id, stage: "mahnung1" }],
             });
           }
-          // Reminder 1 → This week, info.
           for (const r of actionItems.dunningReminder1) {
-            const monthTs = new Date(r.month).getTime();
-            const daysOpen = Math.floor((nowTs - monthTs) / (24 * 60 * 60 * 1000));
+            const daysOpen = Math.floor((nowTs - new Date(r.month).getTime()) / ONE_DAY);
             thisWeek.push({
               key: `r1-${r.id}`,
+              type: "reminder1",
               accent: "info",
               label: "Zahlungserinnerung due",
               detail: `${r.tenantName} · ${fmtMonth(r.month)} · ${fmtEuro(r.amount)} · ${daysOpen}d open`,
+              hoverDetail: `Freundliche Erinnerung. Mahnungs-Eskalation startet ab Tag 14.`,
               href: `/admin/tenants/${r.tenantId}`,
               sortKey: -daysOpen,
+              tenantKey: `t-${r.tenantId}`,
+              tenantName: r.tenantName,
+              isNewToday: daysOpen === 3,
+              actions: [{ kind: "markSent", rentPaymentId: r.id, stage: "reminder1" }],
             });
           }
-          // Failed rents: this month → Today; older → Older bucket.
           for (const r of actionItems.failedRents) {
-            const monthTs = new Date(r.month).getTime();
-            const daysOld = Math.floor((nowTs - monthTs) / (24 * 60 * 60 * 1000));
+            const daysOld = Math.floor((nowTs - new Date(r.month).getTime()) / ONE_DAY);
             const row: Row = {
               key: `rent-${r.id}`,
+              type: "failedRent",
               accent: "danger",
               label: "Failed rent charge",
-              detail: `${r.tenantName} · ${fmtMonth(r.month)} · ${fmtEuro(
-                r.amount
-              )}${r.failureReason ? ` · ${r.failureReason}` : ""}`,
+              detail: `${r.tenantName} · ${fmtMonth(r.month)} · ${fmtEuro(r.amount)}${r.failureReason ? ` · ${r.failureReason}` : ""}`,
+              hoverDetail: r.failureReason
+                ? `Stripe-Grund: ${r.failureReason}`
+                : "SEPA-Einzug fehlgeschlagen. Grund nicht geloggt.",
               href: `/admin/tenants/${r.tenantId}`,
               sortKey: -daysOld,
+              tenantKey: `t-${r.tenantId}`,
+              tenantName: r.tenantName,
+              isNewToday: daysOld <= 1,
+              actions: [{ kind: "retryRent", rentPaymentId: r.id }],
             };
             if (daysOld <= 30) today.push(row);
             else older.push(row);
           }
-          // Missing payment method: moveIn in ≤3d → Today; else → This week.
           for (const t of actionItems.missingSepa) {
-            const days = Math.floor(
-              (new Date(t.moveIn).getTime() - nowTs) / (24 * 60 * 60 * 1000)
-            );
+            const days = Math.floor((new Date(t.moveIn).getTime() - nowTs) / ONE_DAY);
             const row: Row = {
               key: `pay-${t.id}`,
+              type: "missingSepa",
               accent: "warn",
               label: "No payment method yet",
               detail: `${t.name} · ${t.room} · move-in ${fmtDate(t.moveIn)}`,
+              hoverDetail: `Mieter zieht in ${days}d ein ohne Zahlungsmethode — erster Einzug schlägt fehl.`,
               href: `/admin/tenants/${t.id}`,
-              sortKey: days, // soonest move-in first
+              sortKey: days,
+              tenantKey: `t-${t.id}`,
+              tenantName: t.name,
             };
             if (days <= 3) today.push(row);
             else thisWeek.push(row);
           }
-          // Settlements: <14d → This week; 14-30d → This week warn; >30d → Older (danger).
           for (const t of actionItems.settlementsPending) {
             const d = daysSince(t.moveOut) ?? 0;
             const row: Row = {
               key: `settle-${t.id}`,
+              type: "settlement",
               accent: d > 30 ? "danger" : d > 14 ? "warn" : "info",
               label: "Deposit settlement pending",
               detail: `${t.name} · ${t.room} · moved out ${d}d ago`,
+              hoverDetail: `Mieter ausgezogen, Kaution-Settlement offen. Über /admin/deposits abrechnen.`,
               href: `/admin/tenants/${t.id}`,
               sortKey: -d,
+              tenantKey: `t-${t.id}`,
+              tenantName: t.name,
+              isNewToday: d === 0,
             };
             if (d > 30) older.push(row);
             else thisWeek.push(row);
           }
 
-          // Sort each bucket by sortKey (urgent first).
-          today.sort((a, b) => a.sortKey - b.sortKey);
-          thisWeek.sort((a, b) => a.sortKey - b.sortKey);
-          older.sort((a, b) => a.sortKey - b.sortKey);
+          // Filter by hidden types + sort by urgency
+          const filterAndSort = (rs: Row[]) =>
+            rs
+              .filter((r) => !hiddenTypes.has(r.type))
+              .sort((a, b) => a.sortKey - b.sortKey);
+          const todayFiltered = filterAndSort(today);
+          const thisWeekFiltered = filterAndSort(thisWeek);
+          const olderFiltered = filterAndSort(older);
 
           return (
             <div className="space-y-3">
-              <ActionBucket title="Today" items={today} emptyDone />
-              <ActionBucket title="This week" items={thisWeek} emptyDone />
-              <ActionBucket title="Older" items={older} />
+              <ActionBucket title="Today" items={todayFiltered} emptyDone />
+              <ActionBucket title="This week" items={thisWeekFiltered} emptyDone />
+              <ActionBucket
+                title="Older"
+                items={olderFiltered}
+                collapsed={olderCollapsed}
+                onToggleCollapse={() => setOlderCollapsedPersisted(!olderCollapsed)}
+              />
             </div>
           );
         })()}
       </div>
 
-      {/* Notice pipeline — revenue at risk in next 90 days */}
-      {noticePipeline.length > 0 && (
+      {/* Vacancy pipeline — free rooms now + moveOuts in next 30 days */}
+      {vacancyPipeline.length > 0 && (
         <div>
           <div className="flex items-baseline justify-between mb-3 flex-wrap gap-2">
             <div>
-              <h2 className="text-sm font-semibold">Notice pipeline · next 90 days</h2>
+              <h2 className="text-sm font-semibold">Vacancy pipeline · next 30 days</h2>
               <p className="text-xs text-gray mt-0.5">
-                Kündigungen wo noch <strong>kein Nachmieter</strong> gefunden
-                ist — planbare Einnahmen-Lücken.
+                Freie Zimmer jetzt + Kündigungen ohne Nachmieter — planbare
+                Einnahmen-Lücken.
               </p>
             </div>
             <div className="text-xs text-gray tabular-nums">
               €
               {(
-                noticePipeline.reduce((s, n) => s + n.monthlyRent, 0) / 100
+                vacancyPipeline.reduce((s, n) => s + n.monthlyRent, 0) / 100
               ).toLocaleString("de-DE")}{" "}
               MRR at risk
             </div>
           </div>
           <Card>
             <div className="divide-y divide-lightgray">
-              {noticePipeline.map((n) => (
-                <Link
-                  key={n.id}
-                  href={`/admin/tenants/${n.id}`}
-                  className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-background-alt transition-colors"
-                >
-                  <div className="flex items-start gap-3 flex-1 min-w-0">
-                    <LogOut className="w-4 h-4 mt-0.5 text-orange-600 flex-shrink-0" />
-                    <div className="min-w-0">
-                      <div className="text-sm font-medium text-black truncate">
-                        {n.name}
-                      </div>
-                      <div className="text-xs text-gray truncate">
-                        {n.room} · leaves {fmtDate(n.moveOut)}
-                        {n.daysAway <= 14 && (
-                          <span className="ml-2 text-orange-600 font-medium">
-                            in {n.daysAway}d
-                          </span>
-                        )}
+              {vacancyPipeline.map((n) => {
+                const isVacant = n.kind === "vacant_now";
+                const href = isVacant
+                  ? "/admin/rooms"
+                  : `/admin/tenants/${n.id.replace(/^tenant-/, "")}`;
+                return (
+                  <Link
+                    key={n.id}
+                    href={href}
+                    className={`flex items-center justify-between gap-3 px-4 py-3 hover:bg-background-alt transition-colors border-l-4 ${
+                      isVacant ? "border-l-red-500" : "border-l-orange-400"
+                    }`}
+                  >
+                    <div className="flex items-start gap-3 flex-1 min-w-0">
+                      <LogOut
+                        className={`w-4 h-4 mt-0.5 flex-shrink-0 ${isVacant ? "text-red-600" : "text-orange-600"}`}
+                      />
+                      <div className="min-w-0">
+                        <div className="text-sm font-medium text-black truncate flex items-center gap-2">
+                          {n.label}
+                          {isVacant ? (
+                            <span className="inline-block px-1.5 py-0.5 rounded-[5px] text-[10px] uppercase tracking-wide bg-red-100 text-red-700 font-semibold">
+                              Vacant now
+                            </span>
+                          ) : n.daysAway <= 14 ? (
+                            <span className="inline-block px-1.5 py-0.5 rounded-[5px] text-[10px] uppercase tracking-wide bg-orange-100 text-orange-700 font-semibold">
+                              in {n.daysAway}d
+                            </span>
+                          ) : null}
+                        </div>
+                        <div className="text-xs text-gray truncate">
+                          {n.room}
+                          {isVacant
+                            ? ""
+                            : ` · leaves ${fmtDate(n.moveOut)}`}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  <div className="text-xs tabular-nums text-gray flex-shrink-0">
-                    {fmtEuro(n.monthlyRent)}/mo
-                  </div>
-                  <ArrowRight className="w-4 h-4 text-gray" />
-                </Link>
-              ))}
+                    <div className="text-xs tabular-nums text-gray flex-shrink-0">
+                      {fmtEuro(n.monthlyRent)}/mo
+                    </div>
+                    <ArrowRight className="w-4 h-4 text-gray" />
+                  </Link>
+                );
+              })}
             </div>
           </Card>
         </div>
       )}
 
-      {/* Move-ins / Move-outs next 4 weeks */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* Open Defects — maintenance pipeline */}
+      <OpenDefectsSection defects={openDefects} />
+
+      {/* Upcoming move-ins next 4 weeks — operational heads-up */}
+      <div>
+        <h2 className="text-sm font-semibold mb-3">
+          Upcoming move-ins · next 4 weeks
+        </h2>
         <Card>
-          <CardHeader
-            title="Move-ins · next 4 weeks"
-            icon={<Calendar className="w-4 h-4" />}
+          <ScheduleList
+            items={schedule.moveIns}
+            emptyText="No move-ins in the next 4 weeks"
           />
-          <ScheduleList items={schedule.moveIns} emptyText="No move-ins in the next 4 weeks" />
-        </Card>
-        <Card>
-          <CardHeader
-            title="Move-outs · next 4 weeks"
-            icon={<Calendar className="w-4 h-4" />}
-          />
-          <ScheduleList items={schedule.moveOuts} emptyText="No move-outs in the next 4 weeks" />
         </Card>
       </div>
+
+      {/* Activity feed — last 15 admin actions across the team */}
+      <ActivityFeedSection items={activityFeed} />
     </div>
   );
 }
+
+// Action-type metadata (icon + label + color). One source of truth for
+// the legend, the row icon, and anything that needs a type lookup.
+type ActionTypeKey =
+  | "depositDeadline"
+  | "mahnung2"
+  | "mahnung1"
+  | "reminder1"
+  | "failedRent"
+  | "missingSepa"
+  | "settlement";
+
+const ACTION_TYPE_META: Record<
+  ActionTypeKey,
+  { label: string; icon: React.ComponentType<{ className?: string }>; accent: string }
+> = {
+  depositDeadline: {
+    label: "Deposit deadline",
+    icon: Clock,
+    accent: "bg-orange-100 text-orange-700",
+  },
+  mahnung2: {
+    label: "2. Mahnung",
+    icon: AlertOctagon,
+    accent: "bg-red-100 text-red-700",
+  },
+  mahnung1: {
+    label: "1. Mahnung",
+    icon: MailWarning,
+    accent: "bg-orange-100 text-orange-700",
+  },
+  reminder1: {
+    label: "Zahlungserinnerung",
+    icon: BellRing,
+    accent: "bg-yellow-100 text-yellow-700",
+  },
+  failedRent: {
+    label: "Failed rent",
+    icon: CreditCard,
+    accent: "bg-red-100 text-red-700",
+  },
+  missingSepa: {
+    label: "No payment method",
+    icon: UserX,
+    accent: "bg-orange-100 text-orange-700",
+  },
+  settlement: {
+    label: "Settlement pending",
+    icon: PiggyBank,
+    accent: "bg-blue-100 text-blue-700",
+  },
+};
+
+const LS_KEY_ACTION_FILTERS = "stacey-admin-action-filters-v1";
+const LS_KEY_OLDER_COLLAPSED = "stacey-admin-older-collapsed-v1";
 
 // Categories bookable for 2 persons per product rule (CLAUDE.md §Booking).
 const COUPLES_ALLOWED = new Set([
@@ -839,6 +1067,230 @@ function AvailabilityTable({
   );
 }
 
+function NewBookingsCard({
+  newBookings,
+}: {
+  newBookings: Dashboard["newBookings"];
+}) {
+  return (
+    <div className="bg-white rounded-[5px] border border-lightgray p-4">
+      <div className="flex items-center gap-2 text-xs text-gray uppercase tracking-wide">
+        <Sparkles className="w-4 h-4" />
+        New bookings
+      </div>
+      <div className="mt-2 grid grid-cols-2 gap-2">
+        <div className="border-r border-lightgray pr-2">
+          <div className="text-[10px] uppercase tracking-wide text-gray">Today</div>
+          <div className="text-xl font-bold text-black tabular-nums mt-0.5">
+            {newBookings.todayCount}
+          </div>
+          <div className="text-[11px] text-gray tabular-nums mt-0.5">
+            +{fmtEuro(newBookings.todayFeesCollected)} fees
+          </div>
+        </div>
+        <div>
+          <div className="text-[10px] uppercase tracking-wide text-gray">This week</div>
+          <div className="text-xl font-bold text-black tabular-nums mt-0.5">
+            {newBookings.weekCount}
+          </div>
+          <div className="text-[11px] text-gray tabular-nums mt-0.5">
+            +{fmtEuro(newBookings.weekFeesCollected)} fees
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Booking conversion funnel for the current month. Visualises how many
+ *  bookings made it to each stage. Drop-offs between stages reveal where
+ *  people churn. */
+function BookingFunnelSection({
+  funnel,
+}: {
+  funnel: Dashboard["funnel"];
+}) {
+  if (funnel.total === 0) return null;
+  const stages = [
+    { key: "total", label: "Started", count: funnel.total },
+    { key: "feePaid", label: "Booking fee paid", count: funnel.bookingFeePaid },
+    { key: "signed", label: "Contract signed", count: funnel.contractSigned },
+    { key: "depositPaid", label: "Deposit paid", count: funnel.depositPaid },
+    { key: "converted", label: "Tenant", count: funnel.convertedToTenant },
+  ];
+  return (
+    <div>
+      <h2 className="text-sm font-semibold mb-3">
+        Booking funnel · this month
+      </h2>
+      <Card>
+        <div className="p-4">
+          <div className="flex items-stretch gap-1">
+            {stages.map((s, i) => {
+              const pct = funnel.total > 0 ? (s.count / funnel.total) * 100 : 0;
+              const next = stages[i + 1];
+              const dropOff =
+                next && s.count > 0
+                  ? Math.round(((s.count - next.count) / s.count) * 100)
+                  : 0;
+              return (
+                <div key={s.key} className="flex-1 min-w-0 flex flex-col">
+                  <div className="text-[10px] uppercase tracking-wide text-gray truncate">
+                    {s.label}
+                  </div>
+                  <div
+                    className="mt-1 relative rounded-[5px] bg-background-alt overflow-hidden"
+                    style={{ height: 36 }}
+                  >
+                    <div
+                      className="absolute inset-y-0 left-0 bg-black"
+                      style={{ width: `${pct}%` }}
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center text-sm font-bold text-white mix-blend-difference">
+                      {s.count}
+                    </div>
+                  </div>
+                  {next && (
+                    <div className="text-[10px] text-gray mt-0.5 tabular-nums">
+                      {dropOff > 0 ? `−${dropOff}% drop` : "→"}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+function OpenDefectsSection({
+  defects,
+}: {
+  defects: Dashboard["openDefects"];
+}) {
+  if (defects.length === 0) return null;
+  const totalAmount = defects.reduce((s, d) => s + d.amount, 0);
+  return (
+    <div>
+      <div className="flex items-baseline justify-between mb-3 flex-wrap gap-2">
+        <h2 className="text-sm font-semibold">Open defects · {defects.length}</h2>
+        <span className="text-xs text-gray tabular-nums">
+          Total deductions: {fmtEuro(totalAmount)}
+        </span>
+      </div>
+      <Card>
+        <div className="divide-y divide-lightgray">
+          {defects.slice(0, 8).map((d) => (
+            <Link
+              key={d.id}
+              href={`/admin/tenants/${d.tenantId}`}
+              className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-background-alt"
+            >
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium text-black truncate">
+                  {d.description}
+                </div>
+                <div className="text-xs text-gray truncate">
+                  {d.room} · {d.tenantName}
+                  {d.movedOut && (
+                    <span className="ml-2 text-orange-600">moved out</span>
+                  )}
+                  {d.photos > 0 && (
+                    <span className="ml-2">· {d.photos} photo{d.photos === 1 ? "" : "s"}</span>
+                  )}
+                </div>
+              </div>
+              <div className="text-xs tabular-nums text-red-600 flex-shrink-0">
+                −{fmtEuro(d.amount)}
+              </div>
+              <ArrowRight className="w-4 h-4 text-gray flex-shrink-0" />
+            </Link>
+          ))}
+          {defects.length > 8 && (
+            <div className="px-4 py-2 text-xs text-gray text-center">
+              +{defects.length - 8} more
+            </div>
+          )}
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+/** Activity feed — last ~15 admin actions across the team. Uses the
+ *  existing AuditLog rows. Gives the team visibility into what others
+ *  are doing right now (reduces duplicate work / step-on-toes). */
+function ActivityFeedSection({
+  items,
+}: {
+  items: Dashboard["activityFeed"];
+}) {
+  if (items.length === 0) return null;
+  return (
+    <div>
+      <div className="flex items-baseline justify-between mb-3">
+        <h2 className="text-sm font-semibold">Recent team activity</h2>
+        <Link
+          href="/admin/audit"
+          className="text-xs text-gray hover:text-black"
+        >
+          Full audit log &rarr;
+        </Link>
+      </div>
+      <Card>
+        <div className="divide-y divide-lightgray">
+          {items.map((a) => {
+            const href = a.entityId
+              ? a.entityType === "tenant"
+                ? `/admin/tenants/${a.entityId}`
+                : a.entityType === "booking"
+                  ? `/admin/bookings`
+                  : "/admin/audit"
+              : "/admin/audit";
+            return (
+              <Link
+                key={a.id}
+                href={href}
+                className="flex items-center justify-between gap-3 px-4 py-2 hover:bg-background-alt"
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm text-black truncate">
+                    {a.summary ?? `${a.module} · ${a.action}`}
+                  </div>
+                  <div className="text-[11px] text-gray">
+                    {a.module} · {a.action}
+                  </div>
+                </div>
+                <div className="text-[11px] text-gray tabular-nums flex-shrink-0">
+                  {relativeTime(a.at)}
+                </div>
+              </Link>
+            );
+          })}
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+/** "3m ago", "2h ago", "yesterday" — compact timestamps for the feed. */
+function relativeTime(iso: string): string {
+  const ms = Date.now() - new Date(iso).getTime();
+  const m = Math.floor(ms / 60000);
+  if (m < 1) return "just now";
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  const d = Math.floor(h / 24);
+  if (d < 7) return `${d}d ago`;
+  return new Date(iso).toLocaleDateString("de-DE", {
+    day: "2-digit",
+    month: "2-digit",
+  });
+}
+
 function OccupancyCard({
   snapshots,
 }: {
@@ -969,23 +1421,38 @@ function Card({ children }: { children: React.ReactNode }) {
   );
 }
 
+type ActionRowRich = {
+  key: string;
+  type: ActionTypeKey;
+  accent: "info" | "warn" | "danger";
+  label: string;
+  detail: string;
+  hoverDetail?: string;
+  href: string;
+  sortKey: number;
+  tenantKey?: string;
+  tenantName?: string;
+  isNewToday?: boolean;
+  actions?: (
+    | { kind: "retryRent"; rentPaymentId: string }
+    | { kind: "markSent"; rentPaymentId: string; stage: "reminder1" | "mahnung1" | "mahnung2" }
+  )[];
+};
+
 function ActionBucket({
   title,
   items,
   emptyDone,
+  collapsed,
+  onToggleCollapse,
 }: {
   title: string;
-  items: {
-    key: string;
-    accent: "info" | "warn" | "danger";
-    label: string;
-    detail: string;
-    href: string;
-  }[];
-  /** When true and items is empty, render a cheerful "done" card instead
-   *  of hiding the bucket. Good for "Today" / "This week" so admins see
-   *  positive completion. */
+  items: ActionRowRich[];
   emptyDone?: boolean;
+  /** Optional collapse support — when provided, renders a toggle chevron
+   *  and hides the list until clicked. Used for "Older" bucket. */
+  collapsed?: boolean;
+  onToggleCollapse?: () => void;
 }) {
   if (items.length === 0) {
     if (!emptyDone) return null;
@@ -996,72 +1463,327 @@ function ActionBucket({
         </div>
         <Card>
           <div className="px-4 py-3 text-sm text-green-700 flex items-center gap-2">
-            <span className="text-base">✓</span> All caught up.
+            <Sparkles className="w-4 h-4" /> All caught up.
           </div>
         </Card>
       </div>
     );
   }
   const urgent = items.filter((i) => i.accent === "danger").length;
+  const groups = groupRowsByTenant(items);
+  const canCollapse = typeof onToggleCollapse === "function";
+  const isCollapsed = canCollapse && collapsed;
+
   return (
     <div>
       <div className="text-[11px] uppercase tracking-wider text-gray font-semibold mb-1.5 px-1 flex items-center gap-1.5">
-        <span>
-          {title} · {items.length}
-        </span>
+        {canCollapse ? (
+          <button
+            type="button"
+            onClick={onToggleCollapse}
+            className="inline-flex items-center gap-1 hover:text-black"
+          >
+            {isCollapsed ? (
+              <ChevronRight className="w-3 h-3" />
+            ) : (
+              <ChevronDown className="w-3 h-3" />
+            )}
+            <span>
+              {title} · {items.length}
+            </span>
+          </button>
+        ) : (
+          <span>
+            {title} · {items.length}
+          </span>
+        )}
         {urgent > 0 && (
           <span className="normal-case tracking-normal text-red-600 font-semibold">
             ({urgent} urgent)
           </span>
         )}
       </div>
-      <Card>
-        <div className="divide-y divide-lightgray">
-          {items.map((r) => (
-            <ActionRow
-              key={r.key}
-              accent={r.accent}
-              label={r.label}
-              detail={r.detail}
-              href={r.href}
-            />
-          ))}
-        </div>
-      </Card>
+      {!isCollapsed && (
+        <Card>
+          <div className="divide-y divide-lightgray">
+            {groups.map((g) =>
+              g.rows.length === 1 ? (
+                <ActionItemRow key={g.rows[0].key} row={g.rows[0]} />
+              ) : (
+                <GroupedTenantRows key={g.key} group={g} />
+              )
+            )}
+          </div>
+        </Card>
+      )}
     </div>
   );
 }
 
-/** Small inline overview of every action type we monitor with live
- *  counts. Gives admins a one-glance "what's being watched" without
- *  hunting through the buckets below. Zeros intentionally shown —
- *  seeing "0" confirms the system is checking. */
+/** Group rows by tenantKey. Groups with 2+ rows collapse visually into
+ *  one header row per tenant that expands on click. */
+function groupRowsByTenant(rows: ActionRowRich[]) {
+  const map = new Map<string, ActionRowRich[]>();
+  const ordered: string[] = [];
+  for (const r of rows) {
+    const key = r.tenantKey ?? r.key; // standalone if no tenantKey
+    if (!map.has(key)) {
+      map.set(key, []);
+      ordered.push(key);
+    }
+    map.get(key)!.push(r);
+  }
+  return ordered.map((k) => ({
+    key: k,
+    rows: map.get(k)!,
+    tenantName: map.get(k)![0].tenantName,
+    // Most severe accent in the group
+    worstAccent: map
+      .get(k)!
+      .reduce<"info" | "warn" | "danger">(
+        (a, b) =>
+          b.accent === "danger"
+            ? "danger"
+            : b.accent === "warn" && a !== "danger"
+              ? "warn"
+              : a,
+        "info"
+      ),
+  }));
+}
+
+function GroupedTenantRows({
+  group,
+}: {
+  group: {
+    key: string;
+    rows: ActionRowRich[];
+    tenantName?: string;
+    worstAccent: "info" | "warn" | "danger";
+  };
+}) {
+  const [open, setOpen] = useState(false);
+  const accent = group.worstAccent;
+  const border =
+    accent === "danger"
+      ? "border-l-red-500"
+      : accent === "warn"
+        ? "border-l-orange-500"
+        : "border-l-blue-400";
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className={`w-full text-left flex items-center justify-between gap-3 px-4 py-3 hover:bg-background-alt border-l-4 ${border}`}
+      >
+        <div className="flex items-center gap-2 min-w-0">
+          {open ? (
+            <ChevronDown className="w-4 h-4 text-gray flex-shrink-0" />
+          ) : (
+            <ChevronRight className="w-4 h-4 text-gray flex-shrink-0" />
+          )}
+          <div className="min-w-0">
+            <div className="text-sm font-medium text-black truncate">
+              {group.tenantName ?? "—"}
+            </div>
+            <div className="text-xs text-gray">
+              {group.rows.length} issues · {group.rows.map((r) => ACTION_TYPE_META[r.type].label).join(" · ")}
+            </div>
+          </div>
+        </div>
+        <span className="text-xs text-gray">Expand</span>
+      </button>
+      {open && (
+        <div className="bg-background-alt/30 divide-y divide-lightgray/60">
+          {group.rows.map((r) => (
+            <div key={r.key} className="pl-4">
+              <ActionItemRow row={r} />
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** A single action row. Renders icon, label, detail, new-today marker,
+ *  inline action buttons, link-to-open arrow. */
+function ActionItemRow({ row }: { row: ActionRowRich }) {
+  const router = useRouter();
+  const meta = ACTION_TYPE_META[row.type];
+  const Icon = meta.icon;
+  const [busy, setBusy] = useState(false);
+
+  const borderClass =
+    row.accent === "danger"
+      ? "border-l-red-500"
+      : row.accent === "warn"
+        ? "border-l-orange-500"
+        : "border-l-blue-400";
+
+  async function runAction(
+    a: NonNullable<ActionRowRich["actions"]>[number]
+  ) {
+    if (a.kind === "markSent") {
+      const label =
+        a.stage === "reminder1"
+          ? "Zahlungserinnerung"
+          : a.stage === "mahnung1"
+            ? "1. Mahnung"
+            : "2. Mahnung + Kündigungsandrohung";
+      if (
+        !confirm(
+          `${label} als gesendet markieren? Du musst den Mieter separat informieren (Email / Brief).`
+        )
+      )
+        return;
+      setBusy(true);
+      try {
+        const res = await fetch(
+          `/api/admin/rent-payments/${a.rentPaymentId}/dunning`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ stage: a.stage }),
+          }
+        );
+        if (res.ok) router.refresh();
+        else {
+          const data = await res.json().catch(() => ({}));
+          alert(`Failed: ${data.error ?? res.statusText}`);
+        }
+      } finally {
+        setBusy(false);
+      }
+    } else if (a.kind === "retryRent") {
+      if (
+        !confirm(
+          "SEPA-Einzug erneut versuchen? Das löst eine neue Zahlungsanforderung aus."
+        )
+      )
+        return;
+      setBusy(true);
+      try {
+        const res = await fetch(
+          `/api/admin/rent-payments/${a.rentPaymentId}/retry`,
+          { method: "POST" }
+        );
+        const data = await res.json().catch(() => ({}));
+        if (res.ok) {
+          alert(data.message ?? "Retry ausgelöst.");
+          router.refresh();
+        } else {
+          alert(`Failed: ${data.error ?? res.statusText}`);
+        }
+      } finally {
+        setBusy(false);
+      }
+    }
+  }
+
+  return (
+    <div
+      className={`group flex items-start gap-3 px-4 py-3 hover:bg-background-alt border-l-4 ${borderClass} relative`}
+      title={row.hoverDetail}
+    >
+      <div className={`p-1.5 rounded-[5px] ${meta.accent} flex-shrink-0 mt-0.5`}>
+        <Icon className="w-3.5 h-3.5" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-sm font-medium text-black">{row.label}</span>
+          {row.isNewToday && (
+            <span className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded-[5px] bg-pink-100 text-pink-700 font-semibold">
+              new
+            </span>
+          )}
+        </div>
+        <div className="text-xs text-gray mt-0.5 truncate">{row.detail}</div>
+      </div>
+      <div className="flex items-center gap-2 flex-shrink-0">
+        {row.actions?.map((a, i) => {
+          const label =
+            a.kind === "retryRent" ? "Retry" : "Mark sent";
+          const ActionIcon = a.kind === "retryRent" ? RotateCcw : Send;
+          return (
+            <button
+              key={i}
+              type="button"
+              onClick={() => void runAction(a)}
+              disabled={busy}
+              className="inline-flex items-center gap-1 px-2 py-1 text-xs rounded-[5px] border border-lightgray bg-white hover:border-black disabled:opacity-40"
+              title={label}
+            >
+              <ActionIcon className="w-3 h-3" />
+              {label}
+            </button>
+          );
+        })}
+        <button
+          type="button"
+          onClick={() => router.push(row.href)}
+          className="p-1 text-gray hover:text-black"
+          aria-label="Open"
+        >
+          <ArrowRight className="w-4 h-4" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/** Small inline overview of every action type with live counts. Now
+ *  clickable — clicking a badge hides items of that type. Hidden state
+ *  is indicated with a strikethrough and persisted via localStorage. */
 function ActionTypesLegend({
   items,
+  hiddenTypes,
+  onToggleType,
 }: {
   items: Dashboard["actionItems"];
+  hiddenTypes: Set<ActionTypeKey>;
+  onToggleType: (t: ActionTypeKey) => void;
 }) {
-  const types: { label: string; count: number; accent: string }[] = [
-    { label: "Deposit deadline", count: items.depositTimeoutSoon.length, accent: "bg-orange-100 text-orange-700" },
-    { label: "2. Mahnung", count: items.dunningMahnung2.length, accent: "bg-red-100 text-red-700" },
-    { label: "1. Mahnung", count: items.dunningMahnung1.length, accent: "bg-orange-100 text-orange-700" },
-    { label: "Zahlungserinnerung", count: items.dunningReminder1.length, accent: "bg-yellow-100 text-yellow-700" },
-    { label: "Failed rent", count: items.failedRents.length, accent: "bg-red-100 text-red-700" },
-    { label: "No payment method", count: items.missingSepa.length, accent: "bg-orange-100 text-orange-700" },
-    { label: "Settlement pending", count: items.settlementsPending.length, accent: "bg-blue-100 text-blue-700" },
+  const entries: { key: ActionTypeKey; count: number }[] = [
+    { key: "depositDeadline", count: items.depositTimeoutSoon.length },
+    { key: "mahnung2", count: items.dunningMahnung2.length },
+    { key: "mahnung1", count: items.dunningMahnung1.length },
+    { key: "reminder1", count: items.dunningReminder1.length },
+    { key: "failedRent", count: items.failedRents.length },
+    { key: "missingSepa", count: items.missingSepa.length },
+    { key: "settlement", count: items.settlementsPending.length },
   ];
   return (
     <div className="flex items-center gap-1.5 flex-wrap">
-      {types.map((t) => (
-        <span
-          key={t.label}
-          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-[5px] text-[10px] font-medium ${t.count > 0 ? t.accent : "bg-background-alt text-gray"}`}
-          title={`${t.label} (${t.count})`}
-        >
-          {t.label}
-          <span className="tabular-nums">{t.count}</span>
-        </span>
-      ))}
+      {entries.map((e) => {
+        const meta = ACTION_TYPE_META[e.key];
+        const hidden = hiddenTypes.has(e.key);
+        const Icon = meta.icon;
+        return (
+          <button
+            key={e.key}
+            type="button"
+            onClick={() => onToggleType(e.key)}
+            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-[5px] text-[10px] font-medium transition-opacity ${
+              hidden
+                ? "bg-background-alt text-gray line-through opacity-50"
+                : e.count > 0
+                  ? meta.accent
+                  : "bg-background-alt text-gray"
+            } hover:ring-1 hover:ring-black/20`}
+            title={
+              hidden
+                ? `${meta.label} versteckt — klicken zum Einblenden`
+                : `${meta.label} (${e.count}) — klicken zum Ausblenden`
+            }
+          >
+            <Icon className="w-2.5 h-2.5" />
+            {meta.label}
+            <span className="tabular-nums">{e.count}</span>
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -1080,40 +1802,6 @@ function CardHeader({
         {title}
       </div>
     </div>
-  );
-}
-
-function ActionRow({
-  accent,
-  label,
-  detail,
-  href,
-}: {
-  accent: "warn" | "danger" | "info";
-  label: string;
-  detail: string;
-  href: string;
-}) {
-  const dotClass =
-    accent === "danger"
-      ? "bg-red-500"
-      : accent === "warn"
-        ? "bg-orange-400"
-        : "bg-blue-400";
-  return (
-    <Link
-      href={href}
-      className="flex items-center justify-between px-4 py-3 hover:bg-background-alt text-sm"
-    >
-      <div className="flex items-center gap-3">
-        <span className={`w-2 h-2 rounded-full ${dotClass}`} />
-        <div>
-          <div className="font-medium text-black">{label}</div>
-          <div className="text-xs text-gray">{detail}</div>
-        </div>
-      </div>
-      <ArrowRight className="w-4 h-4 text-gray" />
-    </Link>
   );
 }
 

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Plus, Trash2, Edit2, X, Download } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Edit2, X, Download, Mail, ChevronDown } from "lucide-react";
 import WithdrawModal from "../WithdrawModal";
 import DangerZone from "../DangerZone";
 import MoveOutAdjustModal from "../MoveOutAdjustModal";
@@ -267,6 +267,7 @@ export default function TenantFolioPage({
                 Widerruf bearbeiten
               </button>
             )}
+            <ResendEmailDropdown tenantId={tenant.id} />
           </div>
         </div>
       </div>
@@ -1470,6 +1471,88 @@ function PaymentStatusBadge({ status }: { status: string }) {
     <span className={`inline-block px-2 py-0.5 rounded-[5px] text-xs font-semibold ${tone}`}>
       {status}
     </span>
+  );
+}
+
+/** Manual email resend dropdown in the folio header. Lists a hard-coded
+ *  set of templates for the first MVP. Each calls POST
+ *  /api/admin/emails/resend with {templateKey, tenantId}; the server
+ *  validates prerequisites (e.g. open rent for mahnungen, IBAN for
+ *  deposit-return) and returns a 400 with an explanation when blocked. */
+function ResendEmailDropdown({ tenantId }: { tenantId: string }) {
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState<string | null>(null);
+
+  const templates: { key: string; label: string; description: string }[] = [
+    { key: "welcome", label: "Welcome email", description: "nach Move-in" },
+    { key: "payment_setup", label: "Payment setup link", description: "SEPA / Karte einrichten" },
+    { key: "rent_reminder", label: "Rent reminder", description: "offene Miete freundlich" },
+    { key: "mahnung1", label: "1. Mahnung", description: "formelle Mahnung" },
+    { key: "mahnung2", label: "2. Mahnung + Kündigung", description: "letzte Mahnung" },
+    { key: "deposit_return", label: "Deposit settlement", description: "Kautionsabrechnung" },
+  ];
+
+  async function resend(templateKey: string) {
+    if (!confirm(`${templates.find((t) => t.key === templateKey)?.label} an den Mieter senden?`))
+      return;
+    setBusy(templateKey);
+    try {
+      const res = await fetch("/api/admin/emails/resend", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ templateKey, tenantId }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        alert(`✓ Email gesendet an ${data.sentTo}`);
+        setOpen(false);
+      } else {
+        alert(`Fehler: ${data.error ?? res.statusText}`);
+      }
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[5px] text-xs font-medium border border-lightgray hover:bg-background-alt"
+      >
+        <Mail className="w-3.5 h-3.5" />
+        Resend email
+        <ChevronDown className="w-3 h-3" />
+      </button>
+      {open && (
+        <>
+          <div
+            className="fixed inset-0 z-40"
+            onClick={() => setOpen(false)}
+          />
+          <div className="absolute right-0 mt-1 w-64 bg-white border border-lightgray rounded-[5px] shadow-lg z-50">
+            <div className="p-2 border-b border-lightgray text-[10px] uppercase tracking-wider text-gray font-semibold">
+              Email templates
+            </div>
+            <div className="divide-y divide-lightgray">
+              {templates.map((t) => (
+                <button
+                  key={t.key}
+                  onClick={() => resend(t.key)}
+                  disabled={busy !== null}
+                  className="w-full text-left px-3 py-2 hover:bg-background-alt disabled:opacity-50"
+                >
+                  <div className="text-sm font-medium text-black">{t.label}</div>
+                  <div className="text-[11px] text-gray">
+                    {busy === t.key ? "Sending…" : t.description}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+    </div>
   );
 }
 

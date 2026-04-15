@@ -18,7 +18,7 @@ export default async function AdminDashboardPage() {
   const in7Days = new Date(todayStart.getTime() + 7 * 24 * 60 * 60 * 1000);
   const in24h = new Date(now.getTime() + 24 * 60 * 60 * 1000);
   const in28Days = new Date(todayStart.getTime() + 28 * 24 * 60 * 60 * 1000);
-  const in90Days = new Date(todayStart.getTime() + 90 * 24 * 60 * 60 * 1000);
+  const in30Days = new Date(todayStart.getTime() + 30 * 24 * 60 * 60 * 1000);
   const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1);
 
@@ -91,18 +91,79 @@ export default async function AdminDashboardPage() {
       }),
     ]);
 
-  // Batch 3: upcoming schedule
-  const [moveInsUpcoming, moveOutsUpcoming] = await Promise.all([
+  // Batch 3: upcoming move-ins + recent audit + new bookings + defects + funnel
+  const startOfWeek = (() => {
+    const d = new Date(todayStart);
+    const day = d.getDay(); // 0=Sun
+    const diff = day === 0 ? -6 : 1 - day; // make Monday start
+    d.setDate(d.getDate() + diff);
+    return d;
+  })();
+  const [
+    moveInsUpcoming,
+    recentAudit,
+    bookingsToday,
+    bookingsThisWeek,
+    openDefectsRaw,
+    bookingFunnelThisMonth,
+  ] = await Promise.all([
     prisma.tenant.findMany({
       where: { moveIn: { gte: todayStart, lte: in28Days } },
       include: { room: { include: { apartment: { include: { location: true } } } } },
       orderBy: { moveIn: "asc" },
     }),
 
-    prisma.tenant.findMany({
-      where: { moveOut: { gte: todayStart, lte: in28Days } },
-      include: { room: { include: { apartment: { include: { location: true } } } } },
-      orderBy: { moveOut: "asc" },
+    // Recent 15 audit entries — activity feed for team awareness.
+    prisma.auditLog.findMany({
+      orderBy: { at: "desc" },
+      take: 15,
+    }),
+
+    // Bookings created today
+    prisma.booking.findMany({
+      where: { createdAt: { gte: todayStart } },
+      select: { id: true, bookingFeePaidAt: true, monthlyRent: true },
+    }),
+
+    // Bookings created this week (Mon-Sun)
+    prisma.booking.findMany({
+      where: { createdAt: { gte: startOfWeek } },
+      select: { id: true, bookingFeePaidAt: true, monthlyRent: true },
+    }),
+
+    // Open defects (tenant might have moved out or still live there — the
+    // defect is relevant either way for the maintenance ops list).
+    prisma.defect.findMany({
+      include: {
+        tenant: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            moveOut: true,
+            room: {
+              select: {
+                roomNumber: true,
+                apartment: { select: { location: { select: { name: true } } } },
+              },
+            },
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    }),
+
+    // Booking conversion funnel — counts of bookings created THIS MONTH at
+    // each stage of the funnel. Gives admins a view of conversion health.
+    prisma.booking.findMany({
+      where: { createdAt: { gte: currentMonthStart, lt: nextMonthStart } },
+      select: {
+        id: true,
+        bookingFeePaidAt: true,
+        depositPaidAt: true,
+        signatureDocumentId: true,
+        tenant: { select: { id: true } },
+      },
     }),
   ]);
 
@@ -123,12 +184,14 @@ export default async function AdminDashboardPage() {
       },
     }),
 
-    // Notice pipeline: tenants leaving within the next 90 days. We filter
-    // in code to keep only rooms WITHOUT a replacement booking in the
-    // pipeline — those are the real revenue-at-risk items.
+    // Vacancy pipeline: tenants leaving within the next 30 days. We
+    // filter in code to keep only rooms WITHOUT a replacement booking in
+    // the pipeline — those are the real revenue-at-risk items. Currently
+    // vacant rooms (no tenant, no active booking) are derived separately
+    // from roomsAll and merged into the same pipeline.
     prisma.tenant.findMany({
       where: {
-        moveOut: { gte: todayStart, lte: in90Days },
+        moveOut: { gte: todayStart, lte: in30Days },
       },
       include: {
         room: {
@@ -226,36 +289,6 @@ export default async function AdminDashboardPage() {
     }
   }
 
-  // ─── Notice pipeline: keep only rooms without replacement ───────────
-  const noticePipeline = noticePipelineRaw
-    .filter((t) => {
-      if (!t.moveOut || !t.room) return false;
-      const outDate = new Date(t.moveOut).getTime();
-      // Any active booking on this room with moveInDate > current moveOut
-      // means a replacement is already lined up — exclude from pipeline.
-      return !t.room.bookings.some((b) => {
-        if (!b.moveInDate) return false;
-        return new Date(b.moveInDate).getTime() > outDate;
-      });
-    })
-    .map((t) => {
-      const outMs = new Date(t.moveOut!).getTime();
-      const daysAway = Math.max(
-        0,
-        Math.floor((outMs - todayStart.getTime()) / (24 * 60 * 60 * 1000))
-      );
-      return {
-        id: t.id,
-        name: `${t.firstName} ${t.lastName}`,
-        moveOut: t.moveOut,
-        room: t.room
-          ? `${t.room.apartment.location.name} · ${t.room.roomNumber}`
-          : "—",
-        monthlyRent: t.monthlyRent,
-        daysAway,
-      };
-    });
-
   // ─── KPIs ────────────────────────────────────────────────────────────
   // A room is "currently occupied" only if a tenant lives there AND their
   // moveOut isn't already in the past — otherwise the room is functionally
@@ -268,6 +301,69 @@ export default async function AdminDashboardPage() {
 
   const activeRooms = roomsAll.filter((r) => r.status === "ACTIVE");
   const occupiedRooms = activeRooms.filter(isCurrentlyOccupied);
+
+  // ─── Vacancy pipeline: free rooms NOW + moveOuts in next 30 days ───
+  // Two inputs merged into one list:
+  //   A) currently vacant ACTIVE rooms (no tenant, no active booking)
+  //   B) tenants moving out in ≤30d where the room has no replacement
+  //      booking lined up
+  type VacancyPipelineRow = {
+    id: string;
+    kind: "vacant_now" | "leaving_soon";
+    label: string;
+    room: string;
+    category: string;
+    monthlyRent: number;
+    moveOut: string | null;
+    daysAway: number;
+  };
+
+  const vacantNow: VacancyPipelineRow[] = activeRooms
+    .filter((r) => !isCurrentlyOccupied(r) && r.bookings.length === 0)
+    .map((r) => ({
+      id: `room-${r.id}`,
+      kind: "vacant_now" as const,
+      label: "Vacant",
+      room: `${r.apartment.location.name} · ${r.roomNumber}`,
+      category: r.category,
+      monthlyRent: r.monthlyRent,
+      moveOut: null,
+      daysAway: 0,
+    }));
+
+  const leavingSoon: VacancyPipelineRow[] = noticePipelineRaw
+    .filter((t) => {
+      if (!t.moveOut || !t.room) return false;
+      const outDate = new Date(t.moveOut).getTime();
+      return !t.room.bookings.some((b) => {
+        if (!b.moveInDate) return false;
+        return new Date(b.moveInDate).getTime() > outDate;
+      });
+    })
+    .map((t) => {
+      const outMs = new Date(t.moveOut!).getTime();
+      const daysAway = Math.max(
+        0,
+        Math.floor((outMs - todayStart.getTime()) / (24 * 60 * 60 * 1000))
+      );
+      return {
+        id: `tenant-${t.id}`,
+        kind: "leaving_soon" as const,
+        label: `${t.firstName} ${t.lastName}`,
+        room: t.room
+          ? `${t.room.apartment.location.name} · ${t.room.roomNumber}`
+          : "—",
+        category: t.room?.category ?? "",
+        monthlyRent: t.monthlyRent,
+        moveOut: t.moveOut?.toISOString() ?? null,
+        daysAway,
+      } satisfies VacancyPipelineRow;
+    });
+
+  const vacancyPipeline: VacancyPipelineRow[] = [
+    ...vacantNow.sort((a, b) => a.room.localeCompare(b.room)),
+    ...leavingSoon.sort((a, b) => a.daysAway - b.daysAway),
+  ];
 
   // Occupancy snapshot at an arbitrary date: tenant whose window covers
   // the date, or else an active booking (DEPOSIT_PENDING) that has
@@ -406,6 +502,54 @@ export default async function AdminDashboardPage() {
     dunningMahnung1.length +
     dunningMahnung2.length;
 
+  // Booking Fee = €195 per CLAUDE.md (non-refundable, separate Stripe charge)
+  const BOOKING_FEE_CENTS = 19500;
+  const newBookings = {
+    todayCount: bookingsToday.length,
+    todayFeesCollected:
+      bookingsToday.filter((b) => b.bookingFeePaidAt).length * BOOKING_FEE_CENTS,
+    weekCount: bookingsThisWeek.length,
+    weekFeesCollected:
+      bookingsThisWeek.filter((b) => b.bookingFeePaidAt).length * BOOKING_FEE_CENTS,
+  };
+
+  // Conversion funnel — count how far this month's bookings made it.
+  const funnel = {
+    total: bookingFunnelThisMonth.length,
+    bookingFeePaid: bookingFunnelThisMonth.filter((b) => b.bookingFeePaidAt)
+      .length,
+    contractSigned: bookingFunnelThisMonth.filter((b) => b.signatureDocumentId)
+      .length,
+    depositPaid: bookingFunnelThisMonth.filter((b) => b.depositPaidAt).length,
+    convertedToTenant: bookingFunnelThisMonth.filter((b) => b.tenant).length,
+  };
+
+  const openDefects = openDefectsRaw.map((d) => ({
+    id: d.id,
+    description: d.description,
+    amount: d.deductionAmount,
+    createdAt: d.createdAt,
+    photos: d.photos.length,
+    tenantId: d.tenantId,
+    tenantName: `${d.tenant.firstName} ${d.tenant.lastName}`,
+    room: d.tenant.room
+      ? `${d.tenant.room.apartment.location.name} · ${d.tenant.room.roomNumber}`
+      : "—",
+    movedOut: d.tenant.moveOut
+      ? new Date(d.tenant.moveOut).getTime() < todayStart.getTime()
+      : false,
+  }));
+
+  const activityFeed = recentAudit.map((a) => ({
+    id: a.id,
+    at: a.at,
+    module: a.module,
+    action: a.action,
+    summary: a.summary,
+    entityType: a.entityType,
+    entityId: a.entityId,
+  }));
+
   return (
     <DashboardPage
       data={JSON.parse(
@@ -460,7 +604,7 @@ export default async function AdminDashboardPage() {
             openRentAmount,
             totalActionItems,
           },
-          noticePipeline,
+          vacancyPipeline,
           availabilityByLocation,
           actionItems: {
             depositTimeoutSoon: depositTimeoutSoon.map((b) => ({
@@ -523,15 +667,11 @@ export default async function AdminDashboardPage() {
                 ? `${t.room.apartment.location.name} · ${t.room.roomNumber}`
                 : "—",
             })),
-            moveOuts: moveOutsUpcoming.map((t) => ({
-              id: t.id,
-              name: `${t.firstName} ${t.lastName}`,
-              date: t.moveOut,
-              room: t.room
-                ? `${t.room.apartment.location.name} · ${t.room.roomNumber}`
-                : "—",
-            })),
           },
+          newBookings,
+          funnel,
+          openDefects,
+          activityFeed,
         })
       )}
     />
