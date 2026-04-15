@@ -10,20 +10,24 @@ function createPrismaClient() {
   // like prisma.$transaction(async (tx) => ...) used in the Stripe webhook,
   // booking creation, withdraw and rent-adjustment routes.
   //
-  // Pool config tuned for Vercel serverless + Supabase direct connections:
-  //  - max: 5 — each Vercel function can run a few queries in parallel
-  //    without hogging Supabase's direct-connection cap (~60). At 10
-  //    concurrent invocations we're at 50 connections, still under limit.
-  //  - idleTimeoutMillis: 30s — long enough to reuse a pooled connection
-  //    across the lifetime of a warm Vercel function, short enough to
-  //    release it before the next cold start.
-  //  - connectionTimeoutMillis: 15s — Supabase direct connect can take
-  //    several seconds on a cold invocation; 5s was too tight and produced
-  //    cold-start 500s on the admin pages (rooms/finance/occupancy).
+  // Pool config — tight caps because DIRECT_URL on Supabase is actually
+  // the Supavisor *session-mode* pooler (Port 5432, not raw postgres),
+  // and session mode has a strict pool_size cap (default ~15). With many
+  // Vercel invocations we hit MaxClientsInSessionMode fast.
+  //
+  //  - max: 2 — keeps each invocation tiny so 6-8 concurrent Vercel
+  //    functions still fit under the Supavisor pool_size.
+  //  - idleTimeoutMillis: 10s — release connections back to Supavisor
+  //    promptly.
+  //  - connectionTimeoutMillis: 15s — cold-start handshake needs time.
+  //
+  // Mid-term fix: raise Supavisor pool_size in the Supabase dashboard
+  // (Project → Settings → Database → Connection Pool) and then bump
+  // pg.Pool max back up.
   const pool = new pg.Pool({
     connectionString: env.DIRECT_URL,
-    max: 5,
-    idleTimeoutMillis: 30_000,
+    max: 2,
+    idleTimeoutMillis: 10_000,
     connectionTimeoutMillis: 15_000,
   });
   const adapter = new PrismaPg(pool);
