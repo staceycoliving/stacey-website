@@ -1,9 +1,20 @@
 "use client";
 
-import { useState, Fragment } from "react";
-import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useMemo, useState, Fragment } from "react";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import Link from "next/link";
-import { LayoutGrid, Table as TableIcon, Info, ChevronDown, ChevronUp, X } from "lucide-react";
+import {
+  LayoutGrid,
+  Table as TableIcon,
+  Info,
+  ChevronDown,
+  ChevronUp,
+  X,
+  Search,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+} from "lucide-react";
 
 type Location = {
   id: string;
@@ -132,25 +143,150 @@ export default function BookingsPage({
   kpis: BookingKpis;
 }) {
   const router = useRouter();
-  const [view, setView] = useState<"table" | "kanban">("table");
-  const [filterLocation, setFilterLocation] = useState("");
-  const [filterStatus, setFilterStatus] = useState("");
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  // Read everything from URL so the state is shareable via link and
+  // survives reload. writeParams() rewrites the URL via router.replace
+  // without triggering a full re-render cascade.
+  const view = (searchParams.get("view") as "table" | "kanban") ?? "table";
+  const filterLocation = searchParams.get("location") ?? "";
+  const filterStatus = searchParams.get("status") ?? "";
+  const search = searchParams.get("q") ?? "";
+  const moveInFrom = searchParams.get("moveInFrom") ?? "";
+  const moveInTo = searchParams.get("moveInTo") ?? "";
+  const sortBy =
+    (searchParams.get("sortBy") as "date" | "movein" | "name" | "status") ??
+    "date";
+  const sortDir = (searchParams.get("sortDir") as "asc" | "desc") ?? "desc";
+
+  const writeParams = useCallback(
+    (patch: Record<string, string | null>) => {
+      const next = new URLSearchParams(searchParams.toString());
+      for (const [k, v] of Object.entries(patch)) {
+        if (v === null || v === "") next.delete(k);
+        else next.set(k, v);
+      }
+      const qs = next.toString();
+      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+    },
+    [pathname, router, searchParams]
+  );
+
+  // Local-only UI state (not worth URL-syncing)
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [updating, setUpdating] = useState<string | null>(null);
   const [showHelp, setShowHelp] = useState(false);
   const [cancelTarget, setCancelTarget] = useState<CancelTarget | null>(null);
 
-  const filtered = bookings.filter((b) => {
-    if (filterLocation && b.locationId !== filterLocation) return false;
-    if (filterStatus && b.status !== filterStatus) return false;
-    return true;
-  });
+  // Debounce the search input so typing doesn't rewrite the URL on every
+  // keystroke — easier on both React and the URL history stack.
+  const [searchInput, setSearchInput] = useState(search);
+  useEffect(() => {
+    setSearchInput(search); // keep in sync when URL changes (back button)
+  }, [search]);
+  useEffect(() => {
+    if (searchInput === search) return;
+    const t = setTimeout(() => writeParams({ q: searchInput }), 200);
+    return () => clearTimeout(t);
+  }, [searchInput, search, writeParams]);
 
-  // For kanban we ignore filterStatus (status = column)
-  const kanbanFiltered = bookings.filter((b) => {
-    if (filterLocation && b.locationId !== filterLocation) return false;
-    return true;
-  });
+  // Filter + search + sort pipeline
+  const filtered = useMemo(() => {
+    const searchLc = search.toLowerCase();
+    const moveInFromTs = moveInFrom ? new Date(moveInFrom).getTime() : null;
+    const moveInToTs = moveInTo
+      ? new Date(moveInTo).getTime() + 86_400_000 - 1 // include end-of-day
+      : null;
+    const list = bookings.filter((b) => {
+      if (filterLocation && b.locationId !== filterLocation) return false;
+      if (filterStatus && b.status !== filterStatus) return false;
+      if (moveInFromTs !== null) {
+        if (!b.moveInDate) return false;
+        if (new Date(b.moveInDate).getTime() < moveInFromTs) return false;
+      }
+      if (moveInToTs !== null) {
+        if (!b.moveInDate) return false;
+        if (new Date(b.moveInDate).getTime() > moveInToTs) return false;
+      }
+      if (searchLc) {
+        const hay = [
+          b.firstName,
+          b.lastName,
+          b.email,
+          b.phone,
+          b.room?.roomNumber ?? "",
+          b.id,
+        ]
+          .join(" ")
+          .toLowerCase();
+        if (!hay.includes(searchLc)) return false;
+      }
+      return true;
+    });
+
+    const dir = sortDir === "asc" ? 1 : -1;
+    list.sort((a, b) => {
+      switch (sortBy) {
+        case "name":
+          return (
+            dir *
+            `${a.lastName} ${a.firstName}`.localeCompare(
+              `${b.lastName} ${b.firstName}`
+            )
+          );
+        case "movein": {
+          const av = a.moveInDate ? new Date(a.moveInDate).getTime() : 0;
+          const bv = b.moveInDate ? new Date(b.moveInDate).getTime() : 0;
+          return dir * (av - bv);
+        }
+        case "status":
+          return dir * a.status.localeCompare(b.status);
+        case "date":
+        default:
+          return (
+            dir *
+            (new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+          );
+      }
+    });
+    return list;
+  }, [
+    bookings,
+    filterLocation,
+    filterStatus,
+    search,
+    moveInFrom,
+    moveInTo,
+    sortBy,
+    sortDir,
+  ]);
+
+  // For kanban we ignore filterStatus (status = column) but keep the
+  // other filters + search so the board stays in sync with filters.
+  const kanbanFiltered = useMemo(() => {
+    const searchLc = search.toLowerCase();
+    const moveInFromTs = moveInFrom ? new Date(moveInFrom).getTime() : null;
+    const moveInToTs = moveInTo
+      ? new Date(moveInTo).getTime() + 86_400_000 - 1
+      : null;
+    return bookings.filter((b) => {
+      if (filterLocation && b.locationId !== filterLocation) return false;
+      if (moveInFromTs !== null) {
+        if (!b.moveInDate) return false;
+        if (new Date(b.moveInDate).getTime() < moveInFromTs) return false;
+      }
+      if (moveInToTs !== null) {
+        if (!b.moveInDate) return false;
+        if (new Date(b.moveInDate).getTime() > moveInToTs) return false;
+      }
+      if (searchLc) {
+        const hay = [b.firstName, b.lastName, b.email, b.phone].join(" ").toLowerCase();
+        if (!hay.includes(searchLc)) return false;
+      }
+      return true;
+    });
+  }, [bookings, filterLocation, search, moveInFrom, moveInTo]);
 
   // KPIs come from the server (see app/admin/bookings/page.tsx) so we keep
   // the client render pure — React Compiler rejects Date.now() calls here.
@@ -257,12 +393,33 @@ export default function BookingsPage({
         )}
       </div>
 
-      {/* Filters + view toggle */}
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-        <div className="flex flex-wrap gap-3">
+      {/* Filters + search + view toggle */}
+      <div className="space-y-2 mb-4">
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Search (debounced, ~200ms) */}
+          <div className="relative flex-1 min-w-[220px]">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray pointer-events-none" />
+            <input
+              type="text"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              placeholder="Search name, email, phone, room#, ID…"
+              className="w-full pl-8 pr-8 py-2 border border-lightgray rounded-[5px] text-sm bg-white"
+            />
+            {searchInput && (
+              <button
+                onClick={() => setSearchInput("")}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray hover:text-black"
+                aria-label="Clear search"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
           <select
             value={filterLocation}
-            onChange={(e) => setFilterLocation(e.target.value)}
+            onChange={(e) => writeParams({ location: e.target.value })}
             className="px-3 py-2 border border-lightgray rounded-[5px] text-sm bg-white"
           >
             <option value="">All locations</option>
@@ -272,10 +429,11 @@ export default function BookingsPage({
               </option>
             ))}
           </select>
+
           {view === "table" && (
             <select
               value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
+              onChange={(e) => writeParams({ status: e.target.value })}
               className="px-3 py-2 border border-lightgray rounded-[5px] text-sm bg-white"
             >
               <option value="">All stages</option>
@@ -286,28 +444,70 @@ export default function BookingsPage({
               ))}
             </select>
           )}
+
+          <div className="inline-flex rounded-[5px] border border-lightgray overflow-hidden ml-auto">
+            <button
+              onClick={() => writeParams({ view: "table" })}
+              className={`inline-flex items-center gap-1 px-3 py-1.5 text-sm ${
+                view === "table"
+                  ? "bg-black text-white"
+                  : "bg-white text-gray hover:bg-background-alt"
+              }`}
+            >
+              <TableIcon className="w-4 h-4" /> Table
+            </button>
+            <button
+              onClick={() => writeParams({ view: "kanban" })}
+              className={`inline-flex items-center gap-1 px-3 py-1.5 text-sm ${
+                view === "kanban"
+                  ? "bg-black text-white"
+                  : "bg-white text-gray hover:bg-background-alt"
+              }`}
+            >
+              <LayoutGrid className="w-4 h-4" /> Kanban
+            </button>
+          </div>
         </div>
-        <div className="inline-flex rounded-[5px] border border-lightgray overflow-hidden">
-          <button
-            onClick={() => setView("table")}
-            className={`inline-flex items-center gap-1 px-3 py-1.5 text-sm ${
-              view === "table"
-                ? "bg-black text-white"
-                : "bg-white text-gray hover:bg-background-alt"
-            }`}
-          >
-            <TableIcon className="w-4 h-4" /> Table
-          </button>
-          <button
-            onClick={() => setView("kanban")}
-            className={`inline-flex items-center gap-1 px-3 py-1.5 text-sm ${
-              view === "kanban"
-                ? "bg-black text-white"
-                : "bg-white text-gray hover:bg-background-alt"
-            }`}
-          >
-            <LayoutGrid className="w-4 h-4" /> Kanban
-          </button>
+
+        {/* Date-range (move-in) + clear all */}
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          <span className="text-gray">Move-in from</span>
+          <input
+            type="date"
+            value={moveInFrom}
+            onChange={(e) => writeParams({ moveInFrom: e.target.value })}
+            className="px-2 py-1 border border-lightgray rounded-[5px] bg-white"
+          />
+          <span className="text-gray">to</span>
+          <input
+            type="date"
+            value={moveInTo}
+            onChange={(e) => writeParams({ moveInTo: e.target.value })}
+            className="px-2 py-1 border border-lightgray rounded-[5px] bg-white"
+          />
+          {(moveInFrom ||
+            moveInTo ||
+            filterLocation ||
+            filterStatus ||
+            search) && (
+            <button
+              onClick={() =>
+                writeParams({
+                  q: null,
+                  location: null,
+                  status: null,
+                  moveInFrom: null,
+                  moveInTo: null,
+                })
+              }
+              className="text-gray hover:text-black underline"
+            >
+              Clear all
+            </button>
+          )}
+          <span className="ml-auto text-gray">
+            {filtered.length} result{filtered.length === 1 ? "" : "s"}
+          </span>
         </div>
       </div>
 
@@ -316,6 +516,14 @@ export default function BookingsPage({
           bookings={filtered}
           expandedId={expandedId}
           setExpandedId={setExpandedId}
+          sortBy={sortBy}
+          sortDir={sortDir}
+          onSort={(col) =>
+            writeParams({
+              sortBy: col,
+              sortDir: sortBy === col && sortDir === "desc" ? "asc" : "desc",
+            })
+          }
           onCancel={(b) =>
             setCancelTarget({
               id: b.id,
@@ -355,11 +563,17 @@ function TableView({
   bookings,
   expandedId,
   setExpandedId,
+  sortBy,
+  sortDir,
+  onSort,
   onCancel,
 }: {
   bookings: Booking[];
   expandedId: string | null;
   setExpandedId: (id: string | null) => void;
+  sortBy: "date" | "movein" | "name" | "status";
+  sortDir: "asc" | "desc";
+  onSort: (col: "date" | "movein" | "name" | "status") => void;
   onCancel: (b: Booking) => void;
 }) {
   return (
@@ -368,13 +582,13 @@ function TableView({
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-lightgray bg-background-alt">
-              <th className="text-left px-4 py-3 font-semibold text-xs text-gray uppercase tracking-wide">Date</th>
-              <th className="text-left px-4 py-3 font-semibold text-xs text-gray uppercase tracking-wide">Guest</th>
+              <SortableTh col="date" label="Date" sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
+              <SortableTh col="name" label="Guest" sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
               <th className="text-left px-4 py-3 font-semibold text-xs text-gray uppercase tracking-wide">Location</th>
               <th className="text-left px-4 py-3 font-semibold text-xs text-gray uppercase tracking-wide">Room</th>
               <th className="text-left px-4 py-3 font-semibold text-xs text-gray uppercase tracking-wide">Category</th>
-              <th className="text-left px-4 py-3 font-semibold text-xs text-gray uppercase tracking-wide">Move-in</th>
-              <th className="text-left px-4 py-3 font-semibold text-xs text-gray uppercase tracking-wide">Status</th>
+              <SortableTh col="movein" label="Move-in" sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
+              <SortableTh col="status" label="Status" sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
             </tr>
           </thead>
           <tbody>
@@ -710,6 +924,35 @@ function CancelModal({
         </div>
       </div>
     </div>
+  );
+}
+
+function SortableTh({
+  col,
+  label,
+  sortBy,
+  sortDir,
+  onSort,
+}: {
+  col: "date" | "movein" | "name" | "status";
+  label: string;
+  sortBy: "date" | "movein" | "name" | "status";
+  sortDir: "asc" | "desc";
+  onSort: (col: "date" | "movein" | "name" | "status") => void;
+}) {
+  const active = sortBy === col;
+  const Icon = active ? (sortDir === "asc" ? ArrowUp : ArrowDown) : ArrowUpDown;
+  return (
+    <th className="text-left px-4 py-3 font-semibold text-xs text-gray uppercase tracking-wide">
+      <button
+        type="button"
+        onClick={() => onSort(col)}
+        className={`inline-flex items-center gap-1 hover:text-black ${active ? "text-black" : ""}`}
+      >
+        {label}
+        <Icon className="w-3 h-3" />
+      </button>
+    </th>
   );
 }
 
