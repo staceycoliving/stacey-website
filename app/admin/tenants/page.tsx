@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 export default async function AdminTenantsPage() {
   if (!(await isAuthenticated())) redirect("/admin/login");
 
-  const [tenantsRaw, locations] = await Promise.all([
+  const [tenantsRaw, locations, tenantNotes] = await Promise.all([
     prisma.tenant.findMany({
       include: {
         room: {
@@ -21,7 +21,16 @@ export default async function AdminTenantsPage() {
         // Load both the unpaid (for the payment-status badge) and the paid
         // (for the Widerruf refund calculation) rents in one query.
         rentPayments: {
-          select: { id: true, status: true, amount: true, paidAmount: true, month: true },
+          select: {
+            id: true,
+            status: true,
+            amount: true,
+            paidAmount: true,
+            month: true,
+            reminder1SentAt: true,
+            mahnung1SentAt: true,
+            mahnung2SentAt: true,
+          },
         },
         booking: {
           select: { id: true, depositPaidAt: true, bookingFeePaidAt: true },
@@ -33,7 +42,18 @@ export default async function AdminTenantsPage() {
       where: { stayType: "LONG" },
       orderBy: { name: "asc" },
     }),
+    prisma.teamNote.findMany({
+      where: { tenantId: { not: null } },
+      select: { tenantId: true },
+    }),
   ]);
+
+  // Group notes by tenantId → just the count, list view only needs that
+  const notesCountByTenant: Record<string, number> = {};
+  for (const n of tenantNotes) {
+    if (!n.tenantId) continue;
+    notesCountByTenant[n.tenantId] = (notesCountByTenant[n.tenantId] ?? 0) + 1;
+  }
 
   // Pre-compute paidRentsCents per tenant so the Widerruf modal can show
   // an accurate live preview without doing aggregation client-side.
@@ -42,6 +62,7 @@ export default async function AdminTenantsPage() {
     paidRentsCents: t.rentPayments
       .filter((r) => r.status === "PAID")
       .reduce((sum, r) => sum + r.paidAmount, 0),
+    notesCount: notesCountByTenant[t.id] ?? 0,
   }));
 
   return (

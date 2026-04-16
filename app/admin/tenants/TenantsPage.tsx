@@ -1,8 +1,16 @@
 "use client";
 
-import { useMemo, useState, useRef, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { ChevronDown, ChevronUp, MoreHorizontal } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import {
+  AlertTriangle,
+  ChevronDown,
+  ChevronUp,
+  MessageSquare,
+  MoreHorizontal,
+  Search,
+  X,
+} from "lucide-react";
 import WithdrawModal from "./WithdrawModal";
 
 type Location = {
@@ -17,6 +25,9 @@ type RentPaymentSummary = {
   amount: number;
   paidAmount: number;
   month: string;
+  reminder1SentAt?: string | null;
+  mahnung1SentAt?: string | null;
+  mahnung2SentAt?: string | null;
 };
 
 type Tenant = {
@@ -49,6 +60,7 @@ type Tenant = {
   };
   rentPayments: RentPaymentSummary[];
   paidRentsCents: number;
+  notesCount: number;
   booking: {
     id: string;
     depositPaidAt: string | null;
@@ -109,6 +121,58 @@ function withdrawAvailable(t: Tenant): boolean {
   return Boolean(t.booking?.depositPaidAt);
 }
 
+/** Collect every issue this tenant currently has. Used by the compact
+ *  multi-issue pill in the list + by the KPI counters up top. */
+type TenantIssue = {
+  code: "overdue" | "no_payment" | "dunning_due" | "leaving_soon" | "widerruf_active";
+  label: string;
+  tone: "warn" | "danger" | "info";
+};
+function detectIssues(t: Tenant, nowTs: number): TenantIssue[] {
+  const out: TenantIssue[] = [];
+  const ONE_DAY = 86_400_000;
+
+  if (t.rentPayments.some((p) => p.status === "FAILED")) {
+    out.push({ code: "overdue", label: "Overdue rent", tone: "danger" });
+  }
+  if (!t.sepaMandateId) {
+    out.push({ code: "no_payment", label: "No payment method", tone: "warn" });
+  }
+  // Dunning due = reminder/mahnung should have been sent but wasn't yet
+  const dunningDue = t.rentPayments.some((p) => {
+    if (p.status === "PAID") return false;
+    const monthTs = new Date(p.month).getTime();
+    const daysOpen = Math.floor((nowTs - monthTs) / ONE_DAY);
+    if (daysOpen >= 30 && !p.mahnung2SentAt) return true;
+    if (daysOpen >= 14 && !p.mahnung1SentAt) return true;
+    if (daysOpen >= 3 && !p.reminder1SentAt) return true;
+    return false;
+  });
+  if (dunningDue) {
+    out.push({ code: "dunning_due", label: "Dunning step due", tone: "warn" });
+  }
+  if (t.moveOut) {
+    const days = Math.floor((new Date(t.moveOut).getTime() - nowTs) / ONE_DAY);
+    if (days >= 0 && days <= 30) {
+      out.push({ code: "leaving_soon", label: `Leaving in ${days}d`, tone: "info" });
+    }
+  }
+  if (t.booking?.depositPaidAt) {
+    const daysSince = Math.floor(
+      (nowTs - new Date(t.booking.depositPaidAt).getTime()) / ONE_DAY
+    );
+    if (daysSince >= 0 && daysSince <= 14) {
+      const left = 14 - daysSince;
+      out.push({
+        code: "widerruf_active",
+        label: `Widerruf window (${left}d left)`,
+        tone: "info",
+      });
+    }
+  }
+  return out;
+}
+
 export default function TenantsPage({
   tenants,
   locations,
@@ -117,11 +181,52 @@ export default function TenantsPage({
   locations: Location[];
 }) {
   const router = useRouter();
-  const [filterLocation, setFilterLocation] = useState("");
-  const [filterStatus, setFilterStatus] = useState<"all" | "active" | "leaving">("all");
-  const [search, setSearch] = useState("");
-  const [sortCol, setSortCol] = useState<SortColumn>("name");
-  const [sortDir, setSortDir] = useState<SortDirection>("asc");
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  // Read filter/sort state from URL so it's shareable + survives reload
+  const filterLocation = searchParams.get("location") ?? "";
+  const filterStatus =
+    (searchParams.get("status") as
+      | "all"
+      | "active"
+      | "leaving"
+      | "issues") ?? "all";
+  const search = searchParams.get("q") ?? "";
+  const sortCol = (searchParams.get("sortBy") as SortColumn) ?? "name";
+  const sortDir = (searchParams.get("sortDir") as SortDirection) ?? "asc";
+  const moveInFrom = searchParams.get("moveInFrom") ?? "";
+  const moveInTo = searchParams.get("moveInTo") ?? "";
+  const moveOutFrom = searchParams.get("moveOutFrom") ?? "";
+  const moveOutTo = searchParams.get("moveOutTo") ?? "";
+
+  const writeParams = useCallback(
+    (patch: Record<string, string | null>) => {
+      const next = new URLSearchParams(searchParams.toString());
+      for (const [k, v] of Object.entries(patch)) {
+        if (v === null || v === "") next.delete(k);
+        else next.set(k, v);
+      }
+      const qs = next.toString();
+      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+    },
+    [pathname, router, searchParams]
+  );
+
+  // Debounced search input so typing doesn't rewrite the URL on every key
+  const [searchInput, setSearchInput] = useState(search);
+  useEffect(() => {
+    setSearchInput(search);
+  }, [search]);
+  useEffect(() => {
+    if (searchInput === search) return;
+    const t = setTimeout(() => writeParams({ q: searchInput }), 200);
+    return () => clearTimeout(t);
+  }, [searchInput, search, writeParams]);
+
+  // Stable "now" for render-time issue detection (React Compiler purity)
+  const [nowTs] = useState(() => Date.now());
+
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [sendingSetupId, setSendingSetupId] = useState<string | null>(null);
   const [confirmAction, setConfirmAction] = useState<
@@ -143,11 +248,40 @@ export default function TenantsPage({
     return () => document.removeEventListener("mousedown", onClick);
   }, [openMenuId]);
 
+  // Per-tenant issue list — recomputed once per render from nowTs
+  const issuesByTenant = useMemo(() => {
+    const map = new Map<string, TenantIssue[]>();
+    for (const t of tenants) map.set(t.id, detectIssues(t, nowTs));
+    return map;
+  }, [tenants, nowTs]);
+
   const filtered = useMemo(() => {
+    const moveInFromTs = moveInFrom ? new Date(moveInFrom).getTime() : null;
+    const moveInToTs = moveInTo
+      ? new Date(moveInTo).getTime() + 86_400_000 - 1
+      : null;
+    const moveOutFromTs = moveOutFrom ? new Date(moveOutFrom).getTime() : null;
+    const moveOutToTs = moveOutTo
+      ? new Date(moveOutTo).getTime() + 86_400_000 - 1
+      : null;
     let rows = tenants.filter((t) => {
       if (filterLocation && t.room.apartment.location.id !== filterLocation) return false;
       if (filterStatus === "active" && t.moveOut) return false;
       if (filterStatus === "leaving" && !t.moveOut) return false;
+      if (filterStatus === "issues") {
+        const issues = issuesByTenant.get(t.id) ?? [];
+        if (!issues.some((i) => i.tone !== "info")) return false;
+      }
+      if (moveInFromTs !== null && new Date(t.moveIn).getTime() < moveInFromTs) return false;
+      if (moveInToTs !== null && new Date(t.moveIn).getTime() > moveInToTs) return false;
+      if (moveOutFromTs !== null) {
+        if (!t.moveOut) return false;
+        if (new Date(t.moveOut).getTime() < moveOutFromTs) return false;
+      }
+      if (moveOutToTs !== null) {
+        if (!t.moveOut) return false;
+        if (new Date(t.moveOut).getTime() > moveOutToTs) return false;
+      }
       if (search) {
         const q = search.toLowerCase();
         const match =
@@ -199,21 +333,59 @@ export default function TenantsPage({
     });
 
     return rows;
-  }, [tenants, filterLocation, filterStatus, search, sortCol, sortDir]);
+  }, [
+    tenants,
+    issuesByTenant,
+    filterLocation,
+    filterStatus,
+    search,
+    moveInFrom,
+    moveInTo,
+    moveOutFrom,
+    moveOutTo,
+    sortCol,
+    sortDir,
+  ]);
 
-  const counts = {
-    total: tenants.length,
-    active: tenants.filter((t) => !t.moveOut).length,
-    leaving: tenants.filter((t) => t.moveOut).length,
-  };
+  const counts = useMemo(() => {
+    const ONE_DAY = 86_400_000;
+    const in30 = nowTs + 30 * ONE_DAY;
+    const active = tenants.filter((t) => !t.moveOut).length;
+    const leaving = tenants.filter((t) => {
+      if (!t.moveOut) return false;
+      const ts = new Date(t.moveOut).getTime();
+      return ts >= nowTs && ts <= in30;
+    }).length;
+    const overdue = tenants.filter((t) =>
+      t.rentPayments.some((p) => p.status === "FAILED")
+    ).length;
+    const noPayment = tenants.filter((t) => !t.sepaMandateId && !t.moveOut).length;
+    const widerrufActive = tenants.filter((t) => {
+      if (!t.booking?.depositPaidAt) return false;
+      const d = Math.floor(
+        (nowTs - new Date(t.booking.depositPaidAt).getTime()) / ONE_DAY
+      );
+      return d >= 0 && d <= 14;
+    }).length;
+    const upcomingMoveIns = tenants.filter((t) => {
+      const ts = new Date(t.moveIn).getTime();
+      return ts >= nowTs && ts <= in30;
+    }).length;
+    return {
+      active,
+      leaving,
+      overdue,
+      noPayment,
+      widerrufActive,
+      upcomingMoveIns,
+    };
+  }, [tenants, nowTs]);
 
   function toggleSort(col: SortColumn) {
-    if (sortCol === col) {
-      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-    } else {
-      setSortCol(col);
-      setSortDir("asc");
-    }
+    writeParams({
+      sortBy: col,
+      sortDir: sortCol === col && sortDir === "asc" ? "desc" : "asc",
+    });
   }
 
   async function sendSetupLink(tenantId: string) {
@@ -256,50 +428,170 @@ export default function TenantsPage({
 
   return (
     <div>
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
-        <div className="bg-white rounded-[5px] border border-lightgray p-4">
-          <p className="text-xs text-gray uppercase tracking-wide">Total tenants</p>
-          <p className="text-2xl font-bold mt-1">{counts.total}</p>
-        </div>
-        <div className="bg-white rounded-[5px] border border-lightgray p-4">
-          <p className="text-xs text-gray uppercase tracking-wide">Active</p>
-          <p className="text-2xl font-bold mt-1 text-green-600">{counts.active}</p>
-        </div>
-        <div className="bg-white rounded-[5px] border border-lightgray p-4">
-          <p className="text-xs text-gray uppercase tracking-wide">Leaving</p>
-          <p className="text-2xl font-bold mt-1 text-yellow-600">{counts.leaving}</p>
-        </div>
+      {/* KPIs — 6 action-focused cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-4">
+        <KpiCard
+          label="Active"
+          value={counts.active}
+          tone="ok"
+          sub="Currently housed"
+        />
+        <KpiCard
+          label="Leaving · next 30d"
+          value={counts.leaving}
+          tone={counts.leaving > 0 ? "warn" : undefined}
+          sub="Move-out scheduled"
+          onClick={() =>
+            writeParams({
+              status: "leaving",
+              moveOutFrom: new Date(nowTs)
+                .toISOString()
+                .slice(0, 10),
+              moveOutTo: new Date(nowTs + 30 * 86_400_000)
+                .toISOString()
+                .slice(0, 10),
+            })
+          }
+        />
+        <KpiCard
+          label="Move-ins · next 30d"
+          value={counts.upcomingMoveIns}
+          tone={counts.upcomingMoveIns > 0 ? "info" : undefined}
+          sub="Prepare welcome / keys"
+          onClick={() =>
+            writeParams({
+              moveInFrom: new Date(nowTs).toISOString().slice(0, 10),
+              moveInTo: new Date(nowTs + 30 * 86_400_000)
+                .toISOString()
+                .slice(0, 10),
+            })
+          }
+        />
+        <KpiCard
+          label="Overdue rent"
+          value={counts.overdue}
+          tone={counts.overdue > 0 ? "danger" : "ok"}
+          sub={counts.overdue > 0 ? "Needs dunning" : "All paid"}
+          onClick={() => writeParams({ status: "issues" })}
+        />
+        <KpiCard
+          label="No payment method"
+          value={counts.noPayment}
+          tone={counts.noPayment > 0 ? "warn" : "ok"}
+          sub="Active tenants only"
+          onClick={() => writeParams({ status: "issues" })}
+        />
+        <KpiCard
+          label="Widerruf active"
+          value={counts.widerrufActive}
+          tone={counts.widerrufActive > 0 ? "info" : undefined}
+          sub="Within 14d of deposit"
+        />
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-wrap gap-3 mb-4">
-        <input
-          type="text"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search name, email, address, room..."
-          className="px-3 py-2 border border-lightgray rounded-[5px] text-sm bg-white w-72"
-        />
-        <select
-          value={filterLocation}
-          onChange={(e) => setFilterLocation(e.target.value)}
-          className="px-3 py-2 border border-lightgray rounded-[5px] text-sm bg-white"
-        >
-          <option value="">All locations</option>
-          {locations.map((loc) => (
-            <option key={loc.id} value={loc.id}>{loc.name}</option>
-          ))}
-        </select>
-        <select
-          value={filterStatus}
-          onChange={(e) => setFilterStatus(e.target.value as "all" | "active" | "leaving")}
-          className="px-3 py-2 border border-lightgray rounded-[5px] text-sm bg-white"
-        >
-          <option value="all">All</option>
-          <option value="active">Active (no end date)</option>
-          <option value="leaving">Leaving (end date set)</option>
-        </select>
+      {/* Filters row 1 — search + selects + date ranges */}
+      <div className="space-y-2 mb-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative flex-1 min-w-[220px]">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray pointer-events-none" />
+            <input
+              type="text"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              placeholder="Search name, email, address, room…"
+              className="w-full pl-8 pr-8 py-2 border border-lightgray rounded-[5px] text-sm bg-white"
+            />
+            {searchInput && (
+              <button
+                onClick={() => setSearchInput("")}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray hover:text-black"
+                aria-label="Clear"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+          <select
+            value={filterLocation}
+            onChange={(e) => writeParams({ location: e.target.value })}
+            className="px-3 py-2 border border-lightgray rounded-[5px] text-sm bg-white"
+          >
+            <option value="">All locations</option>
+            {locations.map((loc) => (
+              <option key={loc.id} value={loc.id}>
+                {loc.name}
+              </option>
+            ))}
+          </select>
+          <select
+            value={filterStatus}
+            onChange={(e) => writeParams({ status: e.target.value })}
+            className="px-3 py-2 border border-lightgray rounded-[5px] text-sm bg-white"
+          >
+            <option value="all">All tenants</option>
+            <option value="active">Active (no end date)</option>
+            <option value="leaving">Leaving (end date set)</option>
+            <option value="issues">With issues</option>
+          </select>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          <span className="text-gray">Move-in</span>
+          <input
+            type="date"
+            value={moveInFrom}
+            onChange={(e) => writeParams({ moveInFrom: e.target.value })}
+            className="px-2 py-1 border border-lightgray rounded-[5px] bg-white"
+          />
+          <span className="text-gray">→</span>
+          <input
+            type="date"
+            value={moveInTo}
+            onChange={(e) => writeParams({ moveInTo: e.target.value })}
+            className="px-2 py-1 border border-lightgray rounded-[5px] bg-white"
+          />
+          <span className="text-gray ml-2">Move-out</span>
+          <input
+            type="date"
+            value={moveOutFrom}
+            onChange={(e) => writeParams({ moveOutFrom: e.target.value })}
+            className="px-2 py-1 border border-lightgray rounded-[5px] bg-white"
+          />
+          <span className="text-gray">→</span>
+          <input
+            type="date"
+            value={moveOutTo}
+            onChange={(e) => writeParams({ moveOutTo: e.target.value })}
+            className="px-2 py-1 border border-lightgray rounded-[5px] bg-white"
+          />
+          {(search ||
+            filterLocation ||
+            filterStatus !== "all" ||
+            moveInFrom ||
+            moveInTo ||
+            moveOutFrom ||
+            moveOutTo) && (
+            <button
+              onClick={() =>
+                writeParams({
+                  q: null,
+                  location: null,
+                  status: null,
+                  moveInFrom: null,
+                  moveInTo: null,
+                  moveOutFrom: null,
+                  moveOutTo: null,
+                })
+              }
+              className="text-gray hover:text-black underline"
+            >
+              Clear all
+            </button>
+          )}
+          <span className="ml-auto text-gray">
+            {filtered.length} result{filtered.length === 1 ? "" : "s"}
+          </span>
+        </div>
       </div>
 
       {/* Table */}
@@ -318,28 +610,21 @@ export default function TenantsPage({
                 <SortableTh label="Email" col="email" sortCol={sortCol} sortDir={sortDir} onSort={toggleSort} />
                 <SortableTh label="Start" col="moveIn" sortCol={sortCol} sortDir={sortDir} onSort={toggleSort} />
                 <SortableTh label="End" col="moveOut" sortCol={sortCol} sortDir={sortDir} onSort={toggleSort} />
-                <SortableTh label="Payment" col="payment" sortCol={sortCol} sortDir={sortDir} onSort={toggleSort} />
+                <th className="text-left px-4 py-3 font-semibold text-xs text-gray uppercase tracking-wide">Health</th>
+                <th className="text-center px-4 py-3 font-semibold text-xs text-gray uppercase tracking-wide w-12"></th>
                 <th className="text-left px-4 py-3 font-semibold text-xs text-gray uppercase tracking-wide w-20">Actions</th>
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={12} className="px-4 py-8 text-center text-gray">
+                  <td colSpan={13} className="px-4 py-8 text-center text-gray">
                     No tenants found
                   </td>
                 </tr>
               ) : (
                 filtered.map((t) => {
-                  const status = paymentStatus(t);
-                  const toneClass =
-                    status.tone === "danger"
-                      ? "bg-red-100 text-red-700"
-                      : status.tone === "warn"
-                        ? "bg-orange-100 text-orange-700"
-                        : status.tone === "ok"
-                          ? "bg-green-100 text-green-700"
-                          : "bg-gray-100 text-gray-600";
+                  const issues = issuesByTenant.get(t.id) ?? [];
                   return (
                     <tr
                       key={t.id}
@@ -369,9 +654,18 @@ export default function TenantsPage({
                         </span>
                       </td>
                       <td className="px-4 py-3">
-                        <span className={`inline-block px-2 py-0.5 rounded-[5px] text-xs font-semibold ${toneClass}`}>
-                          {status.label}
-                        </span>
+                        <IssuesPill issues={issues} />
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        {t.notesCount > 0 && (
+                          <span
+                            className="inline-flex items-center gap-1 text-[11px] text-gray"
+                            title={`${t.notesCount} note${t.notesCount === 1 ? "" : "s"}`}
+                          >
+                            <MessageSquare className="w-3 h-3" />
+                            {t.notesCount}
+                          </span>
+                        )}
                       </td>
                       <td
                         className="px-4 py-3 relative"
@@ -503,6 +797,92 @@ function SortableTh({
           ))}
       </span>
     </th>
+  );
+}
+
+/** Compact health pill that collapses multi-issue state.
+ *  0 issues → green "OK", 1 issue → issue's own colour, 2+ issues →
+ *  red "N issues" with a hover title listing each one. */
+function IssuesPill({ issues }: { issues: TenantIssue[] }) {
+  if (issues.length === 0) {
+    return (
+      <span className="inline-block px-2 py-0.5 rounded-[5px] text-xs font-semibold bg-green-100 text-green-700">
+        OK
+      </span>
+    );
+  }
+  if (issues.length === 1) {
+    const i = issues[0];
+    const cls =
+      i.tone === "danger"
+        ? "bg-red-100 text-red-700"
+        : i.tone === "warn"
+          ? "bg-orange-100 text-orange-700"
+          : "bg-blue-100 text-blue-700";
+    return (
+      <span className={`inline-block px-2 py-0.5 rounded-[5px] text-xs font-semibold ${cls}`}>
+        {i.label}
+      </span>
+    );
+  }
+  // Multiple — pick the worst tone for the pill colour
+  const worst = issues.some((i) => i.tone === "danger")
+    ? "danger"
+    : issues.some((i) => i.tone === "warn")
+      ? "warn"
+      : "info";
+  const cls =
+    worst === "danger"
+      ? "bg-red-100 text-red-700"
+      : worst === "warn"
+        ? "bg-orange-100 text-orange-700"
+        : "bg-blue-100 text-blue-700";
+  return (
+    <span
+      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-[5px] text-xs font-semibold ${cls}`}
+      title={issues.map((i) => i.label).join(" · ")}
+    >
+      <AlertTriangle className="w-3 h-3" />
+      {issues.length} issues
+    </span>
+  );
+}
+
+function KpiCard({
+  label,
+  value,
+  sub,
+  tone,
+  onClick,
+}: {
+  label: string;
+  value: number;
+  sub?: string;
+  tone?: "ok" | "warn" | "danger" | "info";
+  onClick?: () => void;
+}) {
+  const toneClass =
+    tone === "danger"
+      ? "text-red-600"
+      : tone === "warn"
+        ? "text-orange-600"
+        : tone === "ok"
+          ? "text-green-600"
+          : tone === "info"
+            ? "text-blue-600"
+            : "text-black";
+  const clickable = typeof onClick === "function";
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={!clickable}
+      className={`bg-white rounded-[5px] border border-lightgray p-3 text-left w-full transition-colors ${clickable ? "hover:border-black cursor-pointer" : "cursor-default"}`}
+    >
+      <p className="text-[11px] text-gray uppercase tracking-wide">{label}</p>
+      <p className={`text-2xl font-bold mt-0.5 ${toneClass}`}>{value}</p>
+      {sub && <p className="text-[11px] text-gray mt-0.5">{sub}</p>}
+    </button>
   );
 }
 
