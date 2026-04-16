@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, Fragment } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import Link from "next/link";
 import {
@@ -14,6 +14,11 @@ import {
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
+  Calendar as CalendarIcon,
+  CheckCircle2,
+  Circle,
+  Pin,
+  Trash2,
 } from "lucide-react";
 
 type Location = {
@@ -49,11 +54,22 @@ type Booking = {
   depositStatus: string;
   depositDeadline?: string | null;
   cancellationReason?: string | null;
+  signatureDocumentId?: string | null;
+  bookingFeePaidAt?: string | null;
+  depositPaidAt?: string | null;
   createdAt: string;
   updatedAt?: string;
   location: Location;
   room: { id: string; roomNumber: string } | null;
   tenant?: { id: string } | null;
+};
+
+type TeamNote = {
+  id: string;
+  content: string;
+  author: string | null;
+  sticky: boolean;
+  createdAt: string;
 };
 
 type CancelTarget = {
@@ -138,10 +154,12 @@ export default function BookingsPage({
   bookings,
   locations,
   kpis,
+  notesByBooking,
 }: {
   bookings: Booking[];
   locations: Location[];
   kpis: BookingKpis;
+  notesByBooking: Record<string, TeamNote[]>;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -150,7 +168,8 @@ export default function BookingsPage({
   // Read everything from URL so the state is shareable via link and
   // survives reload. writeParams() rewrites the URL via router.replace
   // without triggering a full re-render cascade.
-  const view = (searchParams.get("view") as "table" | "kanban") ?? "table";
+  const view =
+    (searchParams.get("view") as "table" | "kanban" | "calendar") ?? "table";
   const filterLocation = searchParams.get("location") ?? "";
   const filterStatus = searchParams.get("status") ?? "";
   const search = searchParams.get("q") ?? "";
@@ -178,7 +197,7 @@ export default function BookingsPage({
   const [nowTs] = useState(() => Date.now());
 
   // Local-only UI state (not worth URL-syncing)
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [detailId, setDetailId] = useState<string | null>(null);
   const [updating, setUpdating] = useState<string | null>(null);
   const [showHelp, setShowHelp] = useState(false);
   const [cancelTarget, setCancelTarget] = useState<CancelTarget | null>(null);
@@ -520,13 +539,23 @@ export default function BookingsPage({
             </button>
             <button
               onClick={() => writeParams({ view: "kanban" })}
-              className={`inline-flex items-center gap-1 px-3 py-1.5 text-sm ${
+              className={`inline-flex items-center gap-1 px-3 py-1.5 text-sm border-l border-lightgray ${
                 view === "kanban"
                   ? "bg-black text-white"
                   : "bg-white text-gray hover:bg-background-alt"
               }`}
             >
               <LayoutGrid className="w-4 h-4" /> Kanban
+            </button>
+            <button
+              onClick={() => writeParams({ view: "calendar" })}
+              className={`inline-flex items-center gap-1 px-3 py-1.5 text-sm border-l border-lightgray ${
+                view === "calendar"
+                  ? "bg-black text-white"
+                  : "bg-white text-gray hover:bg-background-alt"
+              }`}
+            >
+              <CalendarIcon className="w-4 h-4" /> Calendar
             </button>
           </div>
         </div>
@@ -585,11 +614,11 @@ export default function BookingsPage({
         </div>
       </div>
 
-      {view === "table" ? (
+      {view === "table" && (
         <TableView
           bookings={filtered}
-          expandedId={expandedId}
-          setExpandedId={setExpandedId}
+          detailId={detailId}
+          setDetailId={setDetailId}
           sortBy={sortBy}
           sortDir={sortDir}
           nowTs={nowTs}
@@ -599,18 +628,13 @@ export default function BookingsPage({
               sortDir: sortBy === col && sortDir === "desc" ? "asc" : "desc",
             })
           }
-          onCancel={(b) =>
-            setCancelTarget({
-              id: b.id,
-              name: `${b.firstName} ${b.lastName}`,
-              status: b.status,
-            })
-          }
         />
-      ) : (
+      )}
+      {view === "kanban" && (
         <KanbanView
           bookings={kanbanFiltered}
           nowTs={nowTs}
+          onOpen={(b) => setDetailId(b.id)}
           onCancel={(b) =>
             setCancelTarget({
               id: b.id,
@@ -620,6 +644,30 @@ export default function BookingsPage({
           }
         />
       )}
+      {view === "calendar" && (
+        <CalendarView bookings={filtered} onOpen={(b) => setDetailId(b.id)} />
+      )}
+
+      {/* Detail side panel */}
+      {detailId && (() => {
+        const b = bookings.find((x) => x.id === detailId);
+        if (!b) return null;
+        return (
+          <BookingDetailPanel
+            booking={b}
+            notes={notesByBooking[b.id] ?? []}
+            nowTs={nowTs}
+            onClose={() => setDetailId(null)}
+            onCancel={() =>
+              setCancelTarget({
+                id: b.id,
+                name: `${b.firstName} ${b.lastName}`,
+                status: b.status,
+              })
+            }
+          />
+        );
+      })()}
 
       {cancelTarget && (
         <CancelModal
@@ -637,22 +685,20 @@ export default function BookingsPage({
 
 function TableView({
   bookings,
-  expandedId,
-  setExpandedId,
+  detailId,
+  setDetailId,
   sortBy,
   sortDir,
   nowTs,
   onSort,
-  onCancel,
 }: {
   bookings: Booking[];
-  expandedId: string | null;
-  setExpandedId: (id: string | null) => void;
+  detailId: string | null;
+  setDetailId: (id: string | null) => void;
   sortBy: "date" | "movein" | "name" | "status";
   sortDir: "asc" | "desc";
   nowTs: number;
   onSort: (col: "date" | "movein" | "name" | "status") => void;
-  onCancel: (b: Booking) => void;
 }) {
   return (
     <div className="bg-white rounded-[5px] border border-lightgray overflow-hidden">
@@ -678,70 +724,28 @@ function TableView({
               </tr>
             ) : (
               bookings.map((b) => (
-                <Fragment key={b.id}>
-                  <tr
-                    onClick={() => setExpandedId(expandedId === b.id ? null : b.id)}
-                    className="border-b border-lightgray/50 hover:bg-background-alt cursor-pointer transition-colors"
-                  >
-                    <td className="px-4 py-3 text-gray">{formatDate(b.createdAt)}</td>
-                    <td className="px-4 py-3 font-medium">
-                      {b.firstName} {b.lastName}
-                    </td>
-                    <td className="px-4 py-3">{b.location.name}</td>
-                    <td className="px-4 py-3">{b.room ? `#${b.room.roomNumber}` : "—"}</td>
-                    <td className="px-4 py-3">{formatCategory(b.category)}</td>
-                    <td className="px-4 py-3 text-gray">{formatDate(b.moveInDate)}</td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className={`inline-block px-2 py-0.5 rounded-[5px] text-xs font-semibold ${STATUS_COLORS[b.status] || ""}`}>
-                          {STATUS_LABEL[b.status] ?? b.status}
-                        </span>
-                        <StatusAgeBadge booking={b} nowTs={nowTs} />
-                      </div>
-                    </td>
-                  </tr>
-                  {expandedId === b.id && (
-                    <tr className="border-b border-lightgray/50 bg-background-alt">
-                      <td colSpan={7} className="px-4 py-4">
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
-                          <div>
-                            <p className="text-xs text-gray uppercase tracking-wide mb-1">Contact</p>
-                            <p>{b.email}</p>
-                            <p>{b.phone || "—"}</p>
-                          </div>
-                          <div>
-                            <p className="text-xs text-gray uppercase tracking-wide mb-1">Details</p>
-                            <p>Persons: {b.persons}</p>
-                            {b.monthlyRent && <p>Rent: {(b.monthlyRent / 100).toFixed(0)} EUR/mo</p>}
-                            {b.moveInReason && <p>Reason: {b.moveInReason}</p>}
-                            {b.message && <p>Message: {b.message}</p>}
-                          </div>
-                          <div>
-                            <p className="text-xs text-gray uppercase tracking-wide mb-1">Actions</p>
-                            <BookingActions
-                              booking={b}
-                              onCancel={() => onCancel(b)}
-                            />
-                            {b.cancellationReason && (
-                              <div className="mt-3">
-                                <p className="text-xs text-gray uppercase tracking-wide mb-1">Cancellation reason</p>
-                                <p className="text-sm">{b.cancellationReason}</p>
-                              </div>
-                            )}
-                            {b.street && (
-                              <div className="mt-3">
-                                <p className="text-xs text-gray uppercase tracking-wide mb-1">Address</p>
-                                <p>{b.street}, {b.zipCode} {b.addressCity}</p>
-                                <p>{b.country}</p>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                        <p className="text-xs text-gray mt-3">ID: {b.id}</p>
-                      </td>
-                    </tr>
-                  )}
-                </Fragment>
+                <tr
+                  key={b.id}
+                  onClick={() => setDetailId(b.id)}
+                  className={`border-b border-lightgray/50 hover:bg-background-alt cursor-pointer transition-colors ${detailId === b.id ? "bg-background-alt" : ""}`}
+                >
+                  <td className="px-4 py-3 text-gray">{formatDate(b.createdAt)}</td>
+                  <td className="px-4 py-3 font-medium">
+                    {b.firstName} {b.lastName}
+                  </td>
+                  <td className="px-4 py-3">{b.location.name}</td>
+                  <td className="px-4 py-3">{b.room ? `#${b.room.roomNumber}` : "—"}</td>
+                  <td className="px-4 py-3">{formatCategory(b.category)}</td>
+                  <td className="px-4 py-3 text-gray">{formatDate(b.moveInDate)}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className={`inline-block px-2 py-0.5 rounded-[5px] text-xs font-semibold ${STATUS_COLORS[b.status] || ""}`}>
+                        {STATUS_LABEL[b.status] ?? b.status}
+                      </span>
+                      <StatusAgeBadge booking={b} nowTs={nowTs} />
+                    </div>
+                  </td>
+                </tr>
               ))
             )}
           </tbody>
@@ -756,10 +760,12 @@ function TableView({
 function KanbanView({
   bookings,
   nowTs,
+  onOpen,
   onCancel,
 }: {
   bookings: Booking[];
   nowTs: number;
+  onOpen: (b: Booking) => void;
   onCancel: (b: Booking) => void;
 }) {
   const grouped = KANBAN_COLUMNS.map((status) => ({
@@ -801,6 +807,7 @@ function KanbanView({
                     key={b.id}
                     booking={b}
                     nowTs={nowTs}
+                    onOpen={() => onOpen(b)}
                     onCancel={() => onCancel(b)}
                   />
                 ))
@@ -816,10 +823,12 @@ function KanbanView({
 function KanbanCard({
   booking,
   nowTs,
+  onOpen,
   onCancel,
 }: {
   booking: Booking;
   nowTs: number;
+  onOpen: () => void;
   onCancel: () => void;
 }) {
   const age = daysSince(booking.createdAt, nowTs);
@@ -840,7 +849,10 @@ function KanbanCard({
       : null;
 
   return (
-    <div className={`rounded-[5px] border p-2 text-sm ${cardTone}`}>
+    <div
+      onClick={onOpen}
+      className={`rounded-[5px] border p-2 text-sm cursor-pointer hover:shadow-sm ${cardTone}`}
+    >
       <div className="font-medium text-black truncate">
         {booking.firstName} {booking.lastName}
       </div>
@@ -877,7 +889,9 @@ function KanbanCard({
         <span className="text-[10px] text-gray uppercase">
           {age === 0 ? "Today" : `${age}d ago`}
         </span>
-        <BookingActions booking={booking} onCancel={onCancel} compact />
+        <div onClick={(e) => e.stopPropagation()}>
+          <BookingActions booking={booking} onCancel={onCancel} compact />
+        </div>
       </div>
     </div>
   );
@@ -1083,6 +1097,494 @@ function CancelModal({
             Keep booking
           </button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+/** Sliding right-hand panel that replaces the inline expand. Shows
+ *  contact, details, address, timeline, booking-scoped team notes, and
+ *  actions. Closes via X, Esc, or backdrop click. */
+function BookingDetailPanel({
+  booking,
+  notes,
+  nowTs,
+  onClose,
+  onCancel,
+}: {
+  booking: Booking;
+  notes: TeamNote[];
+  nowTs: number;
+  onClose: () => void;
+  onCancel: () => void;
+}) {
+  const router = useRouter();
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  // Inline new-note form
+  const [noteContent, setNoteContent] = useState("");
+  const [noteAuthor, setNoteAuthor] = useState(() => {
+    if (typeof window === "undefined") return "";
+    try {
+      return window.localStorage.getItem("stacey-admin-note-author") ?? "";
+    } catch {
+      return "";
+    }
+  });
+  const [savingNote, setSavingNote] = useState(false);
+
+  async function addNote() {
+    if (!noteContent.trim()) return;
+    setSavingNote(true);
+    try {
+      const res = await fetch("/api/admin/team-notes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          content: noteContent,
+          author: noteAuthor || undefined,
+          bookingId: booking.id,
+        }),
+      });
+      if (res.ok) {
+        setNoteContent("");
+        try {
+          if (noteAuthor)
+            window.localStorage.setItem("stacey-admin-note-author", noteAuthor);
+        } catch {
+          /* ignore */
+        }
+        router.refresh();
+      }
+    } finally {
+      setSavingNote(false);
+    }
+  }
+
+  async function toggleStickyNote(id: string, sticky: boolean) {
+    await fetch(`/api/admin/team-notes/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sticky: !sticky }),
+    });
+    router.refresh();
+  }
+
+  async function deleteNote(id: string) {
+    if (!confirm("Delete this note?")) return;
+    await fetch(`/api/admin/team-notes/${id}`, { method: "DELETE" });
+    router.refresh();
+  }
+
+  // Timeline steps derived from booking timestamps
+  type Step = { label: string; at: string | null; done: boolean };
+  const timeline: Step[] = [
+    { label: "Started", at: booking.createdAt, done: true },
+    {
+      label: "Contract signed",
+      at: null, // we only have a flag, not a timestamp
+      done: Boolean(booking.signatureDocumentId),
+    },
+    {
+      label: "Booking fee paid",
+      at: booking.bookingFeePaidAt ?? null,
+      done: Boolean(booking.bookingFeePaidAt),
+    },
+    {
+      label: "Deposit paid",
+      at: booking.depositPaidAt ?? null,
+      done: Boolean(booking.depositPaidAt),
+    },
+    {
+      label:
+        booking.status === "CANCELLED"
+          ? "Cancelled"
+          : booking.tenant
+            ? "Tenant"
+            : "Move-in pending",
+      at:
+        booking.status === "CANCELLED"
+          ? (booking.updatedAt ?? null)
+          : booking.moveInDate,
+      done: booking.status === "CANCELLED" || Boolean(booking.tenant),
+    },
+  ];
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div
+        onClick={onClose}
+        className="fixed inset-0 bg-black/40 z-40"
+        aria-hidden
+      />
+      {/* Panel */}
+      <div className="fixed top-0 right-0 bottom-0 w-full max-w-xl bg-white z-50 shadow-xl overflow-y-auto">
+        {/* Header */}
+        <div className="sticky top-0 bg-white border-b border-lightgray px-5 py-3 flex items-start justify-between gap-3 z-10">
+          <div className="min-w-0 flex-1">
+            <div className="text-xs text-gray flex items-center gap-2">
+              <span>{formatDate(booking.createdAt)}</span>
+              <span>·</span>
+              <span>
+                {booking.location.name}
+                {booking.room && ` · #${booking.room.roomNumber}`}
+              </span>
+            </div>
+            <h2 className="text-lg font-bold text-black truncate mt-0.5">
+              {booking.firstName} {booking.lastName}
+            </h2>
+            <div className="flex items-center gap-1.5 flex-wrap mt-1">
+              <span
+                className={`inline-block px-2 py-0.5 rounded-[5px] text-xs font-semibold ${STATUS_COLORS[booking.status] || ""}`}
+              >
+                {STATUS_LABEL[booking.status] ?? booking.status}
+              </span>
+              <StatusAgeBadge booking={booking} nowTs={nowTs} />
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-gray hover:text-black p-1 -mr-1"
+            aria-label="Close"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="px-5 py-4 space-y-5">
+          {/* Primary actions */}
+          <div>
+            <BookingActions booking={booking} onCancel={onCancel} />
+          </div>
+
+          {/* Timeline */}
+          <div>
+            <div className="text-[11px] uppercase tracking-wider text-gray font-semibold mb-2">
+              Timeline
+            </div>
+            <ol className="space-y-2">
+              {timeline.map((s, i) => (
+                <li key={i} className="flex items-start gap-2 text-sm">
+                  {s.done ? (
+                    <CheckCircle2 className="w-4 h-4 mt-0.5 text-green-600 flex-shrink-0" />
+                  ) : (
+                    <Circle className="w-4 h-4 mt-0.5 text-lightgray flex-shrink-0" />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className={s.done ? "text-black" : "text-gray"}>
+                      {s.label}
+                    </div>
+                    {s.at && (
+                      <div className="text-[11px] text-gray tabular-nums">
+                        {formatDate(s.at)}
+                      </div>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ol>
+          </div>
+
+          {/* Contact */}
+          <div>
+            <div className="text-[11px] uppercase tracking-wider text-gray font-semibold mb-2">
+              Contact
+            </div>
+            <div className="text-sm space-y-0.5">
+              <div>
+                <a
+                  href={`mailto:${booking.email}`}
+                  className="text-black hover:underline"
+                >
+                  {booking.email}
+                </a>
+              </div>
+              {booking.phone && (
+                <div>
+                  <a
+                    href={`tel:${booking.phone}`}
+                    className="text-black hover:underline"
+                  >
+                    {booking.phone}
+                  </a>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Details */}
+          <div>
+            <div className="text-[11px] uppercase tracking-wider text-gray font-semibold mb-2">
+              Details
+            </div>
+            <div className="text-sm space-y-0.5">
+              <div>
+                Category: <strong>{formatCategory(booking.category)}</strong>
+              </div>
+              <div>Persons: {booking.persons}</div>
+              {booking.monthlyRent !== null && (
+                <div>
+                  Rent:{" "}
+                  <strong>
+                    €{(booking.monthlyRent / 100).toFixed(0)}
+                  </strong>
+                  /mo
+                </div>
+              )}
+              {booking.moveInDate && (
+                <div>Move-in: {formatDate(booking.moveInDate)}</div>
+              )}
+              {booking.moveInReason && (
+                <div>Reason: {booking.moveInReason}</div>
+              )}
+              {booking.message && (
+                <div>
+                  Message: <em>{booking.message}</em>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Address */}
+          {booking.street && (
+            <div>
+              <div className="text-[11px] uppercase tracking-wider text-gray font-semibold mb-2">
+                Address
+              </div>
+              <div className="text-sm">
+                <div>
+                  {booking.street}, {booking.zipCode} {booking.addressCity}
+                </div>
+                {booking.country && <div>{booking.country}</div>}
+              </div>
+            </div>
+          )}
+
+          {/* Cancellation */}
+          {booking.cancellationReason && (
+            <div>
+              <div className="text-[11px] uppercase tracking-wider text-gray font-semibold mb-2">
+                Cancellation
+              </div>
+              <div className="text-sm italic text-red-700">
+                {booking.cancellationReason}
+              </div>
+            </div>
+          )}
+
+          {/* Notes */}
+          <div>
+            <div className="text-[11px] uppercase tracking-wider text-gray font-semibold mb-2">
+              Notes · {notes.length}
+            </div>
+            <div className="flex gap-2 items-start mb-2">
+              <input
+                type="text"
+                value={noteAuthor}
+                onChange={(e) => setNoteAuthor(e.target.value)}
+                placeholder="Name"
+                className="w-24 px-2 py-1.5 border border-lightgray rounded-[5px] text-sm bg-white"
+              />
+              <input
+                type="text"
+                value={noteContent}
+                onChange={(e) => setNoteContent(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") void addNote();
+                }}
+                placeholder="Add a note…"
+                className="flex-1 px-2 py-1.5 border border-lightgray rounded-[5px] text-sm bg-white"
+              />
+              <button
+                onClick={addNote}
+                disabled={savingNote || !noteContent.trim()}
+                className="px-3 py-1.5 rounded-[5px] bg-black text-white text-sm hover:bg-black/90 disabled:opacity-40"
+              >
+                Add
+              </button>
+            </div>
+            {notes.length === 0 ? (
+              <p className="text-xs text-gray italic">No notes yet.</p>
+            ) : (
+              <div className="divide-y divide-lightgray/60 border border-lightgray/50 rounded-[5px]">
+                {notes.map((n) => (
+                  <div
+                    key={n.id}
+                    className={`flex items-start gap-2 px-3 py-2 ${n.sticky ? "bg-yellow-50" : ""}`}
+                  >
+                    <button
+                      onClick={() => void toggleStickyNote(n.id, n.sticky)}
+                      className={`mt-1 ${n.sticky ? "text-orange-600" : "text-lightgray hover:text-gray"}`}
+                      title={n.sticky ? "Un-pin" : "Pin"}
+                    >
+                      <Pin className={`w-3 h-3 ${n.sticky ? "fill-current" : ""}`} />
+                    </button>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm text-black whitespace-pre-wrap break-words">
+                        {n.content}
+                      </div>
+                      <div className="text-[10px] text-gray mt-0.5">
+                        {n.author ? `${n.author} · ` : ""}
+                        {formatDate(n.createdAt)}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => void deleteNote(n.id)}
+                      className="text-gray hover:text-red-500 mt-1"
+                      aria-label="Delete note"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* ID */}
+          <div className="text-[10px] text-gray font-mono pt-2 border-t border-lightgray">
+            {booking.id}
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+/** Month calendar view with bookings placed on their move-in date.
+ *  Quick navigation buttons let the admin jump by month. */
+function CalendarView({
+  bookings,
+  onOpen,
+}: {
+  bookings: Booking[];
+  onOpen: (b: Booking) => void;
+}) {
+  const [anchor, setAnchor] = useState<Date>(() => {
+    const d = new Date();
+    d.setDate(1);
+    d.setHours(0, 0, 0, 0);
+    return d;
+  });
+
+  const year = anchor.getFullYear();
+  const month = anchor.getMonth();
+  const firstOfMonth = new Date(year, month, 1);
+  const lastOfMonth = new Date(year, month + 1, 0);
+  const daysInMonth = lastOfMonth.getDate();
+  const firstWeekday = (firstOfMonth.getDay() + 6) % 7; // Mon=0
+
+  // Group bookings by day-of-month of moveInDate within the current month
+  // (React Compiler memoises this automatically — no useMemo needed).
+  const byDay = new Map<number, Booking[]>();
+  for (const b of bookings) {
+    if (!b.moveInDate) continue;
+    const d = new Date(b.moveInDate);
+    if (d.getFullYear() !== year || d.getMonth() !== month) continue;
+    const key = d.getDate();
+    const arr = byDay.get(key) ?? [];
+    arr.push(b);
+    byDay.set(key, arr);
+  }
+
+  function shift(n: number) {
+    const next = new Date(year, month + n, 1);
+    setAnchor(next);
+  }
+
+  const monthLabel = anchor.toLocaleDateString("de-DE", {
+    month: "long",
+    year: "numeric",
+  });
+  const weekdays = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
+
+  return (
+    <div className="bg-white rounded-[5px] border border-lightgray overflow-hidden">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-lightgray bg-background-alt">
+        <h3 className="text-sm font-semibold capitalize">{monthLabel}</h3>
+        <div className="flex items-center gap-1 text-xs">
+          <button
+            onClick={() => shift(-1)}
+            className="px-2 py-1 border border-lightgray rounded-[5px] hover:bg-white"
+          >
+            ‹ Prev
+          </button>
+          <button
+            onClick={() => {
+              const d = new Date();
+              d.setDate(1);
+              d.setHours(0, 0, 0, 0);
+              setAnchor(d);
+            }}
+            className="px-2 py-1 border border-lightgray rounded-[5px] hover:bg-white"
+          >
+            Today
+          </button>
+          <button
+            onClick={() => shift(1)}
+            className="px-2 py-1 border border-lightgray rounded-[5px] hover:bg-white"
+          >
+            Next ›
+          </button>
+        </div>
+      </div>
+      <div className="grid grid-cols-7 border-b border-lightgray bg-background-alt/60 text-[10px] uppercase tracking-wide text-gray">
+        {weekdays.map((w) => (
+          <div key={w} className="px-2 py-1.5 text-center">
+            {w}
+          </div>
+        ))}
+      </div>
+      <div className="grid grid-cols-7">
+        {Array.from({ length: firstWeekday }).map((_, i) => (
+          <div
+            key={`blank-${i}`}
+            className="border-r border-b border-lightgray/40 bg-background-alt/30 min-h-[100px]"
+          />
+        ))}
+        {Array.from({ length: daysInMonth }).map((_, i) => {
+          const day = i + 1;
+          const items = byDay.get(day) ?? [];
+          const isToday = (() => {
+            const t = new Date();
+            return (
+              t.getFullYear() === year &&
+              t.getMonth() === month &&
+              t.getDate() === day
+            );
+          })();
+          return (
+            <div
+              key={day}
+              className={`border-r border-b border-lightgray/40 p-1.5 min-h-[100px] align-top ${isToday ? "bg-pink-50" : ""}`}
+            >
+              <div className="text-[11px] text-gray tabular-nums mb-1">
+                {day}
+              </div>
+              <div className="space-y-1">
+                {items.map((b) => (
+                  <button
+                    key={b.id}
+                    onClick={() => onOpen(b)}
+                    className={`w-full text-left px-1.5 py-0.5 rounded-[5px] text-[11px] truncate ${STATUS_COLORS[b.status] ?? "bg-gray-100 text-gray-700"} hover:opacity-80`}
+                    title={`${b.firstName} ${b.lastName} · ${b.location.name}`}
+                  >
+                    {b.firstName} {b.lastName}
+                  </button>
+                ))}
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

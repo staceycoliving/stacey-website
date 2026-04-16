@@ -380,11 +380,13 @@ model TeamNote {
   author    String?  // display name — free text for now, no user auth yet
   sticky    Boolean  @default(false)
   tenantId  String?
+  bookingId String?  // attach a note to a pre-move-in booking
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([createdAt])
   @@index([sticky])
+  @@index([bookingId])
 }
 
 // Log of every email sent (auto or manual). Feeds the dashboard widget

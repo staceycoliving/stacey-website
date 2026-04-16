@@ -19,7 +19,7 @@ export default async function AdminBookingsPage() {
   const leadCutoff = new Date(today.getTime() - 60 * 86_400_000);
   const cancelledCutoff = new Date(today.getTime() - 30 * 86_400_000);
 
-  const [bookings, locations] = await Promise.all([
+  const [bookings, locations, allNotes] = await Promise.all([
     prisma.booking.findMany({
       where: {
         stayType: "LONG",
@@ -42,7 +42,20 @@ export default async function AdminBookingsPage() {
       where: { stayType: "LONG" },
       orderBy: { name: "asc" },
     }),
+    // Load all booking-scoped notes in a single query. We slice them per
+    // booking on the client — cheaper than N+1.
+    prisma.teamNote.findMany({
+      where: { bookingId: { not: null } },
+      orderBy: [{ sticky: "desc" }, { createdAt: "desc" }],
+    }),
   ]);
+
+  // Group notes by bookingId for O(1) lookup on the client
+  const notesByBooking: Record<string, typeof allNotes> = {};
+  for (const n of allNotes) {
+    if (!n.bookingId) continue;
+    (notesByBooking[n.bookingId] ??= []).push(n);
+  }
 
   // KPIs are computed on the server to keep the client component pure
   // (React Compiler in Next.js 16 rejects impure calls like Date.now() in
@@ -95,6 +108,7 @@ export default async function AdminBookingsPage() {
       bookings={JSON.parse(JSON.stringify(bookings))}
       locations={JSON.parse(JSON.stringify(locations))}
       kpis={kpis}
+      notesByBooking={JSON.parse(JSON.stringify(notesByBooking))}
     />
   );
 }
