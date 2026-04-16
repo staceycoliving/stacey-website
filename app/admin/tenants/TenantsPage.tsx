@@ -2,13 +2,20 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import {
   AlertTriangle,
+  ArrowRight,
+  Calendar as CalendarIcon,
   ChevronDown,
   ChevronUp,
+  Clock,
+  Home,
+  LogOut,
   MessageSquare,
   MoreHorizontal,
   Search,
+  Table as TableIcon,
   X,
 } from "lucide-react";
 import WithdrawModal from "./WithdrawModal";
@@ -173,18 +180,28 @@ function detectIssues(t: Tenant, nowTs: number): TenantIssue[] {
   return out;
 }
 
+type RecentlyChanged = {
+  tenantId: string;
+  at: string;
+  summary: string;
+};
+
 export default function TenantsPage({
   tenants,
   locations,
+  recentlyChanged,
 }: {
   tenants: Tenant[];
   locations: Location[];
+  recentlyChanged: RecentlyChanged[];
 }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
   // Read filter/sort state from URL so it's shareable + survives reload
+  const view =
+    (searchParams.get("view") as "table" | "calendar") ?? "table";
   const filterLocation = searchParams.get("location") ?? "";
   const filterStatus =
     (searchParams.get("status") as
@@ -238,6 +255,7 @@ export default function TenantsPage({
   const [extraChargeTenantId, setExtraChargeTenantId] = useState<string | null>(
     null
   );
+  const [detailId, setDetailId] = useState<string | null>(null);
   const [working, setWorking] = useState(false);
   const [bulkBusy, setBulkBusy] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -599,6 +617,29 @@ export default function TenantsPage({
             <option value="leaving">Leaving (end date set)</option>
             <option value="issues">With issues</option>
           </select>
+
+          <div className="inline-flex rounded-[5px] border border-lightgray overflow-hidden ml-auto">
+            <button
+              onClick={() => writeParams({ view: "table" })}
+              className={`inline-flex items-center gap-1 px-3 py-1.5 text-sm ${
+                view === "table"
+                  ? "bg-black text-white"
+                  : "bg-white text-gray hover:bg-background-alt"
+              }`}
+            >
+              <TableIcon className="w-4 h-4" /> Table
+            </button>
+            <button
+              onClick={() => writeParams({ view: "calendar" })}
+              className={`inline-flex items-center gap-1 px-3 py-1.5 text-sm border-l border-lightgray ${
+                view === "calendar"
+                  ? "bg-black text-white"
+                  : "bg-white text-gray hover:bg-background-alt"
+              }`}
+            >
+              <CalendarIcon className="w-4 h-4" /> Calendar
+            </button>
+          </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-2 text-xs">
@@ -735,7 +776,46 @@ export default function TenantsPage({
         })()}
       </div>
 
-      {/* Table */}
+      {/* Recently changed — sits above the view so admins notice activity */}
+      {recentlyChanged.length > 0 && (
+        <div className="bg-white rounded-[5px] border border-lightgray p-3 mb-4">
+          <div className="text-[11px] uppercase tracking-wider text-gray font-semibold mb-2 flex items-center gap-1.5">
+            <Clock className="w-3 h-3" /> Recently changed · last 7 days
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {recentlyChanged.map((r) => {
+              const t = tenants.find((x) => x.id === r.tenantId);
+              if (!t) return null;
+              return (
+                <button
+                  key={r.tenantId}
+                  type="button"
+                  onClick={() => setDetailId(r.tenantId)}
+                  className="inline-flex items-center gap-2 px-2 py-1 rounded-[5px] border border-lightgray text-xs hover:border-black"
+                  title={r.summary}
+                >
+                  <span className="font-medium">
+                    {t.firstName} {t.lastName}
+                  </span>
+                  <span className="text-gray">·</span>
+                  <span className="text-gray">{formatRelative(r.at, nowTs)}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Calendar view — ticks for move-ins (green) + move-outs (orange) */}
+      {view === "calendar" && (
+        <TenantsCalendarView
+          tenants={filtered}
+          onOpen={(t) => setDetailId(t.id)}
+        />
+      )}
+
+      {/* Table view (default) */}
+      {view === "table" && (
       <div className="bg-white rounded-[5px] border border-lightgray overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -912,6 +992,21 @@ export default function TenantsPage({
           </table>
         </div>
       </div>
+      )}
+
+      {/* Detail sidepanel — quick peek without leaving the list */}
+      {detailId && (() => {
+        const t = tenants.find((x) => x.id === detailId);
+        if (!t) return null;
+        return (
+          <TenantDetailPanel
+            tenant={t}
+            issues={issuesByTenant.get(t.id) ?? []}
+            nowTs={nowTs}
+            onClose={() => setDetailId(null)}
+          />
+        );
+      })()}
 
       {/* Confirm modal — terminate / remove only */}
       {confirmAction && (
@@ -1091,6 +1186,318 @@ function KpiCard({
  *  menu, so the admin doesn't have to navigate into the folio just to
  *  record a €50 Schlüsselersatz. POSTs the same shape as the folio
  *  modal (type/chargeOn included). */
+/** Relative-time label like "3h ago", "2d ago" for the recently-changed chips. */
+function formatRelative(iso: string, nowTs: number): string {
+  const ms = nowTs - new Date(iso).getTime();
+  const m = Math.floor(ms / 60_000);
+  if (m < 1) return "just now";
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  const d = Math.floor(h / 24);
+  return `${d}d ago`;
+}
+
+/** Month calendar showing move-ins (green) and move-outs (orange) for
+ *  every tenant in the filtered set. Click a pill opens the detail
+ *  sidepanel. Move-ins and move-outs can overlap on the same day. */
+function TenantsCalendarView({
+  tenants,
+  onOpen,
+}: {
+  tenants: Tenant[];
+  onOpen: (t: Tenant) => void;
+}) {
+  const [anchor, setAnchor] = useState<Date>(() => {
+    const d = new Date();
+    d.setDate(1);
+    d.setHours(0, 0, 0, 0);
+    return d;
+  });
+  const year = anchor.getFullYear();
+  const month = anchor.getMonth();
+  const firstOfMonth = new Date(year, month, 1);
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const firstWeekday = (firstOfMonth.getDay() + 6) % 7;
+
+  type DayEntry =
+    | { kind: "in"; tenant: Tenant }
+    | { kind: "out"; tenant: Tenant };
+  const byDay = new Map<number, DayEntry[]>();
+  for (const t of tenants) {
+    const mi = new Date(t.moveIn);
+    if (mi.getFullYear() === year && mi.getMonth() === month) {
+      const arr = byDay.get(mi.getDate()) ?? [];
+      arr.push({ kind: "in", tenant: t });
+      byDay.set(mi.getDate(), arr);
+    }
+    if (t.moveOut) {
+      const mo = new Date(t.moveOut);
+      if (mo.getFullYear() === year && mo.getMonth() === month) {
+        const arr = byDay.get(mo.getDate()) ?? [];
+        arr.push({ kind: "out", tenant: t });
+        byDay.set(mo.getDate(), arr);
+      }
+    }
+  }
+
+  const monthLabel = anchor.toLocaleDateString("de-DE", {
+    month: "long",
+    year: "numeric",
+  });
+  const weekdays = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
+
+  return (
+    <div className="bg-white rounded-[5px] border border-lightgray overflow-hidden">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-lightgray bg-background-alt">
+        <h3 className="text-sm font-semibold capitalize">{monthLabel}</h3>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3 text-[10px] text-gray">
+            <span className="inline-flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-green-500" /> Move-in
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-orange-500" /> Move-out
+            </span>
+          </div>
+          <div className="flex items-center gap-1 text-xs ml-2">
+            <button
+              onClick={() => setAnchor(new Date(year, month - 1, 1))}
+              className="px-2 py-1 border border-lightgray rounded-[5px] hover:bg-white"
+            >
+              ‹ Prev
+            </button>
+            <button
+              onClick={() => {
+                const d = new Date();
+                d.setDate(1);
+                d.setHours(0, 0, 0, 0);
+                setAnchor(d);
+              }}
+              className="px-2 py-1 border border-lightgray rounded-[5px] hover:bg-white"
+            >
+              Today
+            </button>
+            <button
+              onClick={() => setAnchor(new Date(year, month + 1, 1))}
+              className="px-2 py-1 border border-lightgray rounded-[5px] hover:bg-white"
+            >
+              Next ›
+            </button>
+          </div>
+        </div>
+      </div>
+      <div className="grid grid-cols-7 border-b border-lightgray bg-background-alt/60 text-[10px] uppercase tracking-wide text-gray">
+        {weekdays.map((w) => (
+          <div key={w} className="px-2 py-1.5 text-center">
+            {w}
+          </div>
+        ))}
+      </div>
+      <div className="grid grid-cols-7">
+        {Array.from({ length: firstWeekday }).map((_, i) => (
+          <div
+            key={`blank-${i}`}
+            className="border-r border-b border-lightgray/40 bg-background-alt/30 min-h-[110px]"
+          />
+        ))}
+        {Array.from({ length: daysInMonth }).map((_, i) => {
+          const day = i + 1;
+          const items = byDay.get(day) ?? [];
+          const isToday = (() => {
+            const t = new Date();
+            return (
+              t.getFullYear() === year &&
+              t.getMonth() === month &&
+              t.getDate() === day
+            );
+          })();
+          return (
+            <div
+              key={day}
+              className={`border-r border-b border-lightgray/40 p-1.5 min-h-[110px] align-top ${isToday ? "bg-pink-50" : ""}`}
+            >
+              <div className="text-[11px] text-gray tabular-nums mb-1">
+                {day}
+              </div>
+              <div className="space-y-1">
+                {items.map((entry, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => onOpen(entry.tenant)}
+                    className={`w-full text-left px-1.5 py-0.5 rounded-[5px] text-[11px] truncate ${
+                      entry.kind === "in"
+                        ? "bg-green-100 text-green-700 hover:bg-green-200"
+                        : "bg-orange-100 text-orange-700 hover:bg-orange-200"
+                    }`}
+                    title={`${entry.kind === "in" ? "Move-in" : "Move-out"}: ${entry.tenant.firstName} ${entry.tenant.lastName}`}
+                  >
+                    {entry.kind === "in" ? "↓" : "↑"} {entry.tenant.firstName}{" "}
+                    {entry.tenant.lastName}
+                  </button>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/** Right-hand detail panel showing contact, health summary, notes preview,
+ *  and a shortcut into the folio. Closes via X / Esc / backdrop click. */
+function TenantDetailPanel({
+  tenant,
+  issues,
+  nowTs,
+  onClose,
+}: {
+  tenant: Tenant;
+  issues: TenantIssue[];
+  nowTs: number;
+  onClose: () => void;
+}) {
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  const openRent = tenant.rentPayments
+    .filter((p) => p.status !== "PAID")
+    .reduce((s, p) => s + Math.max(0, p.amount - p.paidAmount), 0);
+
+  return (
+    <>
+      <div
+        onClick={onClose}
+        className="fixed inset-0 bg-black/40 z-40"
+        aria-hidden
+      />
+      <div className="fixed top-0 right-0 bottom-0 w-full max-w-md bg-white z-50 shadow-xl overflow-y-auto">
+        <div className="sticky top-0 bg-white border-b border-lightgray px-5 py-3 flex items-start justify-between gap-3 z-10">
+          <div className="min-w-0">
+            <div className="text-xs text-gray">
+              {tenant.room.apartment.location.name} · #{tenant.room.roomNumber}
+            </div>
+            <h2 className="text-lg font-bold text-black truncate">
+              {tenant.firstName} {tenant.lastName}
+            </h2>
+            <div className="mt-1">
+              <IssuesPill issues={issues} />
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-gray hover:text-black p-1 -mr-1"
+            aria-label="Close"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="px-5 py-4 space-y-5">
+          <Link
+            href={`/admin/tenants/${tenant.id}`}
+            className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-[5px] border border-lightgray hover:border-black"
+          >
+            Open full folio <ArrowRight className="w-3 h-3" />
+          </Link>
+
+          <div>
+            <div className="text-[11px] uppercase tracking-wider text-gray font-semibold mb-1.5">
+              Contact
+            </div>
+            <div className="text-sm space-y-0.5">
+              <div>
+                <a href={`mailto:${tenant.email}`} className="hover:underline">
+                  {tenant.email}
+                </a>
+              </div>
+              {tenant.phone && (
+                <div>
+                  <a href={`tel:${tenant.phone}`} className="hover:underline">
+                    {tenant.phone}
+                  </a>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <div className="text-[11px] uppercase tracking-wider text-gray font-semibold mb-1.5">
+              Stay
+            </div>
+            <div className="text-sm space-y-0.5">
+              <div className="flex items-center gap-1.5">
+                <Home className="w-3 h-3 text-gray" />
+                {tenant.room.apartment.location.name} · Suite #
+                {tenant.room.roomNumber} · {formatCategory(tenant.room.category)}
+              </div>
+              <div>Rent: €{(tenant.monthlyRent / 100).toFixed(0)}/mo</div>
+              <div>Move-in: {formatDate(tenant.moveIn)}</div>
+              {tenant.moveOut && (
+                <div className="flex items-center gap-1.5 text-orange-700">
+                  <LogOut className="w-3 h-3" />
+                  Leaving: {formatDate(tenant.moveOut)}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {(openRent > 0 || !tenant.sepaMandateId) && (
+            <div>
+              <div className="text-[11px] uppercase tracking-wider text-gray font-semibold mb-1.5">
+                Finance
+              </div>
+              <div className="text-sm space-y-0.5">
+                {openRent > 0 && (
+                  <div className="text-red-700">
+                    Open rent: €{(openRent / 100).toFixed(2)}
+                  </div>
+                )}
+                {!tenant.sepaMandateId && (
+                  <div className="text-orange-700">No payment method set</div>
+                )}
+                <div className="text-gray">
+                  Paid rents total: €{(tenant.paidRentsCents / 100).toFixed(0)}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {tenant.notesCount > 0 && (
+            <div>
+              <div className="text-[11px] uppercase tracking-wider text-gray font-semibold mb-1.5">
+                Notes
+              </div>
+              <Link
+                href={`/admin/tenants/${tenant.id}`}
+                className="inline-flex items-center gap-1 text-sm hover:underline"
+              >
+                <MessageSquare className="w-3 h-3" />
+                {tenant.notesCount} note{tenant.notesCount === 1 ? "" : "s"} —
+                view in folio
+              </Link>
+            </div>
+          )}
+
+          <div className="text-[10px] text-gray font-mono pt-2 border-t border-lightgray">
+            {tenant.id}
+          </div>
+          <div className="text-[10px] text-gray">
+            {/* keep nowTs in context for the health pill */}
+            Live as of {formatRelative(new Date(nowTs).toISOString(), nowTs)}
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
 function QuickExtraChargeModal({
   tenantId,
   tenantName,

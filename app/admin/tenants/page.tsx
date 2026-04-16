@@ -8,7 +8,11 @@ export const dynamic = "force-dynamic";
 export default async function AdminTenantsPage() {
   if (!(await isAuthenticated())) redirect("/admin/login");
 
-  const [tenantsRaw, locations, tenantNotes] = await Promise.all([
+  // Date.now() is fine in a Server Component — the React Compiler rule
+  // fires by default; skip it here.
+  // eslint-disable-next-line react-hooks/purity
+  const sevenDaysAgo = new Date(Date.now() - 7 * 86_400_000);
+  const [tenantsRaw, locations, tenantNotes, recentAudit] = await Promise.all([
     prisma.tenant.findMany({
       include: {
         room: {
@@ -46,6 +50,17 @@ export default async function AdminTenantsPage() {
       where: { tenantId: { not: null } },
       select: { tenantId: true },
     }),
+    // Audit entries about tenant changes in the last 7 days — for the
+    // "Recently changed" section. Distinct tenant IDs then ordered by
+    // most-recent activity.
+    prisma.auditLog.findMany({
+      where: {
+        entityType: "tenant",
+        at: { gte: sevenDaysAgo },
+      },
+      orderBy: { at: "desc" },
+      take: 100, // plenty — we distinct by tenantId on the server below
+    }),
   ]);
 
   // Group notes by tenantId → just the count, list view only needs that
@@ -65,10 +80,26 @@ export default async function AdminTenantsPage() {
     notesCount: notesCountByTenant[t.id] ?? 0,
   }));
 
+  // Recently-changed tenants: first 5 distinct tenantIds from the audit
+  // log. Carry the most-recent summary + timestamp for the dashboard card.
+  const seenTenant = new Set<string>();
+  const recentlyChanged: { tenantId: string; at: Date; summary: string }[] = [];
+  for (const a of recentAudit) {
+    if (!a.entityId || seenTenant.has(a.entityId)) continue;
+    seenTenant.add(a.entityId);
+    recentlyChanged.push({
+      tenantId: a.entityId,
+      at: a.at,
+      summary: a.summary ?? `${a.module} · ${a.action}`,
+    });
+    if (recentlyChanged.length >= 5) break;
+  }
+
   return (
     <TenantsPage
       tenants={JSON.parse(JSON.stringify(tenants))}
       locations={JSON.parse(JSON.stringify(locations))}
+      recentlyChanged={JSON.parse(JSON.stringify(recentlyChanged))}
     />
   );
 }
