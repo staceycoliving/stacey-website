@@ -228,13 +228,18 @@ export default function TenantsPage({
   const [nowTs] = useState(() => Date.now());
 
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [emailSubmenuId, setEmailSubmenuId] = useState<string | null>(null);
   const [sendingSetupId, setSendingSetupId] = useState<string | null>(null);
   const [confirmAction, setConfirmAction] = useState<
     | { type: "terminate"; tenantId: string }
     | null
   >(null);
   const [withdrawTenantId, setWithdrawTenantId] = useState<string | null>(null);
+  const [extraChargeTenantId, setExtraChargeTenantId] = useState<string | null>(
+    null
+  );
   const [working, setWorking] = useState(false);
+  const [bulkBusy, setBulkBusy] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
   // Close menu on outside click
@@ -408,6 +413,67 @@ export default function TenantsPage({
     }
     setSendingSetupId(null);
     setOpenMenuId(null);
+  }
+
+  async function resendEmail(tenantId: string, templateKey: string) {
+    if (!confirm(`${templateKey} an diesen Mieter senden?`)) return;
+    setWorking(true);
+    try {
+      const res = await fetch("/api/admin/emails/resend", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tenantId, templateKey }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        alert(`✓ Gesendet an ${data.sentTo}`);
+      } else {
+        alert(`Fehler: ${data.error ?? res.statusText}`);
+      }
+    } finally {
+      setWorking(false);
+      setOpenMenuId(null);
+      setEmailSubmenuId(null);
+    }
+  }
+
+  /** Bulk-send the same template to every tenant in `filtered` that
+   *  matches `eligible`. Serial calls, simple toast at the end. */
+  async function bulkSend(
+    label: string,
+    templateKey: string,
+    eligible: (t: Tenant) => boolean
+  ) {
+    const targets = filtered.filter(eligible);
+    if (targets.length === 0) {
+      alert("Niemand passt gerade zu diesem Filter.");
+      return;
+    }
+    if (
+      !confirm(
+        `${label} an ${targets.length} Mieter senden?\nKann einige Minuten dauern.`
+      )
+    )
+      return;
+    setBulkBusy(templateKey);
+    let sent = 0;
+    let failed = 0;
+    for (const t of targets) {
+      try {
+        const res = await fetch("/api/admin/emails/resend", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ tenantId: t.id, templateKey }),
+        });
+        if (res.ok) sent++;
+        else failed++;
+      } catch {
+        failed++;
+      }
+    }
+    setBulkBusy(null);
+    alert(`${label}: ${sent} gesendet, ${failed} fehlgeschlagen.`);
+    router.refresh();
   }
 
   async function terminateTenant(tenantId: string) {
@@ -592,6 +658,81 @@ export default function TenantsPage({
             {filtered.length} result{filtered.length === 1 ? "" : "s"}
           </span>
         </div>
+
+        {/* Bulk action bar — only appears when the current filter yields
+            candidates where the action actually makes sense. */}
+        {(() => {
+          const overdue = filtered.filter((t) =>
+            t.rentPayments.some((p) => p.status === "FAILED")
+          );
+          const upcomingMoveIn = filtered.filter((t) => {
+            const ts = new Date(t.moveIn).getTime();
+            return ts >= nowTs && ts <= nowTs + 7 * 86_400_000;
+          });
+          const noPay = filtered.filter(
+            (t) => !t.sepaMandateId && !t.moveOut
+          );
+          if (
+            overdue.length === 0 &&
+            upcomingMoveIn.length === 0 &&
+            noPay.length === 0
+          ) {
+            return null;
+          }
+          return (
+            <div className="flex flex-wrap items-center gap-2 text-xs pt-1 border-t border-lightgray/50">
+              <span className="text-gray uppercase tracking-wide">
+                Bulk actions:
+              </span>
+              {overdue.length > 0 && (
+                <button
+                  onClick={() =>
+                    bulkSend("Mahnung 1", "mahnung1", (t) =>
+                      t.rentPayments.some((p) => p.status === "FAILED")
+                    )
+                  }
+                  disabled={bulkBusy !== null}
+                  className="px-2 py-1 rounded-[5px] border border-lightgray bg-white hover:border-black disabled:opacity-40"
+                >
+                  {bulkBusy === "mahnung1"
+                    ? "Sending…"
+                    : `Send Mahnung 1 to ${overdue.length} overdue`}
+                </button>
+              )}
+              {upcomingMoveIn.length > 0 && (
+                <button
+                  onClick={() =>
+                    bulkSend("Welcome", "welcome", (t) => {
+                      const ts = new Date(t.moveIn).getTime();
+                      return ts >= nowTs && ts <= nowTs + 7 * 86_400_000;
+                    })
+                  }
+                  disabled={bulkBusy !== null}
+                  className="px-2 py-1 rounded-[5px] border border-lightgray bg-white hover:border-black disabled:opacity-40"
+                >
+                  {bulkBusy === "welcome"
+                    ? "Sending…"
+                    : `Send Welcome to ${upcomingMoveIn.length} moving in ≤7d`}
+                </button>
+              )}
+              {noPay.length > 0 && (
+                <button
+                  onClick={() =>
+                    bulkSend("Payment setup link", "payment_setup", (t) =>
+                      Boolean(!t.sepaMandateId && !t.moveOut)
+                    )
+                  }
+                  disabled={bulkBusy !== null}
+                  className="px-2 py-1 rounded-[5px] border border-lightgray bg-white hover:border-black disabled:opacity-40"
+                >
+                  {bulkBusy === "payment_setup"
+                    ? "Sending…"
+                    : `Send Payment setup to ${noPay.length} missing`}
+                </button>
+              )}
+            </div>
+          );
+        })()}
       </div>
 
       {/* Table */}
@@ -683,11 +824,53 @@ export default function TenantsPage({
                         {openMenuId === t.id && (
                           <div
                             ref={menuRef}
-                            className="absolute right-4 top-10 z-20 bg-white border border-lightgray rounded-[5px] shadow-md w-56 py-1"
+                            className="absolute right-4 top-10 z-20 bg-white border border-lightgray rounded-[5px] shadow-md w-60 py-1"
                           >
                             <MenuItem onClick={() => router.push(`/admin/tenants/${t.id}`)}>
                               Open folio
                             </MenuItem>
+                            <MenuItem
+                              onClick={() => {
+                                setExtraChargeTenantId(t.id);
+                                setOpenMenuId(null);
+                              }}
+                            >
+                              Add extra charge…
+                            </MenuItem>
+                            <MenuItem
+                              onClick={() =>
+                                setEmailSubmenuId(
+                                  emailSubmenuId === t.id ? null : t.id
+                                )
+                              }
+                            >
+                              <span className="flex items-center justify-between">
+                                Send email…
+                                <span className="text-gray text-xs">▸</span>
+                              </span>
+                            </MenuItem>
+                            {emailSubmenuId === t.id && (
+                              <div className="bg-background-alt border-t border-b border-lightgray">
+                                <MenuItem onClick={() => resendEmail(t.id, "welcome")}>
+                                  Welcome
+                                </MenuItem>
+                                <MenuItem onClick={() => resendEmail(t.id, "payment_setup")}>
+                                  Payment setup link
+                                </MenuItem>
+                                <MenuItem onClick={() => resendEmail(t.id, "rent_reminder")}>
+                                  Rent reminder
+                                </MenuItem>
+                                <MenuItem onClick={() => resendEmail(t.id, "mahnung1")}>
+                                  1. Mahnung
+                                </MenuItem>
+                                <MenuItem onClick={() => resendEmail(t.id, "mahnung2")}>
+                                  2. Mahnung + Kündigung
+                                </MenuItem>
+                                <MenuItem onClick={() => resendEmail(t.id, "deposit_return")}>
+                                  Deposit settlement
+                                </MenuItem>
+                              </div>
+                            )}
                             <MenuItem
                               onClick={() => sendSetupLink(t.id)}
                               disabled={sendingSetupId === t.id}
@@ -742,6 +925,24 @@ export default function TenantsPage({
           onCancel={() => setConfirmAction(null)}
         />
       )}
+
+      {/* Quick extra-charge modal (open without going to folio) */}
+      {extraChargeTenantId &&
+        (() => {
+          const t = tenants.find((x) => x.id === extraChargeTenantId);
+          if (!t) return null;
+          return (
+            <QuickExtraChargeModal
+              tenantId={t.id}
+              tenantName={`${t.firstName} ${t.lastName}`}
+              onClose={() => setExtraChargeTenantId(null)}
+              onSuccess={() => {
+                setExtraChargeTenantId(null);
+                router.refresh();
+              }}
+            />
+          );
+        })()}
 
       {/* Widerruf modal */}
       {withdrawTenantId &&
@@ -883,6 +1084,155 @@ function KpiCard({
       <p className={`text-2xl font-bold mt-0.5 ${toneClass}`}>{value}</p>
       {sub && <p className="text-[11px] text-gray mt-0.5">{sub}</p>}
     </button>
+  );
+}
+
+/** Compact add-extra-charge modal reachable from the list row action
+ *  menu, so the admin doesn't have to navigate into the folio just to
+ *  record a €50 Schlüsselersatz. POSTs the same shape as the folio
+ *  modal (type/chargeOn included). */
+function QuickExtraChargeModal({
+  tenantId,
+  tenantName,
+  onClose,
+  onSuccess,
+}: {
+  tenantId: string;
+  tenantName: string;
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  const [type, setType] = useState<"CHARGE" | "DISCOUNT">("CHARGE");
+  const [chargeOn, setChargeOn] = useState<"NEXT_RENT" | "DEPOSIT_SETTLEMENT">(
+    "NEXT_RENT"
+  );
+  const [description, setDescription] = useState("");
+  const [amount, setAmount] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  async function save() {
+    const cents = Math.round(parseFloat(amount.replace(",", ".")) * 100);
+    if (!description.trim() || !Number.isFinite(cents) || cents <= 0) {
+      alert("Beschreibung und positiver Betrag nötig.");
+      return;
+    }
+    setSaving(true);
+    try {
+      const res = await fetch(
+        `/api/admin/tenants/${tenantId}/extra-charges`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ description, amount: cents, type, chargeOn }),
+        }
+      );
+      if (res.ok) onSuccess();
+      else {
+        const data = await res.json().catch(() => ({}));
+        alert(`Fehler: ${data.error ?? "save failed"}`);
+      }
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const isDiscount = type === "DISCOUNT";
+  return (
+    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-[5px] border border-lightgray p-6 max-w-md w-full space-y-3">
+        <div className="flex items-start justify-between">
+          <div>
+            <h3 className="font-bold text-black">Add adjustment</h3>
+            <p className="text-xs text-gray mt-0.5">For {tenantName}</p>
+          </div>
+          <button onClick={onClose} className="text-gray hover:text-black">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div>
+          <div className="block text-xs text-gray mb-1">Type</div>
+          <div className="inline-flex rounded-[5px] border border-lightgray overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setType("CHARGE")}
+              className={`px-3 py-1.5 text-sm ${type === "CHARGE" ? "bg-black text-white" : "bg-white text-gray hover:bg-background-alt"}`}
+            >
+              Charge (Mieter schuldet)
+            </button>
+            <button
+              type="button"
+              onClick={() => setType("DISCOUNT")}
+              className={`px-3 py-1.5 text-sm ${type === "DISCOUNT" ? "bg-green-700 text-white" : "bg-white text-gray hover:bg-background-alt"}`}
+            >
+              Discount
+            </button>
+          </div>
+        </div>
+
+        <label className="block">
+          <span className="block text-xs text-gray mb-1">
+            {isDiscount ? "Grund" : "Description"}
+          </span>
+          <input
+            type="text"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder={
+              isDiscount ? "z.B. Heizungsausfall 3 Tage" : "z.B. Schlüsselersatz"
+            }
+            className="w-full px-3 py-2 border border-lightgray rounded-[5px] text-sm"
+          />
+        </label>
+
+        <label className="block">
+          <span className="block text-xs text-gray mb-1">Amount (€)</span>
+          <input
+            type="number"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            placeholder="50.00"
+            className="w-full px-3 py-2 border border-lightgray rounded-[5px] text-sm"
+          />
+        </label>
+
+        <div>
+          <div className="block text-xs text-gray mb-1">When</div>
+          <div className="inline-flex rounded-[5px] border border-lightgray overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setChargeOn("NEXT_RENT")}
+              className={`px-3 py-1.5 text-sm ${chargeOn === "NEXT_RENT" ? "bg-black text-white" : "bg-white text-gray hover:bg-background-alt"}`}
+            >
+              Mit nächster Miete
+            </button>
+            <button
+              type="button"
+              onClick={() => setChargeOn("DEPOSIT_SETTLEMENT")}
+              className={`px-3 py-1.5 text-sm ${chargeOn === "DEPOSIT_SETTLEMENT" ? "bg-black text-white" : "bg-white text-gray hover:bg-background-alt"}`}
+            >
+              Erst bei Auszug
+            </button>
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-2 pt-2">
+          <button
+            onClick={onClose}
+            className="px-3 py-1.5 text-sm border border-lightgray rounded-[5px] hover:bg-background-alt"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={save}
+            disabled={saving}
+            className="px-3 py-1.5 text-sm bg-black text-white rounded-[5px] hover:bg-black/90 disabled:opacity-50"
+          >
+            {saving ? "..." : "Save"}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 
