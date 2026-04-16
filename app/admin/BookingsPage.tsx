@@ -107,13 +107,13 @@ function formatDate(d: string | null) {
   });
 }
 
-function daysSince(iso: string): number {
-  return Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000);
+function daysSince(iso: string, nowTs: number): number {
+  return Math.floor((nowTs - new Date(iso).getTime()) / 86_400_000);
 }
 
-function hoursUntil(iso: string | null): number | null {
+function hoursUntil(iso: string | null, nowTs: number): number | null {
   if (!iso) return null;
-  return Math.round((new Date(iso).getTime() - Date.now()) / 3_600_000);
+  return Math.round((new Date(iso).getTime() - nowTs) / 3_600_000);
 }
 
 function formatCategory(cat: string) {
@@ -131,6 +131,7 @@ type BookingKpis = {
   moveInsThisWeek: number;
   moveInsNext4Weeks: number;
   staleLeads: number;
+  confirmedWithoutTenant: number;
 };
 
 export default function BookingsPage({
@@ -172,6 +173,9 @@ export default function BookingsPage({
     },
     [pathname, router, searchParams]
   );
+
+  // Stable "now" for render-time age math (React Compiler purity).
+  const [nowTs] = useState(() => Date.now());
 
   // Local-only UI state (not worth URL-syncing)
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -290,7 +294,51 @@ export default function BookingsPage({
 
   // KPIs come from the server (see app/admin/bookings/page.tsx) so we keep
   // the client render pure — React Compiler rejects Date.now() calls here.
-  const { depositSoon, depositOverdue, moveInsThisWeek, moveInsNext4Weeks, staleLeads } = kpis;
+  const {
+    depositSoon,
+    depositOverdue,
+    moveInsThisWeek,
+    moveInsNext4Weeks,
+    staleLeads,
+    confirmedWithoutTenant,
+  } = kpis;
+
+  // IDs of all DEPOSIT_PENDING bookings currently in the filtered list —
+  // for the "Remind all" bulk action. Recomputed whenever filters change.
+  const depositPendingIds = useMemo(
+    () => filtered.filter((b) => b.status === "DEPOSIT_PENDING").map((b) => b.id),
+    [filtered]
+  );
+  const [bulkSending, setBulkSending] = useState(false);
+
+  async function bulkSendDepositReminders() {
+    if (depositPendingIds.length === 0) return;
+    if (
+      !confirm(
+        `Deposit reminder an alle ${depositPendingIds.length} Buchungen in "Awaiting deposit" senden?`
+      )
+    )
+      return;
+    setBulkSending(true);
+    let sent = 0;
+    let failed = 0;
+    for (const id of depositPendingIds) {
+      try {
+        const res = await fetch("/api/admin/emails/resend-booking", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ bookingId: id, templateKey: "deposit_reminder" }),
+        });
+        if (res.ok) sent++;
+        else failed++;
+      } catch {
+        failed++;
+      }
+    }
+    setBulkSending(false);
+    alert(`Reminders: ${sent} gesendet, ${failed} fehlgeschlagen.`);
+    router.refresh();
+  }
 
   async function cancelBooking(bookingId: string, reason: string) {
     setUpdating(bookingId);
@@ -319,19 +367,33 @@ export default function BookingsPage({
 
   return (
     <div>
-      {/* Action-focused KPIs */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
+      {/* Data-integrity banner — CONFIRMED with no Tenant row is an
+          operational bug and should be cleaned up manually. */}
+      {confirmedWithoutTenant > 0 && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-[5px] text-sm text-red-800 flex items-start gap-2">
+          <Info className="w-4 h-4 mt-0.5 flex-shrink-0" />
+          <div>
+            <strong>{confirmedWithoutTenant}</strong> confirmed booking
+            {confirmedWithoutTenant === 1 ? " is" : "s are"} missing a linked
+            Tenant. The webhook should have created one — investigate in the
+            table below.
+          </div>
+        </div>
+      )}
+
+      {/* Action-focused KPIs — deposits split into two cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-4">
         <Stat
-          label="Deposits due"
-          value={depositSoon + depositOverdue}
-          tone={depositOverdue > 0 ? "danger" : depositSoon > 0 ? "warn" : "ok"}
-          sub={
-            depositOverdue > 0
-              ? `${depositOverdue} overdue`
-              : depositSoon > 0
-                ? `${depositSoon} within 24h`
-                : "All in time"
-          }
+          label="Deposits overdue"
+          value={depositOverdue}
+          tone={depositOverdue > 0 ? "danger" : "ok"}
+          sub={depositOverdue > 0 ? "Past the 48h window" : "None overdue"}
+        />
+        <Stat
+          label="Deposits · 24h"
+          value={depositSoon}
+          tone={depositSoon > 0 ? "warn" : "ok"}
+          sub={depositSoon > 0 ? "Send a reminder" : "All on track"}
         />
         <Stat
           label="Move-ins this week"
@@ -505,6 +567,18 @@ export default function BookingsPage({
               Clear all
             </button>
           )}
+          {depositPendingIds.length > 1 && (
+            <button
+              onClick={bulkSendDepositReminders}
+              disabled={bulkSending}
+              className="inline-flex items-center gap-1 px-2 py-1 rounded-[5px] border border-lightgray bg-white hover:border-black disabled:opacity-40"
+              title={`Send deposit reminder to ${depositPendingIds.length} bookings`}
+            >
+              {bulkSending
+                ? "Sending…"
+                : `Remind all deposit (${depositPendingIds.length})`}
+            </button>
+          )}
           <span className="ml-auto text-gray">
             {filtered.length} result{filtered.length === 1 ? "" : "s"}
           </span>
@@ -518,6 +592,7 @@ export default function BookingsPage({
           setExpandedId={setExpandedId}
           sortBy={sortBy}
           sortDir={sortDir}
+          nowTs={nowTs}
           onSort={(col) =>
             writeParams({
               sortBy: col,
@@ -535,6 +610,7 @@ export default function BookingsPage({
       ) : (
         <KanbanView
           bookings={kanbanFiltered}
+          nowTs={nowTs}
           onCancel={(b) =>
             setCancelTarget({
               id: b.id,
@@ -565,6 +641,7 @@ function TableView({
   setExpandedId,
   sortBy,
   sortDir,
+  nowTs,
   onSort,
   onCancel,
 }: {
@@ -573,6 +650,7 @@ function TableView({
   setExpandedId: (id: string | null) => void;
   sortBy: "date" | "movein" | "name" | "status";
   sortDir: "asc" | "desc";
+  nowTs: number;
   onSort: (col: "date" | "movein" | "name" | "status") => void;
   onCancel: (b: Booking) => void;
 }) {
@@ -614,9 +692,12 @@ function TableView({
                     <td className="px-4 py-3">{formatCategory(b.category)}</td>
                     <td className="px-4 py-3 text-gray">{formatDate(b.moveInDate)}</td>
                     <td className="px-4 py-3">
-                      <span className={`inline-block px-2 py-0.5 rounded-[5px] text-xs font-semibold ${STATUS_COLORS[b.status] || ""}`}>
-                        {STATUS_LABEL[b.status] ?? b.status}
-                      </span>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className={`inline-block px-2 py-0.5 rounded-[5px] text-xs font-semibold ${STATUS_COLORS[b.status] || ""}`}>
+                          {STATUS_LABEL[b.status] ?? b.status}
+                        </span>
+                        <StatusAgeBadge booking={b} nowTs={nowTs} />
+                      </div>
                     </td>
                   </tr>
                   {expandedId === b.id && (
@@ -674,9 +755,11 @@ function TableView({
 
 function KanbanView({
   bookings,
+  nowTs,
   onCancel,
 }: {
   bookings: Booking[];
+  nowTs: number;
   onCancel: (b: Booking) => void;
 }) {
   const grouped = KANBAN_COLUMNS.map((status) => ({
@@ -717,6 +800,7 @@ function KanbanView({
                   <KanbanCard
                     key={b.id}
                     booking={b}
+                    nowTs={nowTs}
                     onCancel={() => onCancel(b)}
                   />
                 ))
@@ -731,12 +815,14 @@ function KanbanView({
 
 function KanbanCard({
   booking,
+  nowTs,
   onCancel,
 }: {
   booking: Booking;
+  nowTs: number;
   onCancel: () => void;
 }) {
-  const age = daysSince(booking.createdAt);
+  const age = daysSince(booking.createdAt, nowTs);
   const isCancelled = booking.status === "CANCELLED";
   const isConfirmed = booking.status === "CONFIRMED";
   const isStuck = !isCancelled && !isConfirmed && age > 7;
@@ -750,7 +836,7 @@ function KanbanCard({
   // Deposit deadline urgency
   const depositHours =
     booking.status === "DEPOSIT_PENDING"
-      ? hoursUntil(booking.depositDeadline ?? null)
+      ? hoursUntil(booking.depositDeadline ?? null, nowTs)
       : null;
 
   return (
@@ -799,7 +885,7 @@ function KanbanCard({
 
 /**
  * Context-aware actions:
- *  - Leads + Awaiting deposit → Cancel
+ *  - Leads + Awaiting deposit → Cancel + Resend dropdown
  *  - Confirmed (pre-move-in)  → Open in Tenants (for Widerruf / Terminate)
  *  - Cancelled / legacy       → no action
  */
@@ -818,19 +904,20 @@ function BookingActions({
 
   if (booking.status === "DEPOSIT_PENDING") {
     return (
-      <button
-        onClick={onCancel}
-        className={`${baseBtn} text-red-600 hover:bg-red-50 ${
-          compact ? "" : "border-red-300"
-        }`}
-      >
-        Cancel
-      </button>
+      <div className="inline-flex items-center gap-1.5 flex-wrap">
+        <ResendBookingEmailDropdown bookingId={booking.id} compact={compact} />
+        <button
+          onClick={onCancel}
+          className={`${baseBtn} text-red-600 hover:bg-red-50 ${
+            compact ? "" : "border-red-300"
+          }`}
+        >
+          Cancel
+        </button>
+      </div>
     );
   }
   if (booking.status === "PENDING") {
-    // Leads bleiben stehen — kein manuelles Cancel, sie fallen nach 60 Tagen
-    // eh automatisch aus der Pipeline für Retargeting-Zwecke.
     return compact ? null : (
       <span className="text-xs text-gray italic">Lead (keeps for retargeting)</span>
     );
@@ -847,11 +934,85 @@ function BookingActions({
         Open in Tenants →
       </Link>
     ) : (
-      <span className="text-xs text-gray italic">No tenant linked</span>
+      <span className={`${baseBtn} text-red-700 ${compact ? "" : "border-red-300 bg-red-50"}`}>
+        ⚠ No tenant linked
+      </span>
     );
   }
-  // Cancelled or legacy → no primary action
   return null;
+}
+
+/** Resend email dropdown scoped to a single Booking. Currently offers
+ *  deposit_reminder for bookings in the DEPOSIT_PENDING stage — other
+ *  templates can be added as we wire more booking-state emails. */
+function ResendBookingEmailDropdown({
+  bookingId,
+  compact,
+}: {
+  bookingId: string;
+  compact?: boolean;
+}) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState<string | null>(null);
+
+  const templates: { key: string; label: string }[] = [
+    { key: "deposit_reminder", label: "Deposit reminder" },
+  ];
+
+  async function resend(templateKey: string) {
+    if (!confirm(`${templateKey} an diesen Mieter senden?`)) return;
+    setBusy(templateKey);
+    try {
+      const res = await fetch("/api/admin/emails/resend-booking", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bookingId, templateKey }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        alert(`✓ Gesendet an ${data.sentTo}`);
+        setOpen(false);
+        router.refresh();
+      } else {
+        alert(`Fehler: ${data.error ?? res.statusText}`);
+      }
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  const btnCls = compact
+    ? "text-xs px-2 py-0.5 rounded-[5px]"
+    : "px-3 py-1 text-xs font-medium rounded-[5px] border border-lightgray";
+
+  return (
+    <div className="relative inline-block">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className={`${btnCls} inline-flex items-center gap-1 hover:bg-background-alt`}
+      >
+        Resend <ChevronDown className="w-3 h-3" />
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 mt-1 w-52 bg-white border border-lightgray rounded-[5px] shadow-lg z-50">
+            {templates.map((t) => (
+              <button
+                key={t.key}
+                onClick={() => resend(t.key)}
+                disabled={busy !== null}
+                className="w-full text-left px-3 py-2 text-sm hover:bg-background-alt disabled:opacity-40"
+              >
+                {busy === t.key ? "Sending…" : t.label}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
 }
 
 function CancelModal({
@@ -954,6 +1115,53 @@ function SortableTh({
       </button>
     </th>
   );
+}
+
+/** Small secondary pill next to the status pill showing how long the
+ *  booking has been sitting in its current stage. For DEPOSIT_PENDING
+ *  we use hours (deposit window is 48h), otherwise days since createdAt.
+ *  Silent for CANCELLED + CONFIRMED (not actionable). */
+function StatusAgeBadge({
+  booking,
+  nowTs,
+}: {
+  booking: Booking;
+  nowTs: number;
+}) {
+  if (booking.status === "DEPOSIT_PENDING") {
+    const h = hoursUntil(booking.depositDeadline ?? null, nowTs);
+    if (h === null) return null;
+    const cls =
+      h < 0
+        ? "bg-red-100 text-red-700"
+        : h < 24
+          ? "bg-orange-100 text-orange-700"
+          : "bg-gray-100 text-gray-600";
+    return (
+      <span className={`inline-block px-1.5 py-0.5 rounded-[5px] text-[10px] font-semibold ${cls}`}>
+        {h < 0 ? `${Math.abs(h)}h overdue` : `${h}h left`}
+      </span>
+    );
+  }
+  if (booking.status === "PENDING") {
+    const d = daysSince(booking.createdAt, nowTs);
+    if (d < 2) return null;
+    const cls =
+      d > 14
+        ? "bg-red-100 text-red-700"
+        : d > 7
+          ? "bg-orange-100 text-orange-700"
+          : "bg-gray-100 text-gray-600";
+    return (
+      <span
+        className={`inline-block px-1.5 py-0.5 rounded-[5px] text-[10px] font-semibold ${cls}`}
+        title="Days since the booking was created"
+      >
+        {d}d old
+      </span>
+    );
+  }
+  return null;
 }
 
 function HelpItem({

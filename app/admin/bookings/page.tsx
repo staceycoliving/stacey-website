@@ -82,6 +82,12 @@ export default async function AdminBookingsPage() {
         b.status === "PENDING" &&
         nowMs - new Date(b.createdAt).getTime() > 14 * day
     ).length,
+    // Data-integrity check: CONFIRMED means deposit paid → a Tenant row
+    // should have been created by the webhook. If it's null, something
+    // went wrong and we need to investigate.
+    confirmedWithoutTenant: bookings.filter(
+      (b) => b.status === "CONFIRMED" && !b.tenant
+    ).length,
   };
 
   return (
