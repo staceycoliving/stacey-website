@@ -274,6 +274,11 @@ export default function DashboardPage({ data }: { data: Dashboard }) {
   const [hiddenTypes, setHiddenTypes] = useState<Set<ActionTypeKey>>(new Set());
   const [olderCollapsed, setOlderCollapsed] = useState<boolean>(true);
 
+  // Stable "now" for render-time calculations. Using useState with a lazy
+  // initializer keeps Date.now() out of the render body (React Compiler's
+  // purity rule) while still reflecting roughly-current time.
+  const [nowTs] = useState(() => Date.now());
+
   // Hydrate from localStorage on first render. Wrapped in try/catch so
   // server render / private-mode / quota errors don't break the page.
   useEffect(() => {
@@ -384,7 +389,6 @@ export default function DashboardPage({ data }: { data: Dashboard }) {
           const today: Row[] = [];
           const thisWeek: Row[] = [];
           const older: Row[] = [];
-          const nowTs = Date.now();
           const ONE_DAY = 24 * 60 * 60 * 1000;
 
           // Deposit deadlines are always <24h per query → Today. Sort by

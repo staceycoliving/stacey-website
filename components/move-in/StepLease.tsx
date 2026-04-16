@@ -16,13 +16,15 @@ export default function StepLease({
 }) {
   const [signed, setSigned] = useState(false);
   const [opened, setOpened] = useState(false);
-  const [polling, setPolling] = useState(false);
+
+  // Derived from other state — no setState needed, which keeps the effect
+  // below compliant with the react-hooks/set-state-in-effect rule.
+  const polling = opened && Boolean(signatureRequestId) && !signed;
 
   // Poll Yousign for signature status after user opens the signing page
   useEffect(() => {
     if (!opened || !signatureRequestId || signed) return;
 
-    setPolling(true);
     const interval = setInterval(async () => {
       try {
         const res = await fetch(`/api/lease/status?id=${signatureRequestId}`);
@@ -30,7 +32,6 @@ export default function StepLease({
         const status = body?.ok ? body.data.status : null;
         if (status === "done" || status === "signed" || status === "completed") {
           setSigned(true);
-          setPolling(false);
           clearInterval(interval);
         }
       } catch {
@@ -40,9 +41,8 @@ export default function StepLease({
 
     return () => {
       clearInterval(interval);
-      setPolling(false);
     };
-  }, [opened, signatureRequestId, signed]);
+  }, [opened, signatureRequestId, signed, setSigned]);
 
   const openSigning = useCallback(() => {
     if (signingUrl) {
