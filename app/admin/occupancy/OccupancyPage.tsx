@@ -28,7 +28,7 @@ type Room = {
   category: string;
   monthlyRent: number;
   status: "ACTIVE" | "BLOCKED" | "DEACTIVATED";
-  tenant: Tenant | null;
+  tenants: Tenant[];
   bookings: Booking[];
 };
 
@@ -340,10 +340,10 @@ function RoomRow({
 
   // Compute tenant bar
   let tenantBar: { startPx: number; widthPx: number; leaving: boolean } | null = null;
-  if (room.tenant) {
-    const tStart = new Date(room.tenant.moveIn);
-    const tEnd = room.tenant.moveOut
-      ? new Date(room.tenant.moveOut)
+  if (room.tenants[0]) {
+    const tStart = new Date(room.tenants[0].moveIn);
+    const tEnd = room.tenants[0].moveOut
+      ? new Date(room.tenants[0].moveOut)
       : viewEnd;
     const visStart = tStart > viewStart ? tStart : viewStart;
     const visEnd = tEnd < viewEnd ? tEnd : viewEnd;
@@ -353,7 +353,7 @@ function RoomRow({
       tenantBar = {
         startPx,
         widthPx,
-        leaving: Boolean(room.tenant.moveOut),
+        leaving: Boolean(room.tenants[0].moveOut),
       };
     }
   }
@@ -397,18 +397,18 @@ function RoomRow({
       ))}
 
       {/* Tenant bar */}
-      {tenantBar && room.tenant && !isDeactivated && (
+      {tenantBar && room.tenants[0] && !isDeactivated && (
         <button
-          onClick={() => onTenantClick(room.tenant!.id)}
+          onClick={() => onTenantClick(room.tenants[0]!.id)}
           className={`absolute top-1 bottom-1 rounded-[4px] border text-xs px-2 truncate text-left hover:brightness-95 ${
             tenantBar.leaving
               ? "bg-yellow-200 border-yellow-400 text-yellow-900"
               : "bg-blue-200 border-blue-400 text-blue-900"
           }`}
           style={{ left: tenantBar.startPx, width: tenantBar.widthPx }}
-          title={`${room.tenant.firstName} ${room.tenant.lastName}\nIn: ${fmtFullDate(room.tenant.moveIn)}\nOut: ${room.tenant.moveOut ? fmtFullDate(room.tenant.moveOut) : "open end"}`}
+          title={`${room.tenants[0].firstName} ${room.tenants[0].lastName}\nIn: ${fmtFullDate(room.tenants[0].moveIn)}\nOut: ${room.tenants[0].moveOut ? fmtFullDate(room.tenants[0].moveOut) : "open end"}`}
         >
-          {room.tenant.firstName} {room.tenant.lastName[0]}.
+          {room.tenants[0].firstName} {room.tenants[0].lastName[0]}.
         </button>
       )}
 
