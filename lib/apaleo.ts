@@ -504,24 +504,11 @@ export async function getReservations(params: {
   status?: string; // e.g. "Confirmed", "InHouse", "CheckedOut"
 }) {
   const propertyIds = Object.values(PROPERTY_MAP).join(",");
-  // apaleo needs a date range — for a single-day query, use from=day
-  // and to=day+1. Both as bare YYYY-MM-DD (apaleo accepts this for
-  // the reservations endpoint despite the swagger saying datetime).
-  const fromDt = params.from;
-  // If from === to (single day), bump "to" to next day
-  const toDt = (() => {
-    if (params.from === params.to) {
-      const d = new Date(params.to + "T12:00:00Z");
-      d.setUTCDate(d.getUTCDate() + 1);
-      return d.toISOString().slice(0, 10);
-    }
-    return params.to;
-  })();
   const query = new URLSearchParams({
     propertyIds,
     dateFilter: params.dateFilter === "arrival" ? "Arrival" : "Departure",
-    from: fromDt,
-    to: toDt,
+    from: params.from,
+    to: params.to,
     ...(params.status ? { status: params.status } : {}),
     pageSize: "100",
     expand: "unit",
