@@ -45,11 +45,13 @@ export default async function AdminHousekeepingPage({
   let apaleoDepartures: Awaited<ReturnType<typeof getReservations>> = [];
   let apaleoError: string | null = null;
   try {
-    // Only fetch active reservations — exclude canceled/no-show
-    [apaleoArrivals, apaleoDepartures] = await Promise.all([
-      getReservations({ dateFilter: "arrival", from: dateStr, to: dateStr, status: "Confirmed" }),
-      getReservations({ dateFilter: "departure", from: dateStr, to: dateStr, status: "InHouse" }),
+    const [rawArrivals, rawDepartures] = await Promise.all([
+      getReservations({ dateFilter: "arrival", from: dateStr, to: dateStr }),
+      getReservations({ dateFilter: "departure", from: dateStr, to: dateStr }),
     ]);
+    // Filter out canceled/no-show reservations client-side
+    apaleoArrivals = rawArrivals.filter((r: any) => r.status !== "Canceled" && r.status !== "NoShow");
+    apaleoDepartures = rawDepartures.filter((r: any) => r.status !== "Canceled" && r.status !== "NoShow");
   } catch (err) {
     apaleoError = err instanceof Error ? err.message : String(err);
   }
