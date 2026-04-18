@@ -943,10 +943,10 @@ export default function TenantsPage({
                 <FilterTh col="address" value={colFilters.address ?? ""} onChange={setColFilter} options={Array.from(new Set(tenants.map((t) => t.room.apartment.address ?? buildFullAddress(t)))).sort()} />
                 <FilterTh col="zusatz" value={colFilters.zusatz ?? ""} onChange={setColFilter} options={Array.from(new Set(tenants.map((t) => floorLabel(t)).filter(Boolean))).sort()} />
                 <FilterTh col="apartment" value={colFilters.apartment ?? ""} onChange={setColFilter} options={Array.from(new Set(tenants.map((t) => String(t.room.apartment.number ?? "")).filter(Boolean))).sort((a, b) => Number(a) - Number(b))} />
-                <td className="px-1 py-1"></td>
+                <FilterTh col="suite" value={colFilters.suite ?? ""} onChange={setColFilter} options={Array.from(new Set(tenants.map((t) => t.room.roomNumber))).sort()} />
                 <FilterTh col="category" value={colFilters.category ?? ""} onChange={setColFilter} options={Array.from(new Set(tenants.map((t) => formatCategory(t.room.category)))).sort()} />
                 <td className="px-1 py-1"></td>
-                <td className="px-1 py-1"></td>
+                <FilterTh col="name" value={colFilters.name ?? ""} onChange={setColFilter} options={Array.from(new Set(tenants.map((t) => `${t.firstName} ${t.lastName}`))).sort()} />
                 <td className="px-1 py-1"></td>
                 <td className="px-1 py-1"></td>
                 <td className="px-1 py-1"></td>
