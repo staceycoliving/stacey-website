@@ -1,8 +1,19 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { Plus, Edit2, Trash2, X, Tag } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import {
+  ChevronDown,
+  ChevronUp,
+  Edit2,
+  LayoutGrid,
+  MoreHorizontal,
+  Plus,
+  Search,
+  Table as TableIcon,
+  Trash2,
+  X,
+} from "lucide-react";
 
 type Tenant = {
   id: string;
@@ -36,6 +47,8 @@ type Room = {
 
 type Apartment = {
   id: string;
+  number: number | null;
+  address: string | null;
   houseNumber: string;
   floor: string;
   label: string | null;
@@ -72,9 +85,18 @@ function formatDate(d: string | null) {
   return new Date(d).toLocaleDateString("de-DE", {
     day: "2-digit",
     month: "2-digit",
-    year: "numeric",
+    year: "2-digit",
   });
 }
+
+function daysUntilFree(moveOut: string | null, nowTs: number): number | null {
+  if (!moveOut) return null;
+  const d = Math.floor((new Date(moveOut).getTime() - nowTs) / 86_400_000);
+  return d >= 0 ? d : null;
+}
+
+type RoomSortCol = "room" | "floor" | "apt" | "category" | "price" | "status" | "tenant";
+type SortDir = "asc" | "desc";
 
 function formatCategory(cat: string) {
   return cat
@@ -105,8 +127,7 @@ type ModalState =
   | { kind: "addApartment"; locationId: string; locationName: string }
   | { kind: "editApartment"; apartment: Apartment; locationName: string }
   | { kind: "addRoom"; apartmentId: string; apartmentLabel: string }
-  | { kind: "editRoom"; room: Room }
-  | { kind: "batchPrice"; location: Location };
+  | { kind: "editRoom"; room: Room };
 
 export default function RoomsPage({
   locations,
@@ -114,73 +135,171 @@ export default function RoomsPage({
   locations: Location[];
 }) {
   const router = useRouter();
-  // Accept ?location=<id> from links (e.g. from the pricing matrix). Fall
-  // back to the first location if no param or the id doesn't match.
-  const searchParams =
-    typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
-  const initialLocationId = (() => {
-    const param = searchParams?.get("location");
-    if (param && locations.some((l) => l.id === param)) return param;
+  const pathname = usePathname();
+  const sp = useSearchParams();
+
+  // URL-driven state
+  const selectedLocationId = (() => {
+    const p = sp.get("location");
+    if (p && locations.some((l) => l.id === p)) return p;
     return locations[0]?.id || "";
   })();
-  const [selectedLocationId, setSelectedLocationId] = useState(initialLocationId);
-  const [modal, setModal] = useState<ModalState>({ kind: null });
+  const view = (sp.get("view") as "table" | "cards") ?? "table";
+  const search = sp.get("q") ?? "";
+  const filterStatus = sp.get("status") ?? "";
+  const sortCol = (sp.get("sortBy") as RoomSortCol) ?? "room";
+  const sortDir = (sp.get("sortDir") as SortDir) ?? "asc";
 
-  const allRooms = locations.flatMap((l) =>
-    l.apartments.flatMap((a) => a.rooms)
+  const writeParams = useCallback(
+    (patch: Record<string, string | null>) => {
+      const next = new URLSearchParams(sp.toString());
+      for (const [k, v] of Object.entries(patch)) {
+        if (v === null || v === "") next.delete(k);
+        else next.set(k, v);
+      }
+      const qs = next.toString();
+      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+    },
+    [pathname, router, sp]
   );
-  const totalRooms = allRooms.length;
-  const activeRooms = allRooms.filter((r) => r.status === "ACTIVE");
-  const occupied = activeRooms.filter(isCurrentlyOccupied).length;
-  const reserved = activeRooms.filter(
-    (r) => !isCurrentlyOccupied(r) && r.bookings.length > 0
-  ).length;
-  const vacant = activeRooms.length - occupied - reserved;
-  const blocked = allRooms.filter((r) => r.status === "BLOCKED").length;
+
+  const [searchInput, setSearchInput] = useState(search);
+  useEffect(() => { setSearchInput(search); }, [search]);
+  useEffect(() => {
+    if (searchInput === search) return;
+    const t = setTimeout(() => writeParams({ q: searchInput }), 200);
+    return () => clearTimeout(t);
+  }, [searchInput, search, writeParams]);
+
+  const [nowTs] = useState(() => Date.now());
+  const [modal, setModal] = useState<ModalState>({ kind: null });
 
   const selectedLoc = locations.find((l) => l.id === selectedLocationId);
 
-  function close() {
-    setModal({ kind: null });
+  // Flatten rooms for the selected location with parent references
+  type FlatRoom = Room & {
+    apartment: Apartment;
+    locationName: string;
+    occupancyStatus: "occupied" | "reserved" | "vacant" | "blocked" | "deactivated" | "leaving";
+    freeInDays: number | null;
+  };
+
+  const flatRooms: FlatRoom[] = useMemo(() => {
+    if (!selectedLoc) return [];
+    return selectedLoc.apartments.flatMap((apt) =>
+      apt.rooms.map((r) => {
+        const occ = isCurrentlyOccupied(r);
+        const leaving = occ && Boolean(r.tenant?.moveOut);
+        const reserved = !occ && r.bookings.length > 0;
+        const blocked = r.status === "BLOCKED";
+        const deactivated = r.status === "DEACTIVATED";
+        const vacant = !occ && !reserved && !blocked && !deactivated;
+        const status = deactivated
+          ? "deactivated"
+          : blocked
+            ? "blocked"
+            : leaving
+              ? "leaving"
+              : reserved
+                ? "reserved"
+                : vacant
+                  ? "vacant"
+                  : "occupied";
+        return {
+          ...r,
+          apartment: apt,
+          locationName: selectedLoc.name,
+          occupancyStatus: status,
+          freeInDays: leaving ? daysUntilFree(r.tenant?.moveOut ?? null, nowTs) : null,
+        };
+      })
+    );
+  }, [selectedLoc, nowTs]);
+
+  // Per-location KPIs
+  const locKpis = useMemo(() => {
+    const active = flatRooms.filter((r) => r.status === "ACTIVE");
+    return {
+      total: flatRooms.length,
+      occupied: flatRooms.filter((r) => r.occupancyStatus === "occupied" || r.occupancyStatus === "leaving").length,
+      reserved: flatRooms.filter((r) => r.occupancyStatus === "reserved").length,
+      vacant: flatRooms.filter((r) => r.occupancyStatus === "vacant").length,
+      blocked: flatRooms.filter((r) => r.occupancyStatus === "blocked").length,
+      deactivated: flatRooms.filter((r) => r.occupancyStatus === "deactivated").length,
+      occupancyPct: active.length > 0
+        ? Math.round(
+            (flatRooms.filter((r) => r.occupancyStatus === "occupied" || r.occupancyStatus === "leaving").length /
+              active.length) *
+              100
+          )
+        : 0,
+    };
+  }, [flatRooms]);
+
+  // Filter + search + sort
+  const filtered = useMemo(() => {
+    const q = search.toLowerCase();
+    let rows = flatRooms.filter((r) => {
+      if (filterStatus && r.occupancyStatus !== filterStatus) return false;
+      if (q) {
+        const hay = [
+          r.roomNumber,
+          formatCategory(r.category),
+          r.tenant?.firstName ?? "",
+          r.tenant?.lastName ?? "",
+          r.apartment.floor,
+        ]
+          .join(" ")
+          .toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
+    });
+    const dir = sortDir === "asc" ? 1 : -1;
+    rows.sort((a, b) => {
+      const get = (r: FlatRoom): string | number => {
+        switch (sortCol) {
+          case "room": return r.roomNumber;
+          case "floor": return r.apartment.floor;
+          case "apt": return r.apartment.number ?? 0;
+          case "category": return r.category;
+          case "price": return r.monthlyRent;
+          case "status": return r.occupancyStatus;
+          case "tenant": return r.tenant ? `${r.tenant.lastName} ${r.tenant.firstName}` : "zzz";
+          default: return r.roomNumber;
+        }
+      };
+      const av = get(a), bv = get(b);
+      if (av === bv) return 0;
+      return av < bv ? -dir : dir;
+    });
+    return rows;
+  }, [flatRooms, search, filterStatus, sortCol, sortDir]);
+
+  function toggleSort(col: RoomSortCol) {
+    writeParams({
+      sortBy: col,
+      sortDir: sortCol === col && sortDir === "asc" ? "desc" : "asc",
+    });
   }
-  function refresh() {
-    close();
-    router.refresh();
-  }
+
+  function close() { setModal({ kind: null }); }
+  function refresh() { close(); router.refresh(); }
 
   return (
     <div>
-      {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-6">
-        <Stat label="Total" value={totalRooms} />
-        <Stat label="Occupied" value={occupied} tone="ok" />
-        <Stat label="Reserved" value={reserved} tone="warn" />
-        <Stat label="Vacant" value={vacant} tone="info" />
-        <Stat label="Blocked" value={blocked} tone="muted" />
-      </div>
-
-      {/* Header actions */}
-      <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-        <h2 className="text-sm font-semibold">Property inventory</h2>
-        <button
-          onClick={() => setModal({ kind: "addLocation" })}
-          className="inline-flex items-center gap-1 px-3 py-1.5 bg-black text-white rounded-[5px] text-sm font-medium hover:bg-black/90"
-        >
-          <Plus className="w-4 h-4" /> Add location
-        </button>
-      </div>
-
       {/* Location tabs */}
       <div className="flex flex-wrap gap-2 mb-4">
         {locations.map((loc) => {
           const locRooms = loc.apartments.flatMap((a) => a.rooms);
-          const locVacant = locRooms.filter(
-            (r) => !isCurrentlyOccupied(r) && r.status === "ACTIVE"
+          const locActive = locRooms.filter((r) => r.status === "ACTIVE");
+          const locVacant = locActive.filter(
+            (r) => !isCurrentlyOccupied(r) && r.bookings.length === 0
           ).length;
           return (
             <button
               key={loc.id}
-              onClick={() => setSelectedLocationId(loc.id)}
+              onClick={() => writeParams({ location: loc.id })}
               className={`px-3 py-2 rounded-[5px] text-sm transition-colors ${
                 selectedLocationId === loc.id
                   ? "bg-black text-white font-semibold"
@@ -189,80 +308,195 @@ export default function RoomsPage({
             >
               {loc.name}
               <span className="ml-2 text-xs opacity-70">
-                {loc.stayType} · {locVacant} free
+                {locVacant} free
               </span>
             </button>
           );
         })}
       </div>
 
-      {/* Selected location detail */}
-      {selectedLoc && (
-        <div className="space-y-4">
-          <div className="bg-white rounded-[5px] border border-lightgray p-4 flex items-start justify-between gap-3 flex-wrap">
-            <div>
-              <h3 className="font-semibold text-black">
-                {selectedLoc.name}{" "}
-                <span className="text-xs text-gray font-normal">
-                  ({selectedLoc.slug})
-                </span>
-              </h3>
-              <p className="text-xs text-gray mt-0.5">
-                {selectedLoc.city} · {selectedLoc.address} · {selectedLoc.stayType}
-              </p>
-            </div>
-            <div className="flex gap-2 flex-wrap">
-              <button
-                onClick={() =>
-                  setModal({ kind: "batchPrice", location: selectedLoc })
-                }
-                className="inline-flex items-center gap-1 px-2 py-1 border border-lightgray rounded-[5px] text-xs hover:bg-background-alt"
-              >
-                <Tag className="w-3.5 h-3.5" /> Batch price
-              </button>
-              <button
-                onClick={() =>
-                  setModal({
-                    kind: "addApartment",
-                    locationId: selectedLoc.id,
-                    locationName: selectedLoc.name,
-                  })
-                }
-                className="inline-flex items-center gap-1 px-2 py-1 border border-lightgray rounded-[5px] text-xs hover:bg-background-alt"
-              >
-                <Plus className="w-3.5 h-3.5" /> Apartment
-              </button>
-              <button
-                onClick={() =>
-                  setModal({ kind: "editLocation", location: selectedLoc })
-                }
-                className="inline-flex items-center gap-1 px-2 py-1 border border-lightgray rounded-[5px] text-xs hover:bg-background-alt"
-              >
-                <Edit2 className="w-3.5 h-3.5" /> Edit
-              </button>
-              <button
-                onClick={async () => {
-                  if (!confirm(`Delete location "${selectedLoc.name}"?`)) return;
-                  const res = await fetch(
-                    `/api/admin/locations/${selectedLoc.id}`,
-                    { method: "DELETE" }
-                  );
-                  if (res.ok) router.refresh();
-                  else {
-                    const data = await res.json().catch(() => ({}));
-                    alert(`Delete failed: ${data.error ?? res.statusText}`);
-                  }
-                }}
-                className="inline-flex items-center gap-1 px-2 py-1 border border-red-200 text-red-600 rounded-[5px] text-xs hover:bg-red-50"
-              >
-                <Trash2 className="w-3.5 h-3.5" /> Delete
-              </button>
-            </div>
-          </div>
+      {/* Per-location KPIs */}
+      <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 mb-4">
+        <Stat label="Total" value={locKpis.total} />
+        <Stat label={`Occupied ${locKpis.occupancyPct}%`} value={locKpis.occupied} tone="ok" />
+        <Stat label="Reserved" value={locKpis.reserved} tone="warn" />
+        <Stat label="Vacant" value={locKpis.vacant} tone="info" />
+        <Stat label="Blocked" value={locKpis.blocked} tone="muted" />
+        <Stat label="Deactivated" value={locKpis.deactivated} tone="muted" />
+      </div>
 
+      {/* Filter bar + view toggle */}
+      <div className="flex flex-wrap items-center gap-2 mb-4">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray pointer-events-none" />
+          <input
+            type="text"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            placeholder="Search room#, tenant, category…"
+            className="w-full pl-8 pr-8 py-2 border border-lightgray rounded-[5px] text-sm bg-white"
+          />
+          {searchInput && (
+            <button onClick={() => setSearchInput("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray hover:text-black">
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+        <select
+          value={filterStatus}
+          onChange={(e) => writeParams({ status: e.target.value })}
+          className="px-3 py-2 border border-lightgray rounded-[5px] text-sm bg-white"
+        >
+          <option value="">All statuses</option>
+          <option value="occupied">Occupied</option>
+          <option value="leaving">Leaving</option>
+          <option value="reserved">Reserved</option>
+          <option value="vacant">Vacant</option>
+          <option value="blocked">Blocked</option>
+          <option value="deactivated">Deactivated</option>
+        </select>
+        <span className="text-xs text-gray">{filtered.length} rooms</span>
+
+        <div className="inline-flex rounded-[5px] border border-lightgray overflow-hidden ml-auto">
+          <button
+            onClick={() => writeParams({ view: "table" })}
+            className={`inline-flex items-center gap-1 px-3 py-1.5 text-sm ${view === "table" ? "bg-black text-white" : "bg-white text-gray hover:bg-background-alt"}`}
+          >
+            <TableIcon className="w-4 h-4" /> Table
+          </button>
+          <button
+            onClick={() => writeParams({ view: "cards" })}
+            className={`inline-flex items-center gap-1 px-3 py-1.5 text-sm border-l border-lightgray ${view === "cards" ? "bg-black text-white" : "bg-white text-gray hover:bg-background-alt"}`}
+          >
+            <LayoutGrid className="w-4 h-4" /> Cards
+          </button>
+        </div>
+      </div>
+
+      {/* Location header + admin actions */}
+      {selectedLoc && (
+        <div className="bg-white rounded-[5px] border border-lightgray p-3 mb-4 flex items-center justify-between gap-3 flex-wrap">
+          <div>
+            <span className="font-semibold text-sm text-black">{selectedLoc.name}</span>
+            <span className="text-xs text-gray ml-2">
+              {selectedLoc.city} · {selectedLoc.address}
+            </span>
+          </div>
+          <div className="flex gap-2 flex-wrap">
+            <button
+              onClick={() => setModal({ kind: "addApartment", locationId: selectedLoc.id, locationName: selectedLoc.name })}
+              className="inline-flex items-center gap-1 px-2 py-1 border border-lightgray rounded-[5px] text-xs hover:bg-background-alt"
+            >
+              <Plus className="w-3 h-3" /> Apartment
+            </button>
+            <button
+              onClick={() => setModal({ kind: "editLocation", location: selectedLoc })}
+              className="inline-flex items-center gap-1 px-2 py-1 border border-lightgray rounded-[5px] text-xs hover:bg-background-alt"
+            >
+              <Edit2 className="w-3 h-3" /> Edit
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Table view (default) */}
+      {view === "table" && (
+        <div className="bg-white rounded-[5px] border border-lightgray overflow-hidden">
+          <table className="w-full text-sm table-fixed">
+            <colgroup>
+              <col className="w-[8%]" />   {/* Room */}
+              <col className="w-[12%]" />  {/* Floor */}
+              <col className="w-[5%]" />   {/* Apt */}
+              <col className="w-[12%]" />  {/* Category */}
+              <col className="w-[8%]" />   {/* Price */}
+              <col className="w-[10%]" />  {/* Status */}
+              <col className="w-[18%]" />  {/* Tenant */}
+              <col className="w-[9%]" />   {/* Move-in */}
+              <col className="w-[9%]" />   {/* Move-out */}
+              <col className="w-[5%]" />   {/* Actions */}
+            </colgroup>
+            <thead>
+              <tr className="border-b border-lightgray bg-background-alt text-[11px]">
+                <SortTh label="Room" col="room" sortCol={sortCol} sortDir={sortDir} onSort={toggleSort} />
+                <SortTh label="Floor" col="floor" sortCol={sortCol} sortDir={sortDir} onSort={toggleSort} />
+                <SortTh label="Apt" col="apt" sortCol={sortCol} sortDir={sortDir} onSort={toggleSort} />
+                <SortTh label="Category" col="category" sortCol={sortCol} sortDir={sortDir} onSort={toggleSort} />
+                <SortTh label="Price" col="price" sortCol={sortCol} sortDir={sortDir} onSort={toggleSort} align="right" />
+                <SortTh label="Status" col="status" sortCol={sortCol} sortDir={sortDir} onSort={toggleSort} />
+                <SortTh label="Tenant" col="tenant" sortCol={sortCol} sortDir={sortDir} onSort={toggleSort} />
+                <th className="px-3 py-2 text-left text-gray uppercase tracking-wide">In</th>
+                <th className="px-3 py-2 text-left text-gray uppercase tracking-wide">Out</th>
+                <th className="px-3 py-2 w-10"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.length === 0 ? (
+                <tr><td colSpan={10} className="px-3 py-8 text-center text-gray">No rooms match</td></tr>
+              ) : filtered.map((r, idx) => {
+                const zebra = idx % 2 === 1 ? "bg-background-alt/40" : "";
+                const statusCls: Record<string, string> = {
+                  occupied: "bg-green-100 text-green-700",
+                  leaving: "bg-yellow-100 text-yellow-700",
+                  reserved: "bg-orange-100 text-orange-700",
+                  vacant: "bg-blue-100 text-blue-700",
+                  blocked: "bg-red-100 text-red-700",
+                  deactivated: "bg-gray-100 text-gray-500",
+                };
+                return (
+                  <tr
+                    key={r.id}
+                    className={`border-b border-lightgray/30 hover:bg-blue-50/40 text-sm ${zebra} ${r.occupancyStatus === "deactivated" ? "opacity-50" : ""}`}
+                  >
+                    <td className="px-3 py-2 font-medium">{r.roomNumber}</td>
+                    <td className="px-3 py-2 text-gray truncate">{r.apartment.floor}</td>
+                    <td className="px-3 py-2 tabular-nums text-center">{r.apartment.number ?? "—"}</td>
+                    <td className="px-3 py-2 truncate">{formatCategory(r.category)}</td>
+                    <td className="px-3 py-2 text-right tabular-nums">€{(r.monthlyRent / 100).toLocaleString("de-DE")}</td>
+                    <td className="px-3 py-2">
+                      <span className={`inline-block px-1.5 py-0.5 rounded-[5px] text-[10px] font-semibold uppercase ${statusCls[r.occupancyStatus] ?? ""}`}>
+                        {r.occupancyStatus === "leaving" ? `leaving ${r.freeInDays !== null ? `${r.freeInDays}d` : ""}` : r.occupancyStatus}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2 truncate">
+                      {r.tenant ? (
+                        <span>{r.tenant.firstName} {r.tenant.lastName}</span>
+                      ) : r.bookings[0] ? (
+                        <span className="text-orange-600">{r.bookings[0].firstName} {r.bookings[0].lastName}</span>
+                      ) : (
+                        <span className="text-gray">—</span>
+                      )}
+                    </td>
+                    <td className="px-3 py-2 tabular-nums text-gray">{r.tenant ? formatDate(r.tenant.moveIn) : r.bookings[0]?.moveInDate ? formatDate(r.bookings[0].moveInDate) : "—"}</td>
+                    <td className="px-3 py-2 tabular-nums">
+                      {r.tenant?.moveOut ? (
+                        <span className="text-orange-600 font-medium">{formatDate(r.tenant.moveOut)}</span>
+                      ) : r.tenant ? (
+                        <span className="text-gray">open-end</span>
+                      ) : "—"}
+                    </td>
+                    <td className="px-3 py-2 text-center">
+                      <button
+                        onClick={() => setModal({ kind: "editRoom", room: r })}
+                        className="p-1 text-gray hover:text-black rounded-[5px] hover:bg-background-alt"
+                        aria-label="Edit room"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Cards view */}
+      {view === "cards" && selectedLoc && (
+        <div className="space-y-4">
           {selectedLoc.apartments.length === 0 ? (
             <div className="bg-white rounded-[5px] border border-lightgray p-6 text-center text-sm text-gray">
-              No apartments yet. Click <strong>+ Apartment</strong> to add one.
+              No apartments yet.
             </div>
           ) : (
             selectedLoc.apartments.map((apt) => (
@@ -271,19 +505,10 @@ export default function RoomsPage({
                 apartment={apt}
                 locationName={selectedLoc.name}
                 onEditApartment={() =>
-                  setModal({
-                    kind: "editApartment",
-                    apartment: apt,
-                    locationName: selectedLoc.name,
-                  })
+                  setModal({ kind: "editApartment", apartment: apt, locationName: selectedLoc.name })
                 }
                 onAddRoom={() =>
-                  setModal({
-                    kind: "addRoom",
-                    apartmentId: apt.id,
-                    apartmentLabel:
-                      apt.label ?? `${apt.houseNumber} · ${apt.floor}`,
-                  })
+                  setModal({ kind: "addRoom", apartmentId: apt.id, apartmentLabel: apt.label ?? `${apt.houseNumber} · ${apt.floor}` })
                 }
                 onEditRoom={(room) => setModal({ kind: "editRoom", room })}
                 onDeleted={() => router.refresh()}
@@ -293,55 +518,13 @@ export default function RoomsPage({
         </div>
       )}
 
-      {/* Modals */}
-      {modal.kind === "addLocation" && (
-        <LocationModal onSaved={refresh} onClose={close} />
-      )}
-      {modal.kind === "editLocation" && (
-        <LocationModal
-          location={modal.location}
-          onSaved={refresh}
-          onClose={close}
-        />
-      )}
-      {modal.kind === "addApartment" && (
-        <ApartmentModal
-          locationId={modal.locationId}
-          locationName={modal.locationName}
-          onSaved={refresh}
-          onClose={close}
-        />
-      )}
-      {modal.kind === "editApartment" && (
-        <ApartmentModal
-          apartment={modal.apartment}
-          locationName={modal.locationName}
-          onSaved={refresh}
-          onClose={close}
-        />
-      )}
-      {modal.kind === "addRoom" && (
-        <RoomModal
-          apartmentId={modal.apartmentId}
-          apartmentLabel={modal.apartmentLabel}
-          onSaved={refresh}
-          onClose={close}
-        />
-      )}
-      {modal.kind === "editRoom" && (
-        <RoomModal
-          room={modal.room}
-          onSaved={refresh}
-          onClose={close}
-        />
-      )}
-      {modal.kind === "batchPrice" && (
-        <BatchPriceModal
-          location={modal.location}
-          onSaved={refresh}
-          onClose={close}
-        />
-      )}
+      {/* Modals — kept intact */}
+      {modal.kind === "addLocation" && <LocationModal onSaved={refresh} onClose={close} />}
+      {modal.kind === "editLocation" && <LocationModal location={modal.location} onSaved={refresh} onClose={close} />}
+      {modal.kind === "addApartment" && <ApartmentModal locationId={modal.locationId} locationName={modal.locationName} onSaved={refresh} onClose={close} />}
+      {modal.kind === "editApartment" && <ApartmentModal apartment={modal.apartment} locationName={modal.locationName} onSaved={refresh} onClose={close} />}
+      {modal.kind === "addRoom" && <RoomModal apartmentId={modal.apartmentId} apartmentLabel={modal.apartmentLabel} onSaved={refresh} onClose={close} />}
+      {modal.kind === "editRoom" && <RoomModal room={modal.room} onSaved={refresh} onClose={close} />}
     </div>
   );
 }
@@ -831,93 +1014,34 @@ function RoomModal({
   );
 }
 
-function BatchPriceModal({
-  location,
-  onSaved,
-  onClose,
+// ─── Sortable table header ────────────────────────────────
+
+function SortTh({
+  label,
+  col,
+  sortCol,
+  sortDir,
+  onSort,
+  align = "left",
 }: {
-  location: Location;
-  onSaved: () => void;
-  onClose: () => void;
+  label: string;
+  col: RoomSortCol;
+  sortCol: RoomSortCol;
+  sortDir: SortDir;
+  onSort: (c: RoomSortCol) => void;
+  align?: "left" | "right";
 }) {
-  // Compute existing categories present in this location
-  const existing = Array.from(
-    new Set(location.apartments.flatMap((a) => a.rooms.map((r) => r.category)))
-  );
-  const [category, setCategory] = useState(existing[0] ?? CATEGORIES[0]);
-  const [price, setPrice] = useState("");
-  const [saving, setSaving] = useState(false);
-
-  async function save() {
-    const cents = Math.round(parseFloat(price.replace(",", ".")) * 100);
-    if (!Number.isFinite(cents) || cents < 0) {
-      alert("Enter a valid price");
-      return;
-    }
-    if (!confirm(
-      `Set price for all ${formatCategory(category)} rooms in ${location.name} to €${(cents / 100).toFixed(2)}? Existing tenant contracts are NOT changed.`
-    )) {
-      return;
-    }
-    setSaving(true);
-    try {
-      const res = await fetch("/api/admin/rooms/batch-price", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          locationId: location.id,
-          category,
-          monthlyRent: cents,
-        }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        alert(`Updated ${data.updated} room(s).`);
-        onSaved();
-      } else {
-        alert(`Failed: ${data.error}`);
-      }
-    } finally {
-      setSaving(false);
-    }
-  }
-
+  const active = sortCol === col;
   return (
-    <Modal title={`Batch price update — ${location.name}`} onClose={onClose}>
-      <p className="text-xs text-gray">
-        Updates Room.monthlyRent for all rooms in this location matching the
-        category. Existing tenant rents are <strong>not</strong> changed (those are
-        snapshots from the lease).
-      </p>
-      <label className="block">
-        <span className="block text-xs text-gray mb-1">Category</span>
-        <select
-          value={category}
-          onChange={(e) => setCategory(e.target.value)}
-          className="w-full px-3 py-2 border border-lightgray rounded-[5px] text-sm bg-white"
-        >
-          {existing.length === 0
-            ? CATEGORIES.map((c) => (
-                <option key={c} value={c}>
-                  {formatCategory(c)}
-                </option>
-              ))
-            : existing.map((c) => (
-                <option key={c} value={c}>
-                  {formatCategory(c)}
-                </option>
-              ))}
-        </select>
-      </label>
-      <FormInput
-        label="New price (€)"
-        value={price}
-        onChange={setPrice}
-        placeholder="950.00"
-        type="number"
-      />
-      <ModalActions onCancel={onClose} onSave={save} saving={saving} />
-    </Modal>
+    <th
+      className={`px-3 py-2 font-semibold text-gray uppercase tracking-wide cursor-pointer select-none hover:text-black whitespace-nowrap ${align === "right" ? "text-right" : "text-left"}`}
+      onClick={() => onSort(col)}
+    >
+      <span className="inline-flex items-center gap-0.5">
+        {label}
+        {active && (sortDir === "asc" ? <ChevronUp className="w-2.5 h-2.5" /> : <ChevronDown className="w-2.5 h-2.5" />)}
+      </span>
+    </th>
   );
 }
 

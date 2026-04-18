@@ -27,7 +27,7 @@ export default async function AdminRoomsPage() {
             orderBy: { roomNumber: "asc" },
           },
         },
-        orderBy: { houseNumber: "asc" },
+        orderBy: [{ number: "asc" }, { houseNumber: "asc" }],
       },
     },
     orderBy: { name: "asc" },
