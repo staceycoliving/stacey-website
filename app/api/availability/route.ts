@@ -35,10 +35,10 @@ async function getLongStayAvailability(
   today.setHours(0, 0, 0, 0);
 
   // Get all rooms with their tenants and active bookings
-  const rooms = await prisma.room.findMany({
+  const rooms = await prisma.room!.findMany({
     where: { apartment: { locationId } },
     include: {
-      tenant: true,
+      tenants: true,
       bookings: {
         where: {
           stayType: "LONG",
@@ -67,7 +67,7 @@ async function getLongStayAvailability(
     // Room has an active booking → not available
     if (room.bookings.length > 0) continue;
 
-    const tenant = room.tenant;
+    const tenant = room.tenants[0];
 
     if (!tenant) {
       // Room is free now

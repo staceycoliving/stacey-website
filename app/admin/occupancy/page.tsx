@@ -15,7 +15,7 @@ export default async function AdminOccupancyPage() {
         include: {
           rooms: {
             include: {
-              tenant: true,
+              tenants: true,
               bookings: {
                 where: {
                   stayType: "LONG",

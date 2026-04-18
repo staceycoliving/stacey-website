@@ -62,8 +62,10 @@ model Room {
   floorDescription String?      // Stockwerk + Lage (z.B. "3. OG rechts")
   status           RoomStatus   @default(ACTIVE)
 
-  tenant   Tenant? // Aktueller Mieter (oder null = frei)
-  bookings Booking[]
+  tenants        Tenant[] // Usually 0 or 1; >1 only in rare double-booking overrides
+  bookings       Booking[]
+  transfersFrom  RoomTransfer[] @relation("transferFrom")
+  transfersTo    RoomTransfer[] @relation("transferTo")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -94,8 +96,8 @@ enum RoomCategory {
 
 model Tenant {
   id        String   @id @default(cuid())
-  roomId    String   @unique
-  room      Room     @relation(fields: [roomId], references: [id])
+  roomId    String?  // nullable for temporary unassigned state during transfers
+  room      Room?    @relation(fields: [roomId], references: [id])
   bookingId String?  @unique
   booking   Booking? @relation(fields: [bookingId], references: [id])
 
@@ -140,9 +142,43 @@ model Tenant {
   rentAdjustments RentAdjustment[]
   defects         Defect[]
   notes           Note[]
+  roomTransfers   RoomTransfer[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// ─── Room Transfer History ──────────────────────────────────
+
+model RoomTransfer {
+  id              String             @id @default(dbgenerated("gen_random_uuid()::text"))
+  tenantId        String
+  tenant          Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  fromRoomId      String?
+  fromRoom        Room?              @relation("transferFrom", fields: [fromRoomId], references: [id])
+  toRoomId        String
+  toRoom          Room               @relation("transferTo", fields: [toRoomId], references: [id])
+
+  transferDate    DateTime           // can be past, present, or future
+  reason          String?
+  newMonthlyRent  Int?               // null = keep current rent
+  oldMonthlyRent  Int?               // snapshot before transfer
+
+  status          RoomTransferStatus @default(SCHEDULED)
+  completedAt     DateTime?
+  createdAt       DateTime           @default(now())
+
+  @@index([tenantId])
+  @@index([toRoomId])
+  @@index([status])
+  @@index([transferDate])
+}
+
+enum RoomTransferStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
 }
 
 // ─── FOLIO: Zusatzkosten, Mietanpassungen, Mängel, Notizen ──

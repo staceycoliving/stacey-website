@@ -130,7 +130,7 @@ async function handleBookingFeePaid(bookingId: string, sessionId: string) {
 
   const booking = await prisma.booking.findUnique({
     where: { id: bookingId },
-    include: { location: true, room: { include: { tenant: true } } },
+    include: { location: true, room: { include: { tenants: true } } },
   });
 
   if (!booking) {
@@ -264,7 +264,7 @@ async function detectRoomRaceConflict(booking: {
   id: string;
   roomId: string | null;
   moveInDate: Date | null;
-  room: { id: string; tenant: { moveOut: Date | null } | null } | null;
+  room: { id: string; tenants: { moveOut: Date | null }[] } | null;
 }): Promise<string | null> {
   if (!booking.roomId) return null;
 
@@ -280,7 +280,7 @@ async function detectRoomRaceConflict(booking: {
   if (otherBooking) return "Another guest already reserved this room.";
 
   // Room has an active tenant who hasn't moved out by our move-in date
-  const tenant = booking.room?.tenant;
+  const tenant = booking.room?.tenants[0];
   if (tenant && booking.moveInDate) {
     const moveInDate = new Date(booking.moveInDate);
     moveInDate.setHours(0, 0, 0, 0);
@@ -379,7 +379,7 @@ async function handleDepositPaid(bookingId: string) {
 
   const booking = await prisma.booking.findUnique({
     where: { id: bookingId },
-    include: { location: true, room: { include: { tenant: true } } },
+    include: { location: true, room: { include: { tenants: true } } },
   });
 
   if (!booking || booking.status !== "DEPOSIT_PENDING") {
@@ -402,7 +402,7 @@ async function handleDepositPaid(bookingId: string) {
   let createdTenantId: string | null = null;
   await prisma.$transaction(async (tx: any) => {
     // Remove old tenant if their moveOut is on/before the new moveIn
-    const oldTenant = booking.room?.tenant;
+    const oldTenant = booking.room?.tenants[0];
     if (oldTenant && oldTenant.moveOut && new Date(oldTenant.moveOut) <= booking.moveInDate!) {
       await tx.tenant.delete({ where: { id: oldTenant.id } });
       logEvent(
@@ -670,7 +670,7 @@ async function handlePaymentSetupCompleted(tenantId: string, session: any) {
     await sendPaymentSetupConfirmation({
       firstName: tenant.firstName,
       email: tenant.email,
-      locationName: tenant.room.apartment.location.name,
+      locationName: tenant.room!.apartment.location.name,
       monthlyRent: tenant.monthlyRent,
       paymentMethodLabel: methodLabel,
     });
@@ -694,17 +694,17 @@ async function handlePaymentSetupCompleted(tenantId: string, session: any) {
     );
     if (daysUntilMoveIn <= 3) {
       try {
-        const location = tenant.room.apartment.location;
+        const location = tenant.room!.apartment.location;
         await sendWelcomeEmail({
           firstName: tenant.firstName,
           lastName: tenant.lastName,
           email: tenant.email,
           locationName: location.name,
-          locationAddress: tenant.room.buildingAddress || location.address,
+          locationAddress: tenant.room!.buildingAddress || location.address,
           locationSlug: location.slug,
-          roomNumber: tenant.room.roomNumber,
+          roomNumber: tenant.room!.roomNumber,
           moveInDate: tenant.moveIn.toISOString().split("T")[0],
-          floor: tenant.room.floorDescription || undefined,
+          floor: tenant.room!.floorDescription || undefined,
         });
         await prisma.tenant.update({
           where: { id: tenantId },

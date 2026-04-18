@@ -238,7 +238,7 @@ async function handlePaymentSetupReminders() {
       await sendPaymentSetupReminder({
         firstName: tenant.firstName,
         email: tenant.email,
-        locationName: tenant.room.apartment.location.name,
+        locationName: tenant.room!.apartment.location.name,
         setupUrl,
         reminderNumber: nextReminderIndex + 1,
       });
@@ -286,7 +286,7 @@ async function handleWelcomeEmails() {
   let finalWarningSent = 0;
 
   for (const tenant of tenants) {
-    const location = tenant.room.apartment.location;
+    const location = tenant.room!.apartment.location;
 
     if (tenant.sepaMandateId) {
       // Payment is set up → send Welcome Email
@@ -296,11 +296,11 @@ async function handleWelcomeEmails() {
           lastName: tenant.lastName,
           email: tenant.email,
           locationName: location.name,
-          locationAddress: tenant.room.buildingAddress || location.address,
+          locationAddress: tenant.room!.buildingAddress || location.address,
           locationSlug: location.slug,
-          roomNumber: tenant.room.roomNumber,
+          roomNumber: tenant.room!.roomNumber,
           moveInDate: tenant.moveIn.toISOString().split("T")[0],
-          floor: tenant.room.floorDescription || undefined,
+          floor: tenant.room!.floorDescription || undefined,
         });
 
         // Only mark as sent if the email actually went out (not test-mode-skipped)
@@ -347,7 +347,7 @@ async function handleWelcomeEmails() {
           email: tenant.email,
           phone: tenant.phone || "",
           locationName: location.name,
-          category: tenant.room.category,
+          category: tenant.room!.category,
           persons: 1,
           moveInDate: tenant.moveIn.toISOString().split("T")[0],
           bookingId: `Final warning sent — payment not set up`,
@@ -468,7 +468,7 @@ async function handleRentReminders() {
 
   for (const [, rents] of byTenant) {
     const tenant = rents[0].tenant;
-    const location = tenant.room.apartment.location;
+    const location = tenant.room!.apartment.location;
     const emailAllowed = canSendEmail(tenant.email);
 
     // Determine Mahnung level based on the OLDEST unpaid month
@@ -647,7 +647,7 @@ async function handlePostStayFeedback() {
       continue;
     }
 
-    const location = tenant.room.apartment.location;
+    const location = tenant.room!.apartment.location;
 
     try {
       await sendPostStayFeedback({

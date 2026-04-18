@@ -94,7 +94,7 @@ export async function GET(request: NextRequest) {
         belegNr: `RENT-${r.id.slice(-8)}`,
         amount: r.paidAmount,
         account: accounts.rent,
-        text: `Miete ${r.tenant.firstName} ${r.tenant.lastName} ${new Date(r.month).toLocaleDateString("de-DE", { month: "short", year: "numeric" })} #${r.tenant.room.roomNumber} ${r.tenant.room.apartment.location.name}`,
+        text: `Miete ${r.tenant.firstName} ${r.tenant.lastName} ${new Date(r.month).toLocaleDateString("de-DE", { month: "short", year: "numeric" })} #${r.tenant.room!.roomNumber} ${r.tenant.room!.apartment.location.name}`,
       });
     }
   }
@@ -148,7 +148,7 @@ export async function GET(request: NextRequest) {
         belegNr: `EXTRA-${e.id.slice(-8)}`,
         amount: e.amount,
         account: accounts.extras,
-        text: `${e.description} — ${e.tenant.firstName} ${e.tenant.lastName} ${e.tenant.room.apartment.location.name}`,
+        text: `${e.description} — ${e.tenant.firstName} ${e.tenant.lastName} ${e.tenant.room!.apartment.location.name}`,
       });
     }
   }

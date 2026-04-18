@@ -40,7 +40,7 @@ type Room = {
   buildingAddress: string | null;
   floorDescription: string | null;
   status: "ACTIVE" | "BLOCKED" | "DEACTIVATED";
-  tenant: Tenant | null;
+  tenants: Tenant[];
   bookings: ActiveBooking[];
 };
 
@@ -109,9 +109,9 @@ function formatCategory(cat: string) {
 // A tenant whose moveOut has passed is not occupying anymore — same rule
 // as the public booking tool (lib/availability.ts).
 function isCurrentlyOccupied(r: Room): boolean {
-  if (!r.tenant) return false;
-  if (r.tenant.moveOut) {
-    const out = new Date(r.tenant.moveOut);
+  if (!r.tenants[0]) return false;
+  if (r.tenants[0].moveOut) {
+    const out = new Date(r.tenants[0].moveOut);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     if (out <= today) return false;
@@ -188,7 +188,7 @@ export default function RoomsPage({
     return selectedLoc.apartments.flatMap((apt) =>
       apt.rooms.map((r) => {
         const occ = isCurrentlyOccupied(r);
-        const leaving = occ && Boolean(r.tenant?.moveOut);
+        const leaving = occ && Boolean(r.tenants[0]?.moveOut);
         const reserved = !occ && r.bookings.length > 0;
         const blocked = r.status === "BLOCKED";
         const deactivated = r.status === "DEACTIVATED";
@@ -209,7 +209,7 @@ export default function RoomsPage({
           apartment: apt,
           locationName: selectedLoc.name,
           occupancyStatus: status,
-          freeInDays: leaving ? daysUntilFree(r.tenant?.moveOut ?? null, nowTs) : null,
+          freeInDays: leaving ? daysUntilFree(r.tenants[0]?.moveOut ?? null, nowTs) : null,
         };
       })
     );
@@ -244,8 +244,8 @@ export default function RoomsPage({
         const hay = [
           r.roomNumber,
           formatCategory(r.category),
-          r.tenant?.firstName ?? "",
-          r.tenant?.lastName ?? "",
+          r.tenants[0]?.firstName ?? "",
+          r.tenants[0]?.lastName ?? "",
           r.apartment.floor,
         ]
           .join(" ")
@@ -264,7 +264,7 @@ export default function RoomsPage({
           case "category": return r.category;
           case "price": return r.monthlyRent;
           case "status": return r.occupancyStatus;
-          case "tenant": return r.tenant ? `${r.tenant.lastName} ${r.tenant.firstName}` : "zzz";
+          case "tenant": return r.tenants[0] ? `${r.tenants[0].lastName} ${r.tenants[0].firstName}` : "zzz";
           default: return r.roomNumber;
         }
       };
@@ -457,19 +457,19 @@ export default function RoomsPage({
                       </span>
                     </td>
                     <td className="px-3 py-2 truncate">
-                      {r.tenant ? (
-                        <span>{r.tenant.firstName} {r.tenant.lastName}</span>
+                      {r.tenants[0] ? (
+                        <span>{r.tenants[0].firstName} {r.tenants[0].lastName}</span>
                       ) : r.bookings[0] ? (
                         <span className="text-orange-600">{r.bookings[0].firstName} {r.bookings[0].lastName}</span>
                       ) : (
                         <span className="text-gray">—</span>
                       )}
                     </td>
-                    <td className="px-3 py-2 tabular-nums text-gray">{r.tenant ? formatDate(r.tenant.moveIn) : r.bookings[0]?.moveInDate ? formatDate(r.bookings[0].moveInDate) : "—"}</td>
+                    <td className="px-3 py-2 tabular-nums text-gray">{r.tenants[0] ? formatDate(r.tenants[0].moveIn) : r.bookings[0]?.moveInDate ? formatDate(r.bookings[0].moveInDate) : "—"}</td>
                     <td className="px-3 py-2 tabular-nums">
-                      {r.tenant?.moveOut ? (
-                        <span className="text-orange-600 font-medium">{formatDate(r.tenant.moveOut)}</span>
-                      ) : r.tenant ? (
+                      {r.tenants[0]?.moveOut ? (
+                        <span className="text-orange-600 font-medium">{formatDate(r.tenants[0].moveOut)}</span>
+                      ) : r.tenants[0] ? (
                         <span className="text-gray">open-end</span>
                       ) : "—"}
                     </td>
@@ -633,7 +633,8 @@ function RoomCard({
   const occupied = isCurrentlyOccupied(room);
   const isVacant = !occupied && room.bookings.length === 0 && room.status === "ACTIVE";
   const isReserved = !occupied && room.bookings.length > 0;
-  const isLeaving = occupied && room.tenant?.moveOut;
+  const tenant = room.tenants[0] ?? null;
+  const isLeaving = occupied && tenant?.moveOut;
   const isBlocked = room.status === "BLOCKED";
   const isDeactivated = room.status === "DEACTIVATED";
   const activeBooking = room.bookings[0];
@@ -680,17 +681,17 @@ function RoomCard({
         </div>
       </div>
       <div className="text-xs text-gray mb-1">€{(room.monthlyRent / 100).toFixed(0)}/mo</div>
-      {room.tenant ? (
+      {tenant ? (
         <>
           <p className="text-sm">
-            {room.tenant.firstName} {room.tenant.lastName}
+            {tenant.firstName} {tenant.lastName}
           </p>
-          <p className="text-xs text-gray">{room.tenant.email}</p>
+          <p className="text-xs text-gray">{tenant.email}</p>
           <div className="flex gap-3 mt-1">
-            <span className="text-xs text-gray">In: {formatDate(room.tenant.moveIn)}</span>
-            {room.tenant.moveOut && (
+            <span className="text-xs text-gray">In: {formatDate(tenant.moveIn)}</span>
+            {tenant.moveOut && (
               <span className="text-xs text-yellow-600 font-medium">
-                Out: {formatDate(room.tenant.moveOut)}
+                Out: {formatDate(tenant.moveOut)}
               </span>
             )}
           </div>

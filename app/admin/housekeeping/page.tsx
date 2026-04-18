@@ -69,9 +69,9 @@ export default async function AdminHousekeepingPage({
     raw.push({
       taskKey: `tenant-${t.id}-in`,
       taskType: "MOVE_IN",
-      locationName: t.room.apartment.location.name,
-      locationSlug: t.room.apartment.location.slug,
-      roomLabel: `#${t.room.roomNumber}`,
+      locationName: t.room!.apartment.location.name,
+      locationSlug: t.room!.apartment.location.slug,
+      roomLabel: `#${t.room!.roomNumber}`,
       guestName: `${t.firstName} ${t.lastName}`,
       source: "LONG",
     });
@@ -80,9 +80,9 @@ export default async function AdminHousekeepingPage({
     raw.push({
       taskKey: `tenant-${t.id}-out`,
       taskType: "MOVE_OUT",
-      locationName: t.room.apartment.location.name,
-      locationSlug: t.room.apartment.location.slug,
-      roomLabel: `#${t.room.roomNumber}`,
+      locationName: t.room!.apartment.location.name,
+      locationSlug: t.room!.apartment.location.slug,
+      roomLabel: `#${t.room!.roomNumber}`,
       guestName: `${t.firstName} ${t.lastName}`,
       source: "LONG",
     });

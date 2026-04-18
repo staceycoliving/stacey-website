@@ -150,7 +150,7 @@ export async function PATCH(request: NextRequest) {
       await sendDepositReturnNotification({
         firstName: tenant.firstName,
         email: tenant.email,
-        locationName: tenant.room.apartment.location.name,
+        locationName: tenant.room!.apartment.location.name,
         depositAmount: t.deposit,
         damagesAmount: t.defectsAmount,
         arrearsAmount: t.arrearsAmount + t.chargesAmount,

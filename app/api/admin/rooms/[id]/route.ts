@@ -61,11 +61,11 @@ export async function DELETE(
 
   const room = await prisma.room.findUnique({
     where: { id },
-    include: { tenant: true, bookings: true },
+    include: { tenants: true, bookings: true },
   });
   if (!room) return Response.json({ error: "Room not found" }, { status: 404 });
 
-  if (room.tenant) {
+  if (room.tenants.length > 0) {
     return Response.json(
       { error: "Room has an active tenant — remove tenant first or deactivate the room." },
       { status: 409 }

@@ -35,7 +35,7 @@ export default async function AdminDashboardPage() {
 
     prisma.room.findMany({
       include: {
-        tenant: true,
+        tenants: true,
         apartment: { include: { location: true } },
         bookings: {
           where: {
@@ -311,8 +311,9 @@ export default async function AdminDashboardPage() {
   // moveOut isn't already in the past — otherwise the room is functionally
   // vacant (the public booking tool also treats it as available now).
   function isCurrentlyOccupied(r: typeof roomsAll[number]): boolean {
-    if (!r.tenant) return false;
-    if (r.tenant.moveOut && new Date(r.tenant.moveOut) <= todayStart) return false;
+    const tenant = r.tenants[0];
+    if (!tenant) return false;
+    if (tenant.moveOut && new Date(tenant.moveOut) <= todayStart) return false;
     return true;
   }
 
@@ -389,7 +390,7 @@ export default async function AdminDashboardPage() {
     r: (typeof roomsAll)[number],
     snapshotDate: Date
   ): boolean {
-    const tenant = r.tenant;
+    const tenant = r.tenants[0];
     if (tenant) {
       const mIn = new Date(tenant.moveIn);
       mIn.setHours(0, 0, 0, 0);
@@ -458,7 +459,7 @@ export default async function AdminDashboardPage() {
         continue;
       }
 
-      const tenant = r.tenant;
+      const tenant = r.tenants[0];
       if (!tenant) {
         prev.earliestDates.push(todayISO);
       } else if (tenant.moveOut) {

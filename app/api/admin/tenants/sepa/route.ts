@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
     await sendPaymentSetupLink({
       firstName: tenant.firstName,
       email: tenant.email,
-      locationName: tenant.room.apartment.location.name,
+      locationName: tenant.room!.apartment.location.name,
       setupUrl: session.url!,
     });
 

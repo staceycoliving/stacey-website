@@ -43,10 +43,10 @@ export async function GET(
         firstName: tenant.firstName,
         lastName: tenant.lastName,
         dateOfBirth: tenant.dateOfBirth?.toISOString() ?? null,
-        locationName: tenant.room.apartment.location.name,
-        locationAddress: tenant.room.apartment.location.address,
-        roomNumber: tenant.room.roomNumber,
-        apartmentLabel: tenant.room.apartment.label ?? tenant.room.apartment.floor,
+        locationName: tenant.room!.apartment.location.name,
+        locationAddress: tenant.room!.apartment.location.address,
+        roomNumber: tenant.room!.roomNumber,
+        apartmentLabel: tenant.room!.apartment.label ?? tenant.room!.apartment.floor,
         moveIn: tenant.moveIn.toISOString(),
         moveOut: tenant.moveOut?.toISOString() ?? null,
         totalPaid,
@@ -66,10 +66,10 @@ export async function GET(
       const pdf = await generateWohnungsgeberbestaetigung({
         persons: [{ firstName: tenant.firstName, lastName: tenant.lastName }],
         moveInDate: tenant.moveIn.toISOString().split("T")[0],
-        roomNumber: tenant.room.roomNumber,
-        locationSlug: tenant.room.apartment.location.slug,
-        floor: tenant.room.floorDescription ?? tenant.room.apartment.floor,
-        buildingAddress: tenant.room.buildingAddress ?? undefined,
+        roomNumber: tenant.room!.roomNumber,
+        locationSlug: tenant.room!.apartment.location.slug,
+        floor: tenant.room!.floorDescription ?? tenant.room!.apartment.floor,
+        buildingAddress: tenant.room!.buildingAddress ?? undefined,
       });
 
       return new Response(new Uint8Array(pdf), {
