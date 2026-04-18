@@ -905,7 +905,22 @@ export default function TenantsPage({
       {view === "table" && (
       <div className="bg-white rounded-[5px] border border-lightgray overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm table-fixed">
+            <colgroup>
+              <col className="w-[9%]" />   {/* Location */}
+              <col className="w-[14%]" />  {/* Address */}
+              <col className="w-[8%]" />   {/* Floor */}
+              <col className="w-[4%]" />   {/* Apt */}
+              <col className="w-[5%]" />   {/* Suite */}
+              <col className="w-[10%]" />  {/* Category */}
+              <col className="w-[6%]" />   {/* Price */}
+              <col className="w-[14%]" />  {/* Name */}
+              <col className="w-[7%]" />   {/* Start */}
+              <col className="w-[7%]" />   {/* End */}
+              <col className="w-[4%]" />   {/* Health */}
+              <col className="w-[3%]" />   {/* Notes placeholder */}
+              <col className="w-[3%]" />   {/* Actions */}
+            </colgroup>
             <thead>
               <tr className="border-b border-lightgray bg-background-alt text-[11px]">
                 <SortableTh label="Location" col="location" sortCol={sortCol} sortDir={sortDir} onSort={toggleSort} />
@@ -956,23 +971,17 @@ export default function TenantsPage({
                       onClick={() => router.push(`/admin/tenants/${t.id}`)}
                       className={`border-b border-lightgray/30 hover:bg-blue-50/40 cursor-pointer transition-colors text-sm ${zebra}`}
                     >
-                      <td className="px-3 py-2">{t.room.apartment.location.name}</td>
-                      <td className="px-3 py-2">{t.room.apartment.address ?? buildFullAddress(t)}</td>
-                      <td className="px-3 py-2 text-gray">{floorLabel(t)}</td>
-                      <td className="px-3 py-2 tabular-nums text-center">
-                        {t.room.apartment.number ?? "—"}
-                      </td>
+                      <td className="px-3 py-2 truncate">{t.room.apartment.location.name}</td>
+                      <td className="px-3 py-2 truncate">{t.room.apartment.address ?? buildFullAddress(t)}</td>
+                      <td className="px-3 py-2 text-gray truncate">{floorLabel(t)}</td>
+                      <td className="px-3 py-2 tabular-nums text-center">{t.room.apartment.number ?? "—"}</td>
                       <td className="px-3 py-2">{t.room.roomNumber}</td>
-                      <td className="px-3 py-2">{formatCategory(t.room.category)}</td>
-                      <td className="px-3 py-2 text-right tabular-nums">
-                        {fmtPrice(t.monthlyRent)}
-                      </td>
-                      <td className="px-3 py-2 font-medium whitespace-nowrap">
+                      <td className="px-3 py-2 truncate">{formatCategory(t.room.category)}</td>
+                      <td className="px-3 py-2 text-right tabular-nums">{fmtPrice(t.monthlyRent)}</td>
+                      <td className="px-3 py-2 font-medium truncate">
                         {t.firstName} {t.lastName}
                         {t.notesCount > 0 && (
-                          <span className="ml-1.5 text-[10px] text-gray" title={`${t.notesCount} notes`}>
-                            💬{t.notesCount}
-                          </span>
+                          <span className="ml-1 text-[10px] text-gray" title={`${t.notesCount} notes`}>💬{t.notesCount}</span>
                         )}
                       </td>
                       <td className="px-3 py-2 tabular-nums">{formatDate(t.moveIn)}</td>
