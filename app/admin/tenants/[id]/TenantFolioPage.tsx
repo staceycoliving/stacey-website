@@ -1589,11 +1589,9 @@ function ResendEmailDropdown({ tenantId }: { tenantId: string }) {
 
   const templates: { key: string; label: string; description: string }[] = [
     { key: "welcome", label: "Welcome email", description: "nach Move-in" },
-    { key: "payment_setup", label: "Payment setup link", description: "SEPA / Karte einrichten" },
-    { key: "rent_reminder", label: "Rent reminder", description: "offene Miete freundlich" },
-    { key: "mahnung1", label: "1. Mahnung", description: "formelle Mahnung" },
-    { key: "mahnung2", label: "2. Mahnung + Kündigung", description: "letzte Mahnung" },
-    { key: "deposit_return", label: "Deposit settlement", description: "Kautionsabrechnung" },
+    { key: "payment_setup", label: "Payment setup link", description: "Zahlungsmethode einrichten" },
+    { key: "rent_reminder", label: "Rent arrears", description: "aktueller Rückstand mit Zahlungslink" },
+    { key: "mahnung2", label: "Kündigung", description: "nur bei ≥2 Monaten Rückstand" },
   ];
 
   async function resend(templateKey: string) {

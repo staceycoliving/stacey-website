@@ -1049,38 +1049,37 @@ export default function TenantsPage({
                                 <span className="text-gray text-xs">▸</span>
                               </span>
                             </MenuItem>
-                            {emailSubmenuId === t.id && (
-                              <div className="bg-background-alt border-t border-b border-lightgray">
-                                <MenuItem onClick={() => resendEmail(t.id, "welcome")}>
-                                  Welcome
-                                </MenuItem>
-                                <MenuItem onClick={() => resendEmail(t.id, "payment_setup")}>
-                                  Payment setup link
-                                </MenuItem>
-                                <MenuItem onClick={() => resendEmail(t.id, "rent_reminder")}>
-                                  Rent reminder
-                                </MenuItem>
-                                <MenuItem onClick={() => resendEmail(t.id, "mahnung1")}>
-                                  1. Mahnung
-                                </MenuItem>
-                                <MenuItem onClick={() => resendEmail(t.id, "mahnung2")}>
-                                  2. Mahnung + Kündigung
-                                </MenuItem>
-                                <MenuItem onClick={() => resendEmail(t.id, "deposit_return")}>
-                                  Deposit settlement
-                                </MenuItem>
-                              </div>
-                            )}
-                            <MenuItem
-                              onClick={() => sendSetupLink(t.id)}
-                              disabled={sendingSetupId === t.id}
-                            >
-                              {sendingSetupId === t.id
-                                ? "Sending..."
-                                : t.sepaMandateId
-                                  ? "Resend payment setup link"
-                                  : "Send payment setup link"}
-                            </MenuItem>
+                            {emailSubmenuId === t.id && (() => {
+                              const openRentMonths = t.rentPayments.filter(
+                                (p) => p.status === "FAILED" || p.status === "PARTIAL" || p.status === "PENDING"
+                              ).length;
+                              return (
+                                <div className="bg-background-alt border-t border-b border-lightgray">
+                                  <MenuItem onClick={() => resendEmail(t.id, "welcome")}>
+                                    Welcome
+                                  </MenuItem>
+                                  <MenuItem onClick={() => resendEmail(t.id, "payment_setup")}>
+                                    Payment setup link
+                                  </MenuItem>
+                                  <MenuItem
+                                    onClick={() => resendEmail(t.id, "rent_reminder")}
+                                    disabled={openRentMonths === 0}
+                                  >
+                                    Rent arrears ({openRentMonths} month{openRentMonths === 1 ? "" : "s"} open)
+                                  </MenuItem>
+                                  <MenuItem
+                                    onClick={() => {
+                                      if (!confirm("Kündigung wegen Zahlungsrückstand senden? Dies ist ein manueller Vorgang und wird nicht automatisch ausgelöst.")) return;
+                                      resendEmail(t.id, "mahnung2");
+                                    }}
+                                    disabled={openRentMonths < 2}
+                                    tone="danger"
+                                  >
+                                    Kündigung ({openRentMonths < 2 ? "erst ab 2 Monaten Rückstand" : `${openRentMonths} Monate offen`})
+                                  </MenuItem>
+                                </div>
+                              );
+                            })()}
                             {!t.notice && (
                               <MenuItem
                                 onClick={() =>
