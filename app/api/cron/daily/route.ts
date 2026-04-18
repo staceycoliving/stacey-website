@@ -20,7 +20,7 @@ import { chargeRentPayment } from "@/lib/rent-charge";
 import { locations } from "@/lib/data";
 import { isTestMode, canSendEmail, logSkipped } from "@/lib/test-mode";
 import { env } from "@/lib/env";
-import { reportError } from "@/lib/observability";
+import { reportError, logEvent } from "@/lib/observability";
 
 // Reminder schedule: days BEFORE move-in (instead of days after deposit)
 const SETUP_REMINDER_DAYS_BEFORE_MOVEIN = [30, 14, 7];
@@ -374,12 +374,33 @@ async function handleRentReminders() {
   let mahnungen2 = 0;
   let terminations = 0;
 
-  // moveOut reconcile lives on the tenant PATCH route (lib/rent-charge.ts
-  // reconcileMoveOutPayment). It only adjusts RentPayment.amount — the
-  // overpayment surfaces in the deposit settlement, no Stripe refund. So
-  // there's no cron safety net needed: if an admin shortens moveOut after
-  // the cron already collected, the deposit page will pick up the credit
-  // automatically when it computes the settlement.
+  // ─── Execute scheduled room transfers ──────────────────────────
+  try {
+    const dueTransfers = await prisma.roomTransfer.findMany({
+      where: {
+        status: "SCHEDULED",
+        transferDate: { lte: now },
+      },
+      include: { tenant: true },
+    });
+    for (const t of dueTransfers) {
+      const newRent = t.newMonthlyRent ?? t.tenant.monthlyRent;
+      await prisma.tenant.update({
+        where: { id: t.tenantId },
+        data: { roomId: t.toRoomId, monthlyRent: newRent },
+      });
+      await prisma.roomTransfer.update({
+        where: { id: t.id },
+        data: { status: "COMPLETED", completedAt: new Date() },
+      });
+      logEvent(
+        { scope: "cron-daily", tags: { tenantId: t.tenantId, transferId: t.id } },
+        `Executed scheduled room transfer → ${t.toRoomId}`,
+      );
+    }
+  } catch (err) {
+    reportError(err, { scope: "cron-daily", tags: { stage: "room-transfers" } });
+  }
 
   // Find all unpaid rent payments — past months AND current month if the
   // tenant has already moved in. The chargeRentPayment helper will skip

@@ -16,6 +16,31 @@ const CATEGORIES: RoomCategory[] = [
   "DUPLEX",
 ];
 
+/**
+ * GET /api/admin/rooms?locationId=<id>
+ * Returns apartments + rooms for a location (used by the transfer modal).
+ */
+export async function GET(request: NextRequest) {
+  if (!(await isAuthenticated())) {
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  const locationId = request.nextUrl.searchParams.get("locationId");
+  if (!locationId) {
+    return Response.json({ error: "locationId required" }, { status: 400 });
+  }
+  const apartments = await prisma.apartment.findMany({
+    where: { locationId },
+    include: {
+      rooms: {
+        include: { tenants: { select: { id: true, firstName: true, lastName: true } } },
+        orderBy: { roomNumber: "asc" },
+      },
+    },
+    orderBy: { houseNumber: "asc" },
+  });
+  return Response.json({ apartments });
+}
+
 export async function POST(request: NextRequest) {
   if (!(await isAuthenticated())) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });

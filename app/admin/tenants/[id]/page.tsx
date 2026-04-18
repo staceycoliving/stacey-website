@@ -24,6 +24,13 @@ export default async function TenantFolioRoute({
       rentAdjustments: { orderBy: { createdAt: "desc" } },
       defects: { orderBy: { createdAt: "desc" } },
       notes: { orderBy: { createdAt: "desc" } },
+      roomTransfers: {
+        include: {
+          fromRoom: { select: { roomNumber: true } },
+          toRoom: { select: { roomNumber: true } },
+        },
+        orderBy: { transferDate: "desc" },
+      },
     },
   });
 

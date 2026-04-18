@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Plus, Trash2, Edit2, X, Download, Mail, ChevronDown } from "lucide-react";
@@ -121,6 +121,7 @@ export type Tenant = {
   paymentSetupRemindersSent: number;
   paymentFinalWarningSentAt: string | null;
   postStayFeedbackSentAt: string | null;
+  roomId: string | null;
   room: Room;
   booking: Booking;
   rentPayments: RentPayment[];
@@ -128,6 +129,19 @@ export type Tenant = {
   rentAdjustments: RentAdjustment[];
   defects: Defect[];
   notes: Note[];
+  roomTransfers: {
+    id: string;
+    fromRoomId: string | null;
+    toRoomId: string;
+    transferDate: string;
+    reason: string | null;
+    oldMonthlyRent: number | null;
+    newMonthlyRent: number | null;
+    status: string;
+    completedAt: string | null;
+    fromRoom: { roomNumber: string } | null;
+    toRoom: { roomNumber: string } | null;
+  }[];
 };
 
 const TABS = [
@@ -426,7 +440,8 @@ function ProfileTab({ tenant }: { tenant: Tenant }) {
 function LeaseTab({ tenant }: { tenant: Tenant }) {
   const router = useRouter();
   const [showMoveOutAdjust, setShowMoveOutAdjust] = useState(false);
-  const addr = tenant.room.apartment.location.address;
+  const [showTransfer, setShowTransfer] = useState(false);
+  const addr = tenant.room?.apartment.location.address ?? "";
 
   // Pass all PAID/PARTIAL rents to the modal — it picks the right month
   // based on whatever date the admin chooses.
@@ -450,9 +465,17 @@ function LeaseTab({ tenant }: { tenant: Tenant }) {
         label="Floor"
         value={tenant.room.floorDescription ?? tenant.room.apartment.floor}
       />
-      <InfoRow label="Suite" value={`#${tenant.room.roomNumber}`} />
-      <InfoRow label="Category" value={formatCategory(tenant.room.category)} />
+      <InfoRow label="Suite" value={`#${tenant.room?.roomNumber ?? "—"}`} />
+      <InfoRow label="Category" value={formatCategory(tenant.room?.category ?? "")} />
       <InfoRow label="Monthly rent" value={fmtEuro(tenant.monthlyRent)} />
+      <div className="flex items-center gap-2 pt-1">
+        <button
+          onClick={() => setShowTransfer(true)}
+          className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium border border-lightgray rounded-[5px] hover:bg-background-alt"
+        >
+          Transfer room
+        </button>
+      </div>
       <div className="border-t border-lightgray my-4" />
       <InfoRow label="Move-in" value={fmtDate(tenant.moveIn)} />
       <div className="flex items-start text-sm">
@@ -489,6 +512,66 @@ function LeaseTab({ tenant }: { tenant: Tenant }) {
             router.refresh();
           }}
         />
+      )}
+
+      {showTransfer && (
+        <RoomTransferModal
+          tenantId={tenant.id}
+          tenantName={`${tenant.firstName} ${tenant.lastName}`}
+          currentRoomId={tenant.roomId}
+          currentRoomNumber={tenant.room?.roomNumber ?? "—"}
+          currentRent={tenant.monthlyRent}
+          locationId={tenant.room?.apartment.location.id ?? ""}
+          onClose={() => setShowTransfer(false)}
+          onSuccess={() => {
+            setShowTransfer(false);
+            router.refresh();
+          }}
+        />
+      )}
+
+      {/* Transfer history */}
+      {tenant.roomTransfers && tenant.roomTransfers.length > 0 && (
+        <>
+          <div className="border-t border-lightgray my-4" />
+          <div className="text-xs text-gray uppercase tracking-wide font-semibold mb-2">
+            Room transfer history
+          </div>
+          <div className="space-y-1">
+            {tenant.roomTransfers.map((t: any) => (
+              <div
+                key={t.id}
+                className={`text-sm flex items-center gap-2 ${t.status === "CANCELLED" ? "line-through text-gray" : ""}`}
+              >
+                <span
+                  className={`inline-block w-2 h-2 rounded-full ${
+                    t.status === "COMPLETED"
+                      ? "bg-green-500"
+                      : t.status === "SCHEDULED"
+                        ? "bg-orange-400"
+                        : "bg-gray-300"
+                  }`}
+                />
+                <span>{fmtDate(t.transferDate)}</span>
+                <span className="text-gray">→</span>
+                <span>{t.toRoom?.roomNumber ?? t.toRoomId}</span>
+                {t.newMonthlyRent && (
+                  <span className="text-gray text-xs">
+                    (€{(t.oldMonthlyRent / 100).toFixed(0)} → €{(t.newMonthlyRent / 100).toFixed(0)})
+                  </span>
+                )}
+                {t.reason && (
+                  <span className="text-gray text-xs italic">— {t.reason}</span>
+                )}
+                {t.status === "SCHEDULED" && (
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-[5px] bg-orange-100 text-orange-700 font-semibold">
+                    SCHEDULED
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        </>
       )}
     </div>
   );
@@ -1552,6 +1635,240 @@ function ResendEmailDropdown({ tenantId }: { tenantId: string }) {
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+/** Room transfer modal — pick a target room in the same location, set
+ *  transfer date (past, today, or future), optionally change rent. */
+function RoomTransferModal({
+  tenantId,
+  tenantName,
+  currentRoomId,
+  currentRoomNumber,
+  currentRent,
+  locationId,
+  onClose,
+  onSuccess,
+}: {
+  tenantId: string;
+  tenantName: string;
+  currentRoomId: string | null;
+  currentRoomNumber: string;
+  currentRent: number;
+  locationId: string;
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  const [rooms, setRooms] = useState<
+    { id: string; roomNumber: string; category: string; monthlyRent: number; occupied: boolean }[]
+  >([]);
+  const [loading, setLoading] = useState(true);
+  const [toRoomId, setToRoomId] = useState("");
+  const [transferDate, setTransferDate] = useState(
+    new Date().toISOString().slice(0, 10)
+  );
+  const [reason, setReason] = useState("");
+  const [changeRent, setChangeRent] = useState(false);
+  const [newRent, setNewRent] = useState((currentRent / 100).toFixed(2));
+  const [forceOverride, setForceOverride] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [conflict, setConflict] = useState<{
+    name: string;
+  } | null>(null);
+
+  // Load available rooms on mount
+  useEffect(() => {
+    if (!locationId) return;
+    fetch(`/api/admin/rooms?locationId=${locationId}`)
+      .then((r) => r.json())
+      .then((data) => {
+        // Flatten rooms from the location's apartments
+        const flat: typeof rooms = [];
+        for (const apt of data.apartments ?? []) {
+          for (const room of apt.rooms ?? []) {
+            if (room.id === currentRoomId) continue;
+            flat.push({
+              id: room.id,
+              roomNumber: room.roomNumber,
+              category: room.category,
+              monthlyRent: room.monthlyRent,
+              occupied: (room.tenants ?? []).length > 0,
+            });
+          }
+        }
+        flat.sort((a, b) => a.roomNumber.localeCompare(b.roomNumber));
+        setRooms(flat);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, [locationId, currentRoomId]);
+
+  // When a room is selected, auto-fill the rent if changeRent is on
+  useEffect(() => {
+    if (changeRent && toRoomId) {
+      const target = rooms.find((r) => r.id === toRoomId);
+      if (target) setNewRent((target.monthlyRent / 100).toFixed(2));
+    }
+  }, [toRoomId, changeRent, rooms]);
+
+  async function save() {
+    if (!toRoomId) {
+      alert("Bitte Zielzimmer auswählen");
+      return;
+    }
+    const rentCents = changeRent
+      ? Math.round(parseFloat(newRent.replace(",", ".")) * 100)
+      : null;
+    setSaving(true);
+    setConflict(null);
+    try {
+      const res = await fetch(`/api/admin/tenants/${tenantId}/transfer`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          toRoomId,
+          transferDate,
+          reason: reason || null,
+          newMonthlyRent: rentCents,
+          forceOverride,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        const msg = data.executed
+          ? "Zimmerwechsel ausgeführt."
+          : `Zimmerwechsel geplant für ${transferDate}.`;
+        alert(msg);
+        onSuccess();
+      } else if (res.status === 409 && data.occupiedBy) {
+        setConflict({ name: data.occupiedBy.name });
+      } else {
+        alert(`Fehler: ${data.error ?? res.statusText}`);
+      }
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const selectedRoom = rooms.find((r) => r.id === toRoomId);
+
+  return (
+    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-[5px] border border-lightgray p-6 max-w-md w-full space-y-3">
+        <div className="flex items-start justify-between">
+          <div>
+            <h3 className="font-bold text-black">Zimmerwechsel</h3>
+            <p className="text-xs text-gray mt-0.5">
+              {tenantName} · aktuell #{currentRoomNumber}
+            </p>
+          </div>
+          <button onClick={onClose} className="text-gray hover:text-black">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <label className="block">
+          <span className="block text-xs text-gray mb-1">Zielzimmer</span>
+          {loading ? (
+            <p className="text-sm text-gray">Laden…</p>
+          ) : (
+            <select
+              value={toRoomId}
+              onChange={(e) => setToRoomId(e.target.value)}
+              className="w-full px-3 py-2 border border-lightgray rounded-[5px] text-sm bg-white"
+            >
+              <option value="">— Zimmer wählen —</option>
+              {rooms.map((r) => (
+                <option key={r.id} value={r.id}>
+                  #{r.roomNumber} · {r.category.replace(/_/g, " ")} · €
+                  {(r.monthlyRent / 100).toFixed(0)}
+                  {r.occupied ? " ⚠ belegt" : ""}
+                </option>
+              ))}
+            </select>
+          )}
+        </label>
+
+        <label className="block">
+          <span className="block text-xs text-gray mb-1">
+            Datum (Vergangenheit, heute oder Zukunft)
+          </span>
+          <input
+            type="date"
+            value={transferDate}
+            onChange={(e) => setTransferDate(e.target.value)}
+            className="w-full px-3 py-2 border border-lightgray rounded-[5px] text-sm bg-white"
+          />
+        </label>
+
+        <label className="block">
+          <span className="block text-xs text-gray mb-1">Grund (optional)</span>
+          <input
+            type="text"
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            placeholder="z.B. Upgrade, Renovierung, Beschwerde"
+            className="w-full px-3 py-2 border border-lightgray rounded-[5px] text-sm"
+          />
+        </label>
+
+        <label className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            checked={changeRent}
+            onChange={(e) => setChangeRent(e.target.checked)}
+          />
+          <span className="text-sm">Miete anpassen</span>
+        </label>
+
+        {changeRent && (
+          <label className="block">
+            <span className="block text-xs text-gray mb-1">
+              Neue Miete (€) — aktuell €{(currentRent / 100).toFixed(0)}
+              {selectedRoom &&
+                ` · Zimmerpreis €${(selectedRoom.monthlyRent / 100).toFixed(0)}`}
+            </span>
+            <input
+              type="number"
+              value={newRent}
+              onChange={(e) => setNewRent(e.target.value)}
+              className="w-full px-3 py-2 border border-lightgray rounded-[5px] text-sm"
+            />
+          </label>
+        )}
+
+        {conflict && (
+          <div className="p-3 bg-orange-50 border border-orange-200 rounded-[5px] text-xs text-orange-900">
+            <strong>⚠ Zimmer belegt von {conflict.name}</strong>
+            <br />
+            <label className="flex items-center gap-2 mt-2">
+              <input
+                type="checkbox"
+                checked={forceOverride}
+                onChange={(e) => setForceOverride(e.target.checked)}
+              />
+              <span>Trotzdem zuweisen (Doppelbelegung)</span>
+            </label>
+          </div>
+        )}
+
+        <div className="flex justify-end gap-2 pt-2">
+          <button
+            onClick={onClose}
+            className="px-3 py-1.5 text-sm border border-lightgray rounded-[5px] hover:bg-background-alt"
+          >
+            Abbrechen
+          </button>
+          <button
+            onClick={save}
+            disabled={!toRoomId || saving}
+            className="px-3 py-1.5 text-sm bg-black text-white rounded-[5px] hover:bg-black/90 disabled:opacity-50"
+          >
+            {saving ? "..." : "Wechseln"}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
