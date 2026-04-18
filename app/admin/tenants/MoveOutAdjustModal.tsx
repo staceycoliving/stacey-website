@@ -87,6 +87,15 @@ export default function MoveOutAdjustModal({
   const monthStart = new Date(newMoveOut.getFullYear(), newMoveOut.getMonth(), 1);
   const monthEnd = new Date(newMoveOut.getFullYear(), newMoveOut.getMonth() + 1, 0);
 
+  // Warnings
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const threeMonthsOut = new Date(today);
+  threeMonthsOut.setMonth(threeMonthsOut.getMonth() + 3);
+  const lastDayOfMoveOutMonth = monthEnd.getDate();
+  const isShortNotice = valid && newMoveOut < threeMonthsOut;
+  const isNotMonthEnd = valid && newMoveOut.getDate() !== lastDayOfMoveOutMonth;
+
   // Find a PAID rent for the same month as the new move-out, by comparing
   // year/month components (avoids timezone pitfalls when the DB stores
   // 2026-04-01T00:00:00Z but local Date construction yields the prior
@@ -213,6 +222,20 @@ export default function MoveOutAdjustModal({
             offenen Forderungen und Mängeln verrechnet. Kein separater
             Stripe-Refund — der Mieter sieht alles in einem Schritt unter
             Deposits → Settlement.
+          </div>
+        )}
+        {(isShortNotice || isNotMonthEnd) && (
+          <div className="space-y-1.5">
+            {isShortNotice && (
+              <div className="p-2 bg-orange-50 border border-orange-200 rounded-[5px] text-xs text-orange-900">
+                ⚠ Kündigungsfrist unter 3 Monaten (ab heute gerechnet).
+              </div>
+            )}
+            {isNotMonthEnd && (
+              <div className="p-2 bg-orange-50 border border-orange-200 rounded-[5px] text-xs text-orange-900">
+                ⚠ Kein Monatsende — der {lastDayOfMoveOutMonth}. wäre das Monatsende.
+              </div>
+            )}
           </div>
         )}
         <div className="flex justify-end gap-2 pt-2">
