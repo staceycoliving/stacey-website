@@ -844,13 +844,13 @@ export default function TenantsPage({
                               Open folio
                             </MenuItem>
                             <MenuItem onClick={() => router.push(`/admin/tenants/${t.id}?tab=lease`)}>
-                              → Lease
+                              Move-out / Terminate
                             </MenuItem>
                             <MenuItem onClick={() => router.push(`/admin/tenants/${t.id}?tab=payments`)}>
-                              → Payments
+                              Extra charges / Rent
                             </MenuItem>
                             <MenuItem onClick={() => router.push(`/admin/tenants/${t.id}?tab=documents`)}>
-                              → Documents
+                              Send email / Documents
                             </MenuItem>
                           </div>
                         )}

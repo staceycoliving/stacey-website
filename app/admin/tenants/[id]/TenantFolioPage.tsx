@@ -193,7 +193,13 @@ export default function TenantFolioPage({
   withdrawEligible: boolean;
 }) {
   const router = useRouter();
-  const [tab, setTab] = useState<TabId>("profile");
+  // Support ?tab=lease deep-links from the tenants list
+  const [tab, setTab] = useState<TabId>(() => {
+    if (typeof window === "undefined") return "profile";
+    const p = new URLSearchParams(window.location.search).get("tab");
+    const valid: TabId[] = ["profile", "lease", "payments", "deposit", "timeline", "documents"];
+    return valid.includes(p as TabId) ? (p as TabId) : "profile";
+  });
   const [showWithdraw, setShowWithdraw] = useState(false);
   const hasDeposit = Boolean(tenant.booking?.depositPaidAt);
 
