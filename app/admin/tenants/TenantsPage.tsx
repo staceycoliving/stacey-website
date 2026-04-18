@@ -929,20 +929,9 @@ export default function TenantsPage({
                 <SortableTh label="Suite" col="suite" sortCol={sortCol} sortDir={sortDir} onSort={toggleSort} />
                 <SortableTh label="Category" col="category" sortCol={sortCol} sortDir={sortDir} onSort={toggleSort} />
                 <SortableTh label="Price" col="price" sortCol={sortCol} sortDir={sortDir} onSort={toggleSort} align="right" />
-                <SortableTh label="Since" col="moveIn" sortCol={sortCol} sortDir={sortDir} onSort={toggleSort} />
+                <SortableTh label="Start" col="moveIn" sortCol={sortCol} sortDir={sortDir} onSort={toggleSort} />
                 <SortableTh label="End" col="moveOut" sortCol={sortCol} sortDir={sortDir} onSort={toggleSort} />
                 <th className="px-2 py-2 text-gray uppercase tracking-wide text-center">Actions</th>
-              </tr>
-              {/* Per-column filter row */}
-              <tr className="border-b border-lightgray bg-background-alt/60">
-                <FilterTh col="name" value={colFilters.name ?? ""} onChange={setColFilter} options={Array.from(new Set(tenants.map((t) => `${t.firstName} ${t.lastName}`))).sort()} />
-                <FilterTh col="location" value={colFilters.location ?? ""} onChange={setColFilter} options={locations.map((l) => l.name)} />
-                <FilterTh col="suite" value={colFilters.suite ?? ""} onChange={setColFilter} options={Array.from(new Set(tenants.map((t) => t.room.roomNumber))).sort()} />
-                <FilterTh col="category" value={colFilters.category ?? ""} onChange={setColFilter} options={Array.from(new Set(tenants.map((t) => formatCategory(t.room.category)))).sort()} />
-                <td className="px-1 py-1"></td>
-                <td className="px-1 py-1"></td>
-                <td className="px-1 py-1"></td>
-                <td className="px-1 py-1"></td>
               </tr>
             </thead>
             <tbody>
@@ -996,9 +985,7 @@ export default function TenantsPage({
                       <td className="px-3 py-2">{t.room.roomNumber}</td>
                       <td className="px-3 py-2 truncate">{formatCategory(t.room.category)}</td>
                       <td className="px-3 py-2 text-right tabular-nums">{fmtPrice(t.monthlyRent)}</td>
-                      <td className="px-3 py-2" title={formatDate(t.moveIn)}>
-                        <span className="text-gray">{sinceLabel}</span>
-                      </td>
+                      <td className="px-3 py-2 tabular-nums">{formatDate(t.moveIn)}</td>
                       <td className="px-3 py-2">
                         <span className={t.moveOut ? "text-orange-600 font-medium tabular-nums" : "text-gray"}>
                           {t.moveOut ? formatDate(t.moveOut) : "open-end"}
