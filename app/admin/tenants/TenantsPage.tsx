@@ -913,42 +913,33 @@ export default function TenantsPage({
         <div className="overflow-x-auto">
           <table className="w-full text-sm table-fixed">
             <colgroup>
-              <col className="w-[9%]" />   {/* Location */}
-              <col className="w-[15%]" />  {/* Address */}
-              <col className="w-[8%]" />   {/* Floor */}
-              <col className="w-[4%]" />   {/* Apt */}
-              <col className="w-[5%]" />   {/* Suite */}
-              <col className="w-[10%]" />  {/* Category */}
-              <col className="w-[6%]" />   {/* Price */}
-              <col className="w-[15%]" />  {/* Name */}
-              <col className="w-[7%]" />   {/* Start */}
-              <col className="w-[7%]" />   {/* End */}
-              <col className="w-[7%]" />   {/* Actions (dot + menu) */}
+              <col className="w-[24%]" />  {/* Name + email */}
+              <col className="w-[10%]" />  {/* Location */}
+              <col className="w-[7%]" />   {/* Suite */}
+              <col className="w-[12%]" />  {/* Category */}
+              <col className="w-[8%]" />   {/* Price */}
+              <col className="w-[12%]" />  {/* Since */}
+              <col className="w-[10%]" />  {/* End */}
+              <col className="w-[7%]" />   {/* Actions */}
             </colgroup>
             <thead>
               <tr className="border-b border-lightgray bg-background-alt text-[11px]">
+                <SortableTh label="Name" col="name" sortCol={sortCol} sortDir={sortDir} onSort={toggleSort} />
                 <SortableTh label="Location" col="location" sortCol={sortCol} sortDir={sortDir} onSort={toggleSort} />
-                <SortableTh label="Address" col="address" sortCol={sortCol} sortDir={sortDir} onSort={toggleSort} />
-                <SortableTh label="Floor" col="zusatz" sortCol={sortCol} sortDir={sortDir} onSort={toggleSort} />
-                <SortableTh label="Apt" col="apartment" sortCol={sortCol} sortDir={sortDir} onSort={toggleSort} />
                 <SortableTh label="Suite" col="suite" sortCol={sortCol} sortDir={sortDir} onSort={toggleSort} />
                 <SortableTh label="Category" col="category" sortCol={sortCol} sortDir={sortDir} onSort={toggleSort} />
                 <SortableTh label="Price" col="price" sortCol={sortCol} sortDir={sortDir} onSort={toggleSort} align="right" />
-                <SortableTh label="Name" col="name" sortCol={sortCol} sortDir={sortDir} onSort={toggleSort} />
-                <SortableTh label="Start" col="moveIn" sortCol={sortCol} sortDir={sortDir} onSort={toggleSort} />
+                <SortableTh label="Since" col="moveIn" sortCol={sortCol} sortDir={sortDir} onSort={toggleSort} />
                 <SortableTh label="End" col="moveOut" sortCol={sortCol} sortDir={sortDir} onSort={toggleSort} />
                 <th className="px-2 py-2 text-gray uppercase tracking-wide text-center">Actions</th>
               </tr>
-              {/* Per-column filter row — dropdowns only */}
+              {/* Per-column filter row */}
               <tr className="border-b border-lightgray bg-background-alt/60">
+                <FilterTh col="name" value={colFilters.name ?? ""} onChange={setColFilter} options={Array.from(new Set(tenants.map((t) => `${t.firstName} ${t.lastName}`))).sort()} />
                 <FilterTh col="location" value={colFilters.location ?? ""} onChange={setColFilter} options={locations.map((l) => l.name)} />
-                <FilterTh col="address" value={colFilters.address ?? ""} onChange={setColFilter} options={Array.from(new Set(tenants.map((t) => t.room.apartment.address ?? buildFullAddress(t)))).sort()} />
-                <FilterTh col="zusatz" value={colFilters.zusatz ?? ""} onChange={setColFilter} options={Array.from(new Set(tenants.map((t) => floorLabel(t)).filter(Boolean))).sort()} />
-                <FilterTh col="apartment" value={colFilters.apartment ?? ""} onChange={setColFilter} options={Array.from(new Set(tenants.map((t) => String(t.room.apartment.number ?? "")).filter(Boolean))).sort((a, b) => Number(a) - Number(b))} />
                 <FilterTh col="suite" value={colFilters.suite ?? ""} onChange={setColFilter} options={Array.from(new Set(tenants.map((t) => t.room.roomNumber))).sort()} />
                 <FilterTh col="category" value={colFilters.category ?? ""} onChange={setColFilter} options={Array.from(new Set(tenants.map((t) => formatCategory(t.room.category)))).sort()} />
                 <td className="px-1 py-1"></td>
-                <FilterTh col="name" value={colFilters.name ?? ""} onChange={setColFilter} options={Array.from(new Set(tenants.map((t) => `${t.firstName} ${t.lastName}`))).sort()} />
                 <td className="px-1 py-1"></td>
                 <td className="px-1 py-1"></td>
                 <td className="px-1 py-1"></td>
@@ -957,7 +948,7 @@ export default function TenantsPage({
             <tbody>
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={11} className="px-3 py-8 text-center text-gray text-sm">
+                  <td colSpan={8} className="px-3 py-8 text-center text-gray text-sm">
                     No tenants found
                   </td>
                 </tr>
@@ -966,26 +957,48 @@ export default function TenantsPage({
                   const issues = issuesByTenant.get(t.id) ?? [];
                   const zebra = idx % 2 === 1 ? "bg-background-alt/40" : "";
                   const movedOut = t.moveOut && new Date(t.moveOut).getTime() < nowTs;
+                  const initials = `${t.firstName.charAt(0)}${t.lastName.charAt(0)}`.toUpperCase();
+                  const sinceMonths = Math.floor(
+                    (nowTs - new Date(t.moveIn).getTime()) / (30.44 * 86_400_000)
+                  );
+                  const sinceLabel =
+                    sinceMonths < 1
+                      ? "< 1 month"
+                      : sinceMonths === 1
+                        ? "1 month"
+                        : `${sinceMonths} months`;
                   return (
                     <tr
                       key={t.id}
                       onClick={() => router.push(`/admin/tenants/${t.id}`)}
                       className={`border-b border-lightgray/30 hover:bg-blue-50/40 cursor-pointer transition-colors text-sm ${zebra} ${movedOut ? "opacity-50" : ""}`}
                     >
+                      <td className="px-3 py-2">
+                        <div className="flex items-center gap-2.5">
+                          <span
+                            className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-black text-white text-[11px] font-bold flex-shrink-0"
+                            title={`${t.firstName} ${t.lastName}`}
+                          >
+                            {initials}
+                          </span>
+                          <div className="min-w-0">
+                            <div className="font-medium truncate">
+                              {t.firstName} {t.lastName}
+                              {t.notesCount > 0 && (
+                                <span className="ml-1 text-[10px] text-gray" title={`${t.notesCount} notes`}>💬{t.notesCount}</span>
+                              )}
+                            </div>
+                            <div className="text-[11px] text-gray truncate">{t.email}</div>
+                          </div>
+                        </div>
+                      </td>
                       <td className="px-3 py-2 truncate">{t.room.apartment.location.name}</td>
-                      <td className="px-3 py-2 truncate">{t.room.apartment.address ?? buildFullAddress(t)}</td>
-                      <td className="px-3 py-2 text-gray truncate">{floorLabel(t)}</td>
-                      <td className="px-3 py-2 tabular-nums text-center">{t.room.apartment.number ?? "—"}</td>
                       <td className="px-3 py-2">{t.room.roomNumber}</td>
                       <td className="px-3 py-2 truncate">{formatCategory(t.room.category)}</td>
                       <td className="px-3 py-2 text-right tabular-nums">{fmtPrice(t.monthlyRent)}</td>
-                      <td className="px-3 py-2 font-medium truncate">
-                        {t.firstName} {t.lastName}
-                        {t.notesCount > 0 && (
-                          <span className="ml-1 text-[10px] text-gray" title={`${t.notesCount} notes`}>💬{t.notesCount}</span>
-                        )}
+                      <td className="px-3 py-2" title={formatDate(t.moveIn)}>
+                        <span className="text-gray">{sinceLabel}</span>
                       </td>
-                      <td className="px-3 py-2 tabular-nums">{formatDate(t.moveIn)}</td>
                       <td className="px-3 py-2">
                         <span className={t.moveOut ? "text-orange-600 font-medium tabular-nums" : "text-gray"}>
                           {t.moveOut ? formatDate(t.moveOut) : "open-end"}
