@@ -135,21 +135,10 @@ function extractHouseNumber(id: string | null | undefined): string {
   return m ? m[0] : id;
 }
 
-/** Floor + orientation for the dedicated Floor column. Tries in order:
- *  1. room.floorDescription — most specific (admin override)
- *  2. apartment.label if it contains "rechts"/"links" — the orientation
- *     info lives there for some locations (e.g. Mühlenkamp). We strip
- *     the redundant apartment-ID prefix (e.g. "D3a") so only the floor
- *     + orientation show (e.g. "1.OG links").
- *  3. apartment.floor — plain level without orientation. */
+/** Floor column — now seeded directly from the CSV "Zusatz" column into
+ *  apartment.floor (e.g. "EG rechts", "VH 1.OG"). No heuristics needed. */
 function floorLabel(t: Tenant): string {
-  if (t.room.floorDescription) return t.room.floorDescription;
-  const label = t.room.apartment.label ?? "";
-  if (/rechts|links/i.test(label)) {
-    // Strip the leading apartment-ID prefix (e.g. "D3a " or "F13 ")
-    return label.replace(/^[A-Za-z]\d+[a-zA-Z]?\s+/, "").trim();
-  }
-  return t.room.apartment.floor ?? "";
+  return t.room.floorDescription ?? t.room.apartment.floor ?? "";
 }
 
 function formatCategory(cat: string) {
@@ -917,7 +906,7 @@ export default function TenantsPage({
               <tr className="border-b border-lightgray bg-background-alt">
                 <SortableTh label="Location" col="location" sortCol={sortCol} sortDir={sortDir} onSort={toggleSort} />
                 <SortableTh label="Address" col="address" sortCol={sortCol} sortDir={sortDir} onSort={toggleSort} />
-                <SortableTh label="Zusatz" col="zusatz" sortCol={sortCol} sortDir={sortDir} onSort={toggleSort} />
+                <SortableTh label="Floor" col="zusatz" sortCol={sortCol} sortDir={sortDir} onSort={toggleSort} />
                 <SortableTh label="Apartment" col="apartment" sortCol={sortCol} sortDir={sortDir} onSort={toggleSort} />
                 <SortableTh label="Suite" col="suite" sortCol={sortCol} sortDir={sortDir} onSort={toggleSort} />
                 <SortableTh label="Category" col="category" sortCol={sortCol} sortDir={sortDir} onSort={toggleSort} />

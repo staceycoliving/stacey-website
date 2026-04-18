@@ -1,6 +1,9 @@
 /**
- * Reads the CSV export and updates Apartment.number + Apartment.address
- * by matching on Room.roomNumber (= CSV "Suite" column).
+ * Reads the CSV export and updates Apartment fields by matching on
+ * Room.roomNumber (= CSV "Suite" column).
+ *
+ * Updates: number, address, AND floor (= CSV "Zusatz" column, e.g.
+ * "EG rechts", "VH 1.OG") so the admin table matches the CSV exactly.
  *
  * Usage: node scripts/seed-apartment-data.mjs
  */
@@ -20,9 +23,7 @@ const csvPath = resolve(
 );
 const raw = readFileSync(csvPath, "utf-8");
 const lines = raw.split("\n").filter((l) => l.trim());
-const header = lines[0].split(",");
 
-// Parse CSV rows (handle quoted fields with commas inside)
 function parseCSVLine(line) {
   const fields = [];
   let current = "";
@@ -41,15 +42,20 @@ function parseCSVLine(line) {
   return fields;
 }
 
-// Build a map: suite → { apartment number, address }
+// Build map: suite → { apartment number, address, floor (= Zusatz) }
 const suiteMap = new Map();
 for (let i = 1; i < lines.length; i++) {
   const cols = parseCSVLine(lines[i]);
-  const suite = cols[5]; // Suite column
-  const aptNum = parseInt(cols[4], 10); // Apartment column
-  const address = cols[2]; // Address column
-  if (!suite || isNaN(aptNum)) continue;
-  suiteMap.set(suite, { number: aptNum, address });
+  const suite = cols[5];   // Suite
+  const aptNum = parseInt(cols[4], 10); // Apartment
+  const address = cols[2]; // Address
+  const floor = cols[3];   // Zusatz (= floor + orientation)
+  if (!suite) continue;
+  suiteMap.set(suite, {
+    number: isNaN(aptNum) ? null : aptNum,
+    address: address || null,
+    floor: floor || null,
+  });
 }
 
 console.log(`Parsed ${suiteMap.size} suite→apartment mappings from CSV`);
@@ -57,10 +63,9 @@ console.log(`Parsed ${suiteMap.size} suite→apartment mappings from CSV`);
 const client = new Client({ connectionString: process.env.DIRECT_URL });
 await client.connect();
 
-// For each suite in the map, find the Room → get its apartmentId → update
 let updated = 0;
 let notFound = 0;
-const seen = new Set(); // track apartmentIds we've already updated
+const seen = new Map(); // apartmentId → first CSV data (in case of conflicts)
 
 for (const [suite, data] of suiteMap) {
   const res = await client.query(
@@ -69,15 +74,36 @@ for (const [suite, data] of suiteMap) {
   );
   if (res.rows.length === 0) {
     notFound++;
+    console.log(`  NOT FOUND: ${suite}`);
     continue;
   }
   const aptId = res.rows[0].apartmentId;
-  if (seen.has(aptId)) continue; // already updated this apartment
-  seen.add(aptId);
+  if (seen.has(aptId)) continue; // already updated
+  seen.set(aptId, data);
+
+  const updates = [];
+  const params = [];
+  let idx = 1;
+
+  if (data.number !== null) {
+    updates.push(`"number" = $${idx++}`);
+    params.push(data.number);
+  }
+  if (data.address) {
+    updates.push(`"address" = $${idx++}`);
+    params.push(data.address);
+  }
+  if (data.floor) {
+    updates.push(`"floor" = $${idx++}`);
+    params.push(data.floor);
+  }
+
+  if (updates.length === 0) continue;
+  params.push(aptId);
 
   await client.query(
-    `UPDATE "Apartment" SET "number" = $1, "address" = $2 WHERE "id" = $3`,
-    [data.number, data.address, aptId]
+    `UPDATE "Apartment" SET ${updates.join(", ")} WHERE "id" = $${idx}`,
+    params
   );
   updated++;
 }
