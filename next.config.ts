@@ -4,7 +4,7 @@ import { withSentryConfig } from "@sentry/nextjs";
 const nextConfig: NextConfig = {
   // Use a separate distDir in dev to work around a Turbopack persistent
   // cache corruption on macOS. Production (Vercel) uses the default ".next".
-  ...(process.env.NODE_ENV === "development" ? { distDir: ".next-dev" } : {}),
+  ...(process.env.NODE_ENV === "development" ? { distDir: ".next-d2" } : {}),
 };
 
 // withSentryConfig is a no-op when no SENTRY_AUTH_TOKEN is set, so this is safe
