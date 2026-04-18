@@ -930,16 +930,16 @@ export default function TenantsPage({
                 <th className="text-center px-4 py-3 font-semibold text-xs text-gray uppercase tracking-wide w-12"></th>
                 <th className="text-left px-4 py-3 font-semibold text-xs text-gray uppercase tracking-wide w-12"></th>
               </tr>
-              {/* Per-column filter row */}
+              {/* Per-column filter row — dropdowns, not freetext */}
               <tr className="border-b border-lightgray bg-background-alt/60">
                 <FilterTh col="location" value={colFilters.location ?? ""} onChange={setColFilter} options={locations.map((l) => l.name)} />
-                <FilterTh col="address" value={colFilters.address ?? ""} onChange={setColFilter} />
-                <FilterTh col="zusatz" value={colFilters.zusatz ?? ""} onChange={setColFilter} />
-                <FilterTh col="apartment" value={colFilters.apartment ?? ""} onChange={setColFilter} />
-                <FilterTh col="suite" value={colFilters.suite ?? ""} onChange={setColFilter} />
+                <FilterTh col="address" value={colFilters.address ?? ""} onChange={setColFilter} options={Array.from(new Set(tenants.map((t) => t.room.apartment.address ?? buildFullAddress(t)))).sort()} />
+                <FilterTh col="zusatz" value={colFilters.zusatz ?? ""} onChange={setColFilter} options={Array.from(new Set(tenants.map((t) => floorLabel(t)).filter(Boolean))).sort()} />
+                <FilterTh col="apartment" value={colFilters.apartment ?? ""} onChange={setColFilter} options={Array.from(new Set(tenants.map((t) => String(t.room.apartment.number ?? "")).filter(Boolean))).sort((a, b) => Number(a) - Number(b))} />
+                <FilterTh col="suite" value={colFilters.suite ?? ""} onChange={setColFilter} options={Array.from(new Set(tenants.map((t) => t.room.roomNumber))).sort()} />
                 <FilterTh col="category" value={colFilters.category ?? ""} onChange={setColFilter} options={Array.from(new Set(tenants.map((t) => formatCategory(t.room.category)))).sort()} />
                 <td className="px-2 py-1"></td>
-                <FilterTh col="name" value={colFilters.name ?? ""} onChange={setColFilter} />
+                <td className="px-2 py-1"></td>
                 <td className="px-2 py-1"></td>
                 <td className="px-2 py-1"></td>
                 <td className="px-2 py-1"></td>
@@ -1754,8 +1754,8 @@ function QuickExtraChargeModal({
   );
 }
 
-/** Per-column filter cell. Renders a dropdown if `options` is provided,
- *  otherwise a small text input. Sits in the second header row. */
+/** Per-column filter cell — always a dropdown with all distinct values
+ *  from that column. No freetext inputs. */
 function FilterTh({
   col,
   value,
@@ -1765,35 +1765,22 @@ function FilterTh({
   col: string;
   value: string;
   onChange: (col: string, val: string) => void;
-  options?: string[];
+  options: string[];
 }) {
-  if (options) {
-    return (
-      <td className="px-2 py-1">
-        <select
-          value={value}
-          onChange={(e) => onChange(col, e.target.value)}
-          className="w-full px-1.5 py-1 border border-lightgray rounded-[5px] text-[11px] bg-white"
-        >
-          <option value="">All</option>
-          {options.map((o) => (
-            <option key={o} value={o}>
-              {o}
-            </option>
-          ))}
-        </select>
-      </td>
-    );
-  }
   return (
     <td className="px-2 py-1">
-      <input
-        type="text"
+      <select
         value={value}
         onChange={(e) => onChange(col, e.target.value)}
-        placeholder="Filter…"
         className="w-full px-1.5 py-1 border border-lightgray rounded-[5px] text-[11px] bg-white"
-      />
+      >
+        <option value="">All</option>
+        {options.map((o) => (
+          <option key={o} value={o}>
+            {o}
+          </option>
+        ))}
+      </select>
     </td>
   );
 }
