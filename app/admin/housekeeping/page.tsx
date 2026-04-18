@@ -46,9 +46,9 @@ export default async function AdminHousekeepingPage({
   let apaleoError: string | null = null;
   try {
     // apaleo's "to" is exclusive — to query a single day we need
-    // from=YYYY-MM-DD and to=next day.
-    const nextDay = new Date(date);
-    nextDay.setDate(nextDay.getDate() + 1);
+    // from=YYYY-MM-DD and to=next day. Use UTC to avoid timezone shift.
+    const nextDay = new Date(dateStr + "T12:00:00Z");
+    nextDay.setUTCDate(nextDay.getUTCDate() + 1);
     const toStr = nextDay.toISOString().slice(0, 10);
     [apaleoArrivals, apaleoDepartures] = await Promise.all([
       getReservations({ dateFilter: "arrival", from: dateStr, to: toStr }),
