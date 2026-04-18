@@ -7,7 +7,6 @@ import {
   ChevronUp,
   Edit2,
   LayoutGrid,
-  MoreHorizontal,
   Plus,
   Search,
   Table as TableIcon,
@@ -239,7 +238,7 @@ export default function RoomsPage({
   // Filter + search + sort
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
-    let rows = flatRooms.filter((r) => {
+    const rows = flatRooms.filter((r) => {
       if (filterStatus && r.occupancyStatus !== filterStatus) return false;
       if (q) {
         const hay = [
