@@ -430,7 +430,7 @@ export default function TenantsPage({
           case "moveIn":
             return t.moveIn;
           case "moveOut":
-            return t.moveOut ?? "";
+            return t.moveOut ?? "9999-12-31";
           default:
             return "";
         }
