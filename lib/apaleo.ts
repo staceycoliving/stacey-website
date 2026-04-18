@@ -504,11 +504,18 @@ export async function getReservations(params: {
   status?: string; // e.g. "Confirmed", "InHouse", "CheckedOut"
 }) {
   const propertyIds = Object.values(PROPERTY_MAP).join(",");
+  // apaleo requires full ISO 8601 datetime — bare YYYY-MM-DD returns 422.
+  // For a single-day query: from = start of day, to = start of next day.
+  const fromDt = `${params.from}T00:00:00Z`;
+  const toDate = new Date(params.to + "T12:00:00Z");
+  toDate.setUTCDate(toDate.getUTCDate() + 1);
+  const toDt = `${toDate.toISOString().slice(0, 10)}T00:00:00Z`;
+
   const query = new URLSearchParams({
     propertyIds,
     dateFilter: params.dateFilter === "arrival" ? "Arrival" : "Departure",
-    from: params.from,
-    to: params.to,
+    from: fromDt,
+    to: toDt,
     ...(params.status ? { status: params.status } : {}),
     pageSize: "100",
     expand: "unit",
