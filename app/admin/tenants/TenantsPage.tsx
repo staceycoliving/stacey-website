@@ -24,6 +24,7 @@ type Location = {
   id: string;
   slug: string;
   name: string;
+  address: string;
 };
 
 type RentPaymentSummary = {
@@ -79,6 +80,7 @@ type SortColumn =
   | "location"
   | "address"
   | "apartment"
+  | "floor"
   | "suite"
   | "category"
   | "price"
@@ -97,6 +99,56 @@ function formatDate(d: string | null) {
     month: "2-digit",
     year: "numeric",
   });
+}
+
+/** Builds just street + specific house number for the Address column.
+ *  Source fields:
+ *  - location.address often looks like "Fischerinsel 13-15, 10179 Berlin"
+ *    (range + zip/city). We want the street name only.
+ *  - apartment.houseNumber is a Stacey-internal apartment identifier
+ *    like "F13", "D3a" — the letter is a building prefix, the rest is
+ *    the actual house number we want to combine with the street.
+ *  room.buildingAddress beats both when an admin set an explicit override.
+ *  Zip + city are dropped here — they belong in the folio, not the list. */
+function buildFullAddress(t: Tenant): string {
+  if (t.room.buildingAddress) return t.room.buildingAddress;
+  const full = t.room.apartment.location.address.trim();
+  // Strip anything after the first comma → removes zip + city
+  const firstSegment = full.split(",")[0].trim();
+  // Drop a trailing number / range so we can replace it with the
+  // specific apartment's house number.
+  const streetOnly = firstSegment
+    .replace(/\s+\d+[a-zA-Z]?([-/]\d+[a-zA-Z]?)?\s*$/, "")
+    .trim();
+  const num = extractHouseNumber(t.room.apartment.houseNumber);
+  if (!num) return streetOnly || firstSegment;
+  return `${streetOnly} ${num}`;
+}
+
+/** Given a Stacey apartment identifier like "F13" or "D3a", return the
+ *  actual house number portion ("13" / "3a"). If the input is already
+ *  purely numeric, pass it through. */
+function extractHouseNumber(id: string | null | undefined): string {
+  if (!id) return "";
+  const m = id.match(/\d+[a-zA-Z]?$/);
+  return m ? m[0] : id;
+}
+
+/** Floor + orientation for the dedicated Floor column. Tries in order:
+ *  1. room.floorDescription — most specific (admin override)
+ *  2. apartment.label if it contains "rechts"/"links" — the orientation
+ *     info lives there for some locations (e.g. Mühlenkamp). We strip
+ *     the redundant apartment-ID prefix (e.g. "D3a") so only the floor
+ *     + orientation show (e.g. "1.OG links").
+ *  3. apartment.floor — plain level without orientation. */
+function floorLabel(t: Tenant): string {
+  if (t.room.floorDescription) return t.room.floorDescription;
+  const label = t.room.apartment.label ?? "";
+  if (/rechts|links/i.test(label)) {
+    // Strip the leading apartment-ID prefix (e.g. "D3a " or "F13 ")
+    return label.replace(/^[A-Za-z]\d+[a-zA-Z]?\s+/, "").trim();
+  }
+  return t.room.apartment.floor ?? "";
 }
 
 function formatCategory(cat: string) {
@@ -326,9 +378,11 @@ export default function TenantsPage({
           case "location":
             return t.room.apartment.location.name;
           case "address":
-            return t.room.apartment.houseNumber;
+            return buildFullAddress(t);
           case "apartment":
-            return t.room.apartment.label ?? t.room.apartment.floor;
+            return t.room.apartment.houseNumber;
+          case "floor":
+            return floorLabel(t);
           case "suite":
             return t.room.roomNumber;
           case "category":
@@ -823,8 +877,9 @@ export default function TenantsPage({
               <tr className="border-b border-lightgray bg-background-alt">
                 <SortableTh label="Location" col="location" sortCol={sortCol} sortDir={sortDir} onSort={toggleSort} />
                 <SortableTh label="Address" col="address" sortCol={sortCol} sortDir={sortDir} onSort={toggleSort} />
-                <SortableTh label="Apartment" col="apartment" sortCol={sortCol} sortDir={sortDir} onSort={toggleSort} />
-                <SortableTh label="Suite" col="suite" sortCol={sortCol} sortDir={sortDir} onSort={toggleSort} />
+                <SortableTh label="Apartment#" col="apartment" sortCol={sortCol} sortDir={sortDir} onSort={toggleSort} />
+                <SortableTh label="Floor" col="floor" sortCol={sortCol} sortDir={sortDir} onSort={toggleSort} />
+                <SortableTh label="Suite#" col="suite" sortCol={sortCol} sortDir={sortDir} onSort={toggleSort} />
                 <SortableTh label="Category" col="category" sortCol={sortCol} sortDir={sortDir} onSort={toggleSort} />
                 <SortableTh label="Price" col="price" sortCol={sortCol} sortDir={sortDir} onSort={toggleSort} align="right" />
                 <SortableTh label="Name" col="name" sortCol={sortCol} sortDir={sortDir} onSort={toggleSort} />
@@ -839,7 +894,7 @@ export default function TenantsPage({
             <tbody>
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={13} className="px-4 py-8 text-center text-gray">
+                  <td colSpan={14} className="px-4 py-8 text-center text-gray">
                     No tenants found
                   </td>
                 </tr>
@@ -853,12 +908,11 @@ export default function TenantsPage({
                       className="border-b border-lightgray/50 hover:bg-background-alt cursor-pointer transition-colors"
                     >
                       <td className="px-4 py-3">{t.room.apartment.location.name}</td>
-                      <td className="px-4 py-3">
-                        {t.room.buildingAddress ?? t.room.apartment.houseNumber}
+                      <td className="px-4 py-3">{buildFullAddress(t)}</td>
+                      <td className="px-4 py-3 font-mono text-xs">
+                        {t.room.apartment.houseNumber}
                       </td>
-                      <td className="px-4 py-3">
-                        {t.room.apartment.label ?? t.room.apartment.floor}
-                      </td>
+                      <td className="px-4 py-3 text-gray">{floorLabel(t)}</td>
                       <td className="px-4 py-3">#{t.room.roomNumber}</td>
                       <td className="px-4 py-3">{formatCategory(t.room.category)}</td>
                       <td className="px-4 py-3 text-right tabular-nums">
