@@ -499,15 +499,19 @@ export async function createPaidShortStayBooking(params: {
 export async function getReservations(params: {
   dateFilter: "arrival" | "departure";
   from: string; // YYYY-MM-DD
-  to: string;   // YYYY-MM-DD
+  to: string;   // YYYY-MM-DD (exclusive — will be converted to end-of-day datetime)
   status?: string; // e.g. "Confirmed", "InHouse", "CheckedOut"
 }) {
   const propertyIds = Object.values(PROPERTY_MAP).join(",");
+  // apaleo expects ISO 8601 datetime, not bare dates.
+  // "from" = start of day, "to" = end of the last day in the range.
+  const fromDt = `${params.from}T00:00:00Z`;
+  const toDt = `${params.to}T23:59:59Z`;
   const query = new URLSearchParams({
     propertyIds,
     dateFilter: params.dateFilter === "arrival" ? "Arrival" : "Departure",
-    from: params.from,
-    to: params.to,
+    from: fromDt,
+    to: toDt,
     ...(params.status ? { status: params.status } : {}),
     pageSize: "100",
     expand: "unit",

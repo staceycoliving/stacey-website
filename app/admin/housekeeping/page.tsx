@@ -45,14 +45,11 @@ export default async function AdminHousekeepingPage({
   let apaleoDepartures: Awaited<ReturnType<typeof getReservations>> = [];
   let apaleoError: string | null = null;
   try {
-    // apaleo's "to" is exclusive — to query a single day we need
-    // from=YYYY-MM-DD and to=next day. Use UTC to avoid timezone shift.
-    const nextDay = new Date(dateStr + "T12:00:00Z");
-    nextDay.setUTCDate(nextDay.getUTCDate() + 1);
-    const toStr = nextDay.toISOString().slice(0, 10);
+    // getReservations now handles datetime conversion internally —
+    // pass the same day for both from and to for a single-day query.
     [apaleoArrivals, apaleoDepartures] = await Promise.all([
-      getReservations({ dateFilter: "arrival", from: dateStr, to: toStr }),
-      getReservations({ dateFilter: "departure", from: dateStr, to: toStr }),
+      getReservations({ dateFilter: "arrival", from: dateStr, to: dateStr }),
+      getReservations({ dateFilter: "departure", from: dateStr, to: dateStr }),
     ]);
   } catch (err) {
     apaleoError = err instanceof Error ? err.message : String(err);
