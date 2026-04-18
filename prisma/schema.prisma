@@ -36,9 +36,11 @@ model Apartment {
   locationId  String
   location    Location @relation(fields: [locationId], references: [id])
 
-  houseNumber String   // Hausnummer
+  number      Int?     // Human-friendly apartment number (1, 2, 3…)
+  address     String?  // Full street address (e.g. "Dorotheenstraße 3b")
+  houseNumber String   // Internal code (e.g. "D3b", "F13")
   floor       String   // Stockwerk (z.B. "EG", "1.OG", "2.OG")
-  label       String?  // Optionaler Name (z.B. "Vorderhaus")
+  label       String?  // Optionaler Name / Zusatz (z.B. "D3a 1.OG rechts")
 
   rooms Room[]
 

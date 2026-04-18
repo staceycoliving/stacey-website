@@ -60,6 +60,8 @@ type Tenant = {
     floorDescription: string | null;
     apartment: {
       id: string;
+      number: number | null;
+      address: string | null;
       houseNumber: string;
       floor: string;
       label: string | null;
@@ -79,16 +81,15 @@ type Tenant = {
 type SortColumn =
   | "location"
   | "address"
+  | "zusatz"
   | "apartment"
-  | "floor"
   | "suite"
   | "category"
   | "price"
   | "name"
   | "email"
   | "moveIn"
-  | "moveOut"
-  | "payment";
+  | "moveOut";
 
 type SortDirection = "asc" | "desc";
 
@@ -269,6 +270,18 @@ export default function TenantsPage({
   const moveOutFrom = searchParams.get("moveOutFrom") ?? "";
   const moveOutTo = searchParams.get("moveOutTo") ?? "";
 
+  // Per-column filters — local state (kept out of URL for simplicity,
+  // the global filters above cover the persistent use case).
+  const [colFilters, setColFilters] = useState<Record<string, string>>({});
+  function setColFilter(col: string, value: string) {
+    setColFilters((prev) => {
+      const next = { ...prev };
+      if (value) next[col] = value;
+      else delete next[col];
+      return next;
+    });
+  }
+
   const writeParams = useCallback(
     (patch: Record<string, string | null>) => {
       const next = new URLSearchParams(searchParams.toString());
@@ -368,6 +381,34 @@ export default function TenantsPage({
           (t.room.apartment.label ?? "").toLowerCase().includes(q);
         if (!match) return false;
       }
+      // Per-column text filters
+      for (const [col, val] of Object.entries(colFilters)) {
+        if (!val) continue;
+        const v = val.toLowerCase();
+        switch (col) {
+          case "location":
+            if (!t.room.apartment.location.name.toLowerCase().includes(v)) return false;
+            break;
+          case "address":
+            if (!(t.room.apartment.address ?? buildFullAddress(t)).toLowerCase().includes(v)) return false;
+            break;
+          case "zusatz":
+            if (!floorLabel(t).toLowerCase().includes(v)) return false;
+            break;
+          case "apartment":
+            if (String(t.room.apartment.number ?? "").includes(v) === false) return false;
+            break;
+          case "suite":
+            if (!t.room.roomNumber.toLowerCase().includes(v)) return false;
+            break;
+          case "category":
+            if (!t.room.category.toLowerCase().includes(v) && !formatCategory(t.room.category).toLowerCase().includes(v)) return false;
+            break;
+          case "name":
+            if (!`${t.firstName} ${t.lastName}`.toLowerCase().includes(v)) return false;
+            break;
+        }
+      }
       return true;
     });
 
@@ -378,11 +419,11 @@ export default function TenantsPage({
           case "location":
             return t.room.apartment.location.name;
           case "address":
-            return buildFullAddress(t);
-          case "apartment":
-            return t.room.apartment.houseNumber;
-          case "floor":
+            return t.room.apartment.address ?? buildFullAddress(t);
+          case "zusatz":
             return floorLabel(t);
+          case "apartment":
+            return t.room.apartment.number ?? 0;
           case "suite":
             return t.room.roomNumber;
           case "category":
@@ -397,8 +438,6 @@ export default function TenantsPage({
             return t.moveIn;
           case "moveOut":
             return t.moveOut ?? "";
-          case "payment":
-            return paymentStatus(t).label;
           default:
             return "";
         }
@@ -422,6 +461,7 @@ export default function TenantsPage({
     moveOutTo,
     sortCol,
     sortDir,
+    colFilters,
   ]);
 
   const counts = useMemo(() => {
@@ -877,9 +917,9 @@ export default function TenantsPage({
               <tr className="border-b border-lightgray bg-background-alt">
                 <SortableTh label="Location" col="location" sortCol={sortCol} sortDir={sortDir} onSort={toggleSort} />
                 <SortableTh label="Address" col="address" sortCol={sortCol} sortDir={sortDir} onSort={toggleSort} />
-                <SortableTh label="Apartment#" col="apartment" sortCol={sortCol} sortDir={sortDir} onSort={toggleSort} />
-                <SortableTh label="Floor" col="floor" sortCol={sortCol} sortDir={sortDir} onSort={toggleSort} />
-                <SortableTh label="Suite#" col="suite" sortCol={sortCol} sortDir={sortDir} onSort={toggleSort} />
+                <SortableTh label="Zusatz" col="zusatz" sortCol={sortCol} sortDir={sortDir} onSort={toggleSort} />
+                <SortableTh label="Apartment" col="apartment" sortCol={sortCol} sortDir={sortDir} onSort={toggleSort} />
+                <SortableTh label="Suite" col="suite" sortCol={sortCol} sortDir={sortDir} onSort={toggleSort} />
                 <SortableTh label="Category" col="category" sortCol={sortCol} sortDir={sortDir} onSort={toggleSort} />
                 <SortableTh label="Price" col="price" sortCol={sortCol} sortDir={sortDir} onSort={toggleSort} align="right" />
                 <SortableTh label="Name" col="name" sortCol={sortCol} sortDir={sortDir} onSort={toggleSort} />
@@ -888,7 +928,24 @@ export default function TenantsPage({
                 <SortableTh label="End" col="moveOut" sortCol={sortCol} sortDir={sortDir} onSort={toggleSort} />
                 <th className="text-left px-4 py-3 font-semibold text-xs text-gray uppercase tracking-wide">Health</th>
                 <th className="text-center px-4 py-3 font-semibold text-xs text-gray uppercase tracking-wide w-12"></th>
-                <th className="text-left px-4 py-3 font-semibold text-xs text-gray uppercase tracking-wide w-20">Actions</th>
+                <th className="text-left px-4 py-3 font-semibold text-xs text-gray uppercase tracking-wide w-12"></th>
+              </tr>
+              {/* Per-column filter row */}
+              <tr className="border-b border-lightgray bg-background-alt/60">
+                <FilterTh col="location" value={colFilters.location ?? ""} onChange={setColFilter} options={locations.map((l) => l.name)} />
+                <FilterTh col="address" value={colFilters.address ?? ""} onChange={setColFilter} />
+                <FilterTh col="zusatz" value={colFilters.zusatz ?? ""} onChange={setColFilter} />
+                <FilterTh col="apartment" value={colFilters.apartment ?? ""} onChange={setColFilter} />
+                <FilterTh col="suite" value={colFilters.suite ?? ""} onChange={setColFilter} />
+                <FilterTh col="category" value={colFilters.category ?? ""} onChange={setColFilter} options={Array.from(new Set(tenants.map((t) => formatCategory(t.room.category)))).sort()} />
+                <td className="px-2 py-1"></td>
+                <FilterTh col="name" value={colFilters.name ?? ""} onChange={setColFilter} />
+                <td className="px-2 py-1"></td>
+                <td className="px-2 py-1"></td>
+                <td className="px-2 py-1"></td>
+                <td className="px-2 py-1"></td>
+                <td className="px-2 py-1"></td>
+                <td className="px-2 py-1"></td>
               </tr>
             </thead>
             <tbody>
@@ -908,12 +965,12 @@ export default function TenantsPage({
                       className="border-b border-lightgray/50 hover:bg-background-alt cursor-pointer transition-colors"
                     >
                       <td className="px-4 py-3">{t.room.apartment.location.name}</td>
-                      <td className="px-4 py-3">{buildFullAddress(t)}</td>
-                      <td className="px-4 py-3 font-mono text-xs">
-                        {t.room.apartment.houseNumber}
-                      </td>
+                      <td className="px-4 py-3">{t.room.apartment.address ?? buildFullAddress(t)}</td>
                       <td className="px-4 py-3 text-gray">{floorLabel(t)}</td>
-                      <td className="px-4 py-3">#{t.room.roomNumber}</td>
+                      <td className="px-4 py-3 tabular-nums">
+                        {t.room.apartment.number ?? "—"}
+                      </td>
+                      <td className="px-4 py-3 font-mono text-xs">{t.room.roomNumber}</td>
                       <td className="px-4 py-3">{formatCategory(t.room.category)}</td>
                       <td className="px-4 py-3 text-right tabular-nums">
                         €{(t.monthlyRent / 100).toFixed(0)}
@@ -921,8 +978,8 @@ export default function TenantsPage({
                       <td className="px-4 py-3 font-medium">
                         {t.firstName} {t.lastName}
                       </td>
-                      <td className="px-4 py-3 text-gray">{t.email}</td>
-                      <td className="px-4 py-3">{formatDate(t.moveIn)}</td>
+                      <td className="px-4 py-3 text-gray text-xs">{t.email}</td>
+                      <td className="px-4 py-3 tabular-nums">{formatDate(t.moveIn)}</td>
                       <td className="px-4 py-3">
                         <span className={t.moveOut ? "text-yellow-600 font-medium" : "text-gray"}>
                           {formatDate(t.moveOut)}
@@ -1694,6 +1751,50 @@ function QuickExtraChargeModal({
         </div>
       </div>
     </div>
+  );
+}
+
+/** Per-column filter cell. Renders a dropdown if `options` is provided,
+ *  otherwise a small text input. Sits in the second header row. */
+function FilterTh({
+  col,
+  value,
+  onChange,
+  options,
+}: {
+  col: string;
+  value: string;
+  onChange: (col: string, val: string) => void;
+  options?: string[];
+}) {
+  if (options) {
+    return (
+      <td className="px-2 py-1">
+        <select
+          value={value}
+          onChange={(e) => onChange(col, e.target.value)}
+          className="w-full px-1.5 py-1 border border-lightgray rounded-[5px] text-[11px] bg-white"
+        >
+          <option value="">All</option>
+          {options.map((o) => (
+            <option key={o} value={o}>
+              {o}
+            </option>
+          ))}
+        </select>
+      </td>
+    );
+  }
+  return (
+    <td className="px-2 py-1">
+      <input
+        type="text"
+        value={value}
+        onChange={(e) => onChange(col, e.target.value)}
+        placeholder="Filter…"
+        className="w-full px-1.5 py-1 border border-lightgray rounded-[5px] text-[11px] bg-white"
+      />
+    </td>
   );
 }
 
