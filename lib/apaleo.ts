@@ -58,7 +58,8 @@ async function apiFetch(path: string, options?: RequestInit) {
     throw new Error(`apaleo API ${res.status} ${path}: ${text.slice(0, 300)}`);
   }
   if (!text) {
-    throw new Error(`apaleo API empty body ${path}`);
+    // Empty body on 200/204 is valid — means no results.
+    return { reservations: [] };
   }
   try {
     return JSON.parse(text);
@@ -503,10 +504,19 @@ export async function getReservations(params: {
   status?: string; // e.g. "Confirmed", "InHouse", "CheckedOut"
 }) {
   const propertyIds = Object.values(PROPERTY_MAP).join(",");
-  // apaleo expects ISO 8601 datetime, not bare dates.
-  // "from" = start of day, "to" = end of the last day in the range.
-  const fromDt = `${params.from}T00:00:00Z`;
-  const toDt = `${params.to}T23:59:59Z`;
+  // apaleo needs a date range — for a single-day query, use from=day
+  // and to=day+1. Both as bare YYYY-MM-DD (apaleo accepts this for
+  // the reservations endpoint despite the swagger saying datetime).
+  const fromDt = params.from;
+  // If from === to (single day), bump "to" to next day
+  const toDt = (() => {
+    if (params.from === params.to) {
+      const d = new Date(params.to + "T12:00:00Z");
+      d.setUTCDate(d.getUTCDate() + 1);
+      return d.toISOString().slice(0, 10);
+    }
+    return params.to;
+  })();
   const query = new URLSearchParams({
     propertyIds,
     dateFilter: params.dateFilter === "arrival" ? "Arrival" : "Departure",
