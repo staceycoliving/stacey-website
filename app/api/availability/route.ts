@@ -50,6 +50,11 @@ async function getLongStayAvailability(
         where: { status: "SCHEDULED" },
         take: 1,
       },
+      // Outbound transfers: tenant is leaving this room on transferDate
+      transfersFrom: {
+        where: { status: "SCHEDULED" },
+        take: 1,
+      },
     },
   });
 
@@ -75,10 +80,27 @@ async function getLongStayAvailability(
 
     const tenant = room.tenants[0];
 
+    // If the tenant has a SCHEDULED outbound transfer, the room frees
+    // up on the transfer date (not moveOut) — the tenant is moving to
+    // another room, not leaving the property.
+    const outboundTransfer = room.transfersFrom[0];
+
     if (!tenant) {
       // Room is free now
       entry.freeNow++;
       entry.moveInDates.push(localDate(today));
+    } else if (outboundTransfer) {
+      // Tenant is transferring out on a specific date
+      const transferDate = new Date(outboundTransfer.transferDate);
+      transferDate.setHours(0, 0, 0, 0);
+      if (transferDate <= today) {
+        entry.freeNow++;
+        entry.moveInDates.push(localDate(today));
+      } else {
+        const availFrom = new Date(transferDate);
+        availFrom.setDate(availFrom.getDate() + 1);
+        entry.moveInDates.push(localDate(availFrom));
+      }
     } else if (tenant.moveOut) {
       const moveOutDate = new Date(tenant.moveOut);
       moveOutDate.setHours(0, 0, 0, 0);
