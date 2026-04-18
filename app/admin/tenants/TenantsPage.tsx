@@ -908,7 +908,6 @@ export default function TenantsPage({
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-lightgray bg-background-alt text-[11px]">
-                <SortableTh label="Name" col="name" sortCol={sortCol} sortDir={sortDir} onSort={toggleSort} />
                 <SortableTh label="Location" col="location" sortCol={sortCol} sortDir={sortDir} onSort={toggleSort} />
                 <SortableTh label="Address" col="address" sortCol={sortCol} sortDir={sortDir} onSort={toggleSort} />
                 <SortableTh label="Floor" col="zusatz" sortCol={sortCol} sortDir={sortDir} onSort={toggleSort} />
@@ -916,6 +915,7 @@ export default function TenantsPage({
                 <SortableTh label="Suite" col="suite" sortCol={sortCol} sortDir={sortDir} onSort={toggleSort} />
                 <SortableTh label="Category" col="category" sortCol={sortCol} sortDir={sortDir} onSort={toggleSort} />
                 <SortableTh label="Price" col="price" sortCol={sortCol} sortDir={sortDir} onSort={toggleSort} align="right" />
+                <SortableTh label="Name" col="name" sortCol={sortCol} sortDir={sortDir} onSort={toggleSort} />
                 <SortableTh label="Start" col="moveIn" sortCol={sortCol} sortDir={sortDir} onSort={toggleSort} />
                 <SortableTh label="End" col="moveOut" sortCol={sortCol} sortDir={sortDir} onSort={toggleSort} />
                 <th className="px-2 py-2 text-gray uppercase tracking-wide text-center">Health</th>
@@ -924,13 +924,13 @@ export default function TenantsPage({
               </tr>
               {/* Per-column filter row — dropdowns only */}
               <tr className="border-b border-lightgray bg-background-alt/60">
-                <td className="px-1 py-1"></td>
                 <FilterTh col="location" value={colFilters.location ?? ""} onChange={setColFilter} options={locations.map((l) => l.name)} />
                 <FilterTh col="address" value={colFilters.address ?? ""} onChange={setColFilter} options={Array.from(new Set(tenants.map((t) => t.room.apartment.address ?? buildFullAddress(t)))).sort()} />
                 <FilterTh col="zusatz" value={colFilters.zusatz ?? ""} onChange={setColFilter} options={Array.from(new Set(tenants.map((t) => floorLabel(t)).filter(Boolean))).sort()} />
                 <FilterTh col="apartment" value={colFilters.apartment ?? ""} onChange={setColFilter} options={Array.from(new Set(tenants.map((t) => String(t.room.apartment.number ?? "")).filter(Boolean))).sort((a, b) => Number(a) - Number(b))} />
                 <td className="px-1 py-1"></td>
                 <FilterTh col="category" value={colFilters.category ?? ""} onChange={setColFilter} options={Array.from(new Set(tenants.map((t) => formatCategory(t.room.category)))).sort()} />
+                <td className="px-1 py-1"></td>
                 <td className="px-1 py-1"></td>
                 <td className="px-1 py-1"></td>
                 <td className="px-1 py-1"></td>
@@ -956,14 +956,6 @@ export default function TenantsPage({
                       onClick={() => router.push(`/admin/tenants/${t.id}`)}
                       className={`border-b border-lightgray/30 hover:bg-blue-50/40 cursor-pointer transition-colors text-sm ${zebra}`}
                     >
-                      <td className="px-3 py-2 font-medium whitespace-nowrap">
-                        {t.firstName} {t.lastName}
-                        {t.notesCount > 0 && (
-                          <span className="ml-1.5 text-[10px] text-gray" title={`${t.notesCount} notes`}>
-                            💬{t.notesCount}
-                          </span>
-                        )}
-                      </td>
                       <td className="px-3 py-2">{t.room.apartment.location.name}</td>
                       <td className="px-3 py-2">{t.room.apartment.address ?? buildFullAddress(t)}</td>
                       <td className="px-3 py-2 text-gray">{floorLabel(t)}</td>
@@ -974,6 +966,14 @@ export default function TenantsPage({
                       <td className="px-3 py-2">{formatCategory(t.room.category)}</td>
                       <td className="px-3 py-2 text-right tabular-nums">
                         {fmtPrice(t.monthlyRent)}
+                      </td>
+                      <td className="px-3 py-2 font-medium whitespace-nowrap">
+                        {t.firstName} {t.lastName}
+                        {t.notesCount > 0 && (
+                          <span className="ml-1.5 text-[10px] text-gray" title={`${t.notesCount} notes`}>
+                            💬{t.notesCount}
+                          </span>
+                        )}
                       </td>
                       <td className="px-3 py-2 tabular-nums">{formatDate(t.moveIn)}</td>
                       <td className="px-3 py-2">
