@@ -61,3 +61,4 @@ tmp-email-preview.html
 # Test / preview PDFs generated during development
 Wohnungsgeberbestaetigung_*.pdf
 Meldeschein_*.pdf
+.next-dev
