@@ -15,6 +15,11 @@ export default async function AdminRoomsPage() {
           rooms: {
             include: {
               tenants: true,
+              transfersTo: {
+                where: { status: "SCHEDULED" },
+                include: { tenant: { select: { firstName: true, lastName: true } } },
+                take: 1,
+              },
               bookings: {
                 where: {
                   stayType: "LONG",

@@ -101,6 +101,7 @@ export default async function AdminDashboardPage() {
     bookingFunnelThisMonth,
     teamNotes,
     recentEmails,
+    upcomingTransfers,
   ] = await Promise.all([
     prisma.tenant.findMany({
       where: { moveIn: { gte: todayStart, lte: in28Days } },
@@ -181,6 +182,19 @@ export default async function AdminDashboardPage() {
     prisma.sentEmail.findMany({
       orderBy: { sentAt: "desc" },
       take: 10,
+    }),
+
+    // Scheduled room transfers in the next 7 days
+    prisma.roomTransfer.findMany({
+      where: {
+        status: "SCHEDULED",
+        transferDate: { lte: new Date(todayStart.getTime() + 7 * 24 * 60 * 60 * 1000) },
+      },
+      include: {
+        tenant: { select: { id: true, firstName: true, lastName: true } },
+        toRoom: { select: { roomNumber: true } },
+      },
+      orderBy: { transferDate: "asc" },
     }),
   ]);
 
@@ -518,7 +532,8 @@ export default async function AdminDashboardPage() {
     missingSepa.length +
     dunningReminder1.length +
     dunningMahnung1.length +
-    dunningMahnung2.length;
+    dunningMahnung2.length +
+    upcomingTransfers.length;
 
   // Booking Fee = €195 per CLAUDE.md (non-refundable, separate Stripe charge)
   const BOOKING_FEE_CENTS = 19500;
@@ -761,6 +776,13 @@ export default async function AdminDashboardPage() {
               tenantName: `${r.tenant.firstName} ${r.tenant.lastName}`,
               month: r.month,
               amount: r.amount - r.paidAmount,
+            })),
+            upcomingTransfers: upcomingTransfers.map((t) => ({
+              id: t.id,
+              tenantId: t.tenant.id,
+              tenantName: `${t.tenant.firstName} ${t.tenant.lastName}`,
+              toRoom: t.toRoom.roomNumber,
+              transferDate: t.transferDate,
             })),
           },
           schedule: {

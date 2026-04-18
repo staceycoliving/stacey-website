@@ -125,6 +125,13 @@ type Dashboard = {
       month: string;
       amount: number;
     }[];
+    upcomingTransfers: {
+      id: string;
+      tenantId: string;
+      tenantName: string;
+      toRoom: string;
+      transferDate: string;
+    }[];
   };
   vacancyPipeline: {
     id: string;
@@ -514,6 +521,28 @@ export default function DashboardPage({ data }: { data: Dashboard }) {
               isNewToday: d === 0,
             };
             if (d > 30) older.push(row);
+            else thisWeek.push(row);
+          }
+
+          // Upcoming room transfers
+          for (const t of actionItems.upcomingTransfers) {
+            const days = Math.floor(
+              (new Date(t.transferDate).getTime() - nowTs) / ONE_DAY
+            );
+            const row: Row = {
+              key: `transfer-${t.id}`,
+              type: "settlement" as ActionTypeKey, // reuse settlement color
+              accent: days <= 1 ? "warn" : "info",
+              label: "Room transfer scheduled",
+              detail: `${t.tenantName} → #${t.toRoom} in ${days}d (${fmtDate(t.transferDate)})`,
+              hoverDetail: `Scheduled room transfer. Will be executed automatically by the daily cron.`,
+              href: `/admin/tenants/${t.tenantId}`,
+              sortKey: days,
+              tenantKey: `t-${t.tenantId}`,
+              tenantName: t.tenantName,
+              isNewToday: days <= 0,
+            };
+            if (days <= 1) today.push(row);
             else thisWeek.push(row);
           }
 

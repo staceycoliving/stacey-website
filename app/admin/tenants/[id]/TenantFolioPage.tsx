@@ -538,13 +538,13 @@ function LeaseTab({ tenant }: { tenant: Tenant }) {
             Room transfer history
           </div>
           <div className="space-y-1">
-            {tenant.roomTransfers.map((t: any) => (
+            {tenant.roomTransfers.map((t) => (
               <div
                 key={t.id}
                 className={`text-sm flex items-center gap-2 ${t.status === "CANCELLED" ? "line-through text-gray" : ""}`}
               >
                 <span
-                  className={`inline-block w-2 h-2 rounded-full ${
+                  className={`inline-block w-2 h-2 rounded-full flex-shrink-0 ${
                     t.status === "COMPLETED"
                       ? "bg-green-500"
                       : t.status === "SCHEDULED"
@@ -557,16 +557,37 @@ function LeaseTab({ tenant }: { tenant: Tenant }) {
                 <span>{t.toRoom?.roomNumber ?? t.toRoomId}</span>
                 {t.newMonthlyRent && (
                   <span className="text-gray text-xs">
-                    (€{(t.oldMonthlyRent / 100).toFixed(0)} → €{(t.newMonthlyRent / 100).toFixed(0)})
+                    (€{((t.oldMonthlyRent ?? 0) / 100).toFixed(0)} → €{(t.newMonthlyRent / 100).toFixed(0)})
                   </span>
                 )}
                 {t.reason && (
                   <span className="text-gray text-xs italic">— {t.reason}</span>
                 )}
                 {t.status === "SCHEDULED" && (
-                  <span className="text-[10px] px-1.5 py-0.5 rounded-[5px] bg-orange-100 text-orange-700 font-semibold">
-                    SCHEDULED
-                  </span>
+                  <>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-[5px] bg-orange-100 text-orange-700 font-semibold">
+                      SCHEDULED
+                    </span>
+                    <button
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        if (!confirm("Geplanten Zimmerwechsel stornieren?")) return;
+                        const res = await fetch(
+                          `/api/admin/tenants/${tenant.id}/transfer`,
+                          {
+                            method: "DELETE",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ transferId: t.id }),
+                          }
+                        );
+                        if (res.ok) router.refresh();
+                        else alert("Stornierung fehlgeschlagen");
+                      }}
+                      className="text-[10px] text-red-600 hover:text-red-800 underline"
+                    >
+                      Cancel
+                    </button>
+                  </>
                 )}
               </div>
             ))}

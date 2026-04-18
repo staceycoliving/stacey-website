@@ -39,6 +39,11 @@ export default async function AdminTenantsPage() {
         booking: {
           select: { id: true, depositPaidAt: true, bookingFeePaidAt: true },
         },
+        roomTransfers: {
+          where: { status: "SCHEDULED" },
+          include: { toRoom: { select: { roomNumber: true } } },
+          take: 1,
+        },
       },
       orderBy: { lastName: "asc" },
     }),

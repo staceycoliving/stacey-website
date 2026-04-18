@@ -42,6 +42,11 @@ type Room = {
   status: "ACTIVE" | "BLOCKED" | "DEACTIVATED";
   tenants: Tenant[];
   bookings: ActiveBooking[];
+  transfersTo: {
+    id: string;
+    transferDate: string;
+    tenant: { firstName: string; lastName: string };
+  }[];
 };
 
 type Apartment = {
@@ -179,8 +184,9 @@ export default function RoomsPage({
   type FlatRoom = Room & {
     apartment: Apartment;
     locationName: string;
-    occupancyStatus: "occupied" | "reserved" | "vacant" | "blocked" | "deactivated" | "leaving";
+    occupancyStatus: "occupied" | "reserved" | "reserved_transfer" | "vacant" | "blocked" | "deactivated" | "leaving";
     freeInDays: number | null;
+    scheduledTransfer: { tenant: string; date: string } | null;
   };
 
   const flatRooms: FlatRoom[] = useMemo(() => {
@@ -190,9 +196,10 @@ export default function RoomsPage({
         const occ = isCurrentlyOccupied(r);
         const leaving = occ && Boolean(r.tenants[0]?.moveOut);
         const reserved = !occ && r.bookings.length > 0;
+        const hasScheduledTransfer = r.transfersTo.length > 0;
         const blocked = r.status === "BLOCKED";
         const deactivated = r.status === "DEACTIVATED";
-        const vacant = !occ && !reserved && !blocked && !deactivated;
+        const vacant = !occ && !reserved && !hasScheduledTransfer && !blocked && !deactivated;
         const status = deactivated
           ? "deactivated"
           : blocked
@@ -201,15 +208,23 @@ export default function RoomsPage({
               ? "leaving"
               : reserved
                 ? "reserved"
-                : vacant
-                  ? "vacant"
-                  : "occupied";
+                : hasScheduledTransfer && !occ
+                  ? "reserved_transfer"
+                  : vacant
+                    ? "vacant"
+                    : "occupied";
         return {
           ...r,
           apartment: apt,
           locationName: selectedLoc.name,
           occupancyStatus: status,
           freeInDays: leaving ? daysUntilFree(r.tenants[0]?.moveOut ?? null, nowTs) : null,
+          scheduledTransfer: hasScheduledTransfer
+            ? {
+                tenant: `${r.transfersTo[0].tenant.firstName} ${r.transfersTo[0].tenant.lastName}`,
+                date: r.transfersTo[0].transferDate,
+              }
+            : null,
         };
       })
     );
@@ -437,6 +452,7 @@ export default function RoomsPage({
                   occupied: "bg-green-100 text-green-700",
                   leaving: "bg-yellow-100 text-yellow-700",
                   reserved: "bg-orange-100 text-orange-700",
+                  reserved_transfer: "bg-purple-100 text-purple-700",
                   vacant: "bg-blue-100 text-blue-700",
                   blocked: "bg-red-100 text-red-700",
                   deactivated: "bg-gray-100 text-gray-500",
@@ -452,8 +468,15 @@ export default function RoomsPage({
                     <td className="px-3 py-2 truncate">{formatCategory(r.category)}</td>
                     <td className="px-3 py-2 text-right tabular-nums">€{(r.monthlyRent / 100).toLocaleString("de-DE")}</td>
                     <td className="px-3 py-2">
-                      <span className={`inline-block px-1.5 py-0.5 rounded-[5px] text-[10px] font-semibold uppercase ${statusCls[r.occupancyStatus] ?? ""}`}>
-                        {r.occupancyStatus === "leaving" ? `leaving ${r.freeInDays !== null ? `${r.freeInDays}d` : ""}` : r.occupancyStatus}
+                      <span
+                        className={`inline-block px-1.5 py-0.5 rounded-[5px] text-[10px] font-semibold uppercase ${statusCls[r.occupancyStatus] ?? ""}`}
+                        title={r.scheduledTransfer ? `Transfer: ${r.scheduledTransfer.tenant} am ${formatDate(r.scheduledTransfer.date)}` : undefined}
+                      >
+                        {r.occupancyStatus === "leaving"
+                          ? `leaving ${r.freeInDays !== null ? `${r.freeInDays}d` : ""}`
+                          : r.occupancyStatus === "reserved_transfer"
+                            ? `transfer ${formatDate(r.scheduledTransfer?.date ?? "")}`
+                            : r.occupancyStatus}
                       </span>
                     </td>
                     <td className="px-3 py-2 truncate">

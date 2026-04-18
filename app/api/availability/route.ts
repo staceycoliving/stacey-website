@@ -45,6 +45,11 @@ async function getLongStayAvailability(
           status: { in: ACTIVE_BOOKING_STATUSES },
         },
       },
+      // Scheduled room transfers reserve the target room for a future tenant
+      transfersTo: {
+        where: { status: "SCHEDULED" },
+        take: 1,
+      },
     },
   });
 
@@ -64,8 +69,9 @@ async function getLongStayAvailability(
     const entry = categoryMap.get(room.category)!;
     entry.total++;
 
-    // Room has an active booking → not available
+    // Room has an active booking or scheduled transfer → not available
     if (room.bookings.length > 0) continue;
+    if (room.transfersTo.length > 0) continue;
 
     const tenant = room.tenants[0];
 

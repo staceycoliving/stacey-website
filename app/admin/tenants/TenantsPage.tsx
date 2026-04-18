@@ -71,6 +71,11 @@ type Tenant = {
   rentPayments: RentPaymentSummary[];
   paidRentsCents: number;
   notesCount: number;
+  roomTransfers: {
+    id: string;
+    transferDate: string;
+    toRoom: { roomNumber: string } | null;
+  }[];
   booking: {
     id: string;
     depositPaidAt: string | null;
@@ -982,7 +987,17 @@ export default function TenantsPage({
                         </div>
                       </td>
                       <td className="px-3 py-2 truncate">{t.room.apartment.location.name}</td>
-                      <td className="px-3 py-2">{t.room.roomNumber}</td>
+                      <td className="px-3 py-2">
+                        {t.room.roomNumber}
+                        {t.roomTransfers[0] && (
+                          <span
+                            className="ml-1 text-[10px] px-1 py-0.5 rounded-[5px] bg-orange-100 text-orange-700 font-semibold"
+                            title={`Transfer to #${t.roomTransfers[0].toRoom?.roomNumber ?? "?"} on ${formatDate(t.roomTransfers[0].transferDate)}`}
+                          >
+                            → {t.roomTransfers[0].toRoom?.roomNumber ?? "?"}
+                          </span>
+                        )}
+                      </td>
                       <td className="px-3 py-2 truncate">{formatCategory(t.room.category)}</td>
                       <td className="px-3 py-2 text-right tabular-nums">{fmtPrice(t.monthlyRent)}</td>
                       <td className="px-3 py-2 tabular-nums">{formatDate(t.moveIn)}</td>
