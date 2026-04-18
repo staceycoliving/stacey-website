@@ -45,11 +45,10 @@ export default async function AdminHousekeepingPage({
   let apaleoDepartures: Awaited<ReturnType<typeof getReservations>> = [];
   let apaleoError: string | null = null;
   try {
-    // getReservations now handles datetime conversion internally —
-    // pass the same day for both from and to for a single-day query.
+    // Only fetch active reservations — exclude canceled/no-show
     [apaleoArrivals, apaleoDepartures] = await Promise.all([
-      getReservations({ dateFilter: "arrival", from: dateStr, to: dateStr }),
-      getReservations({ dateFilter: "departure", from: dateStr, to: dateStr }),
+      getReservations({ dateFilter: "arrival", from: dateStr, to: dateStr, status: "Confirmed" }),
+      getReservations({ dateFilter: "departure", from: dateStr, to: dateStr, status: "InHouse" }),
     ]);
   } catch (err) {
     apaleoError = err instanceof Error ? err.message : String(err);
