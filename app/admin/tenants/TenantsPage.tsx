@@ -914,18 +914,16 @@ export default function TenantsPage({
           <table className="w-full text-sm table-fixed">
             <colgroup>
               <col className="w-[9%]" />   {/* Location */}
-              <col className="w-[14%]" />  {/* Address */}
+              <col className="w-[15%]" />  {/* Address */}
               <col className="w-[8%]" />   {/* Floor */}
               <col className="w-[4%]" />   {/* Apt */}
               <col className="w-[5%]" />   {/* Suite */}
               <col className="w-[10%]" />  {/* Category */}
               <col className="w-[6%]" />   {/* Price */}
-              <col className="w-[14%]" />  {/* Name */}
+              <col className="w-[15%]" />  {/* Name */}
               <col className="w-[7%]" />   {/* Start */}
               <col className="w-[7%]" />   {/* End */}
-              <col className="w-[4%]" />   {/* Health */}
-              <col className="w-[3%]" />   {/* Notes placeholder */}
-              <col className="w-[3%]" />   {/* Actions */}
+              <col className="w-[7%]" />   {/* Actions (dot + menu) */}
             </colgroup>
             <thead>
               <tr className="border-b border-lightgray bg-background-alt text-[11px]">
@@ -940,8 +938,6 @@ export default function TenantsPage({
                 <SortableTh label="Start" col="moveIn" sortCol={sortCol} sortDir={sortDir} onSort={toggleSort} />
                 <SortableTh label="End" col="moveOut" sortCol={sortCol} sortDir={sortDir} onSort={toggleSort} />
                 <th className="px-2 py-2 text-gray uppercase tracking-wide text-center">Actions</th>
-                <th className="px-1 py-2 w-8"></th>
-                <th className="px-1 py-2 w-8"></th>
               </tr>
               {/* Per-column filter row — dropdowns only */}
               <tr className="border-b border-lightgray bg-background-alt/60">
@@ -956,14 +952,12 @@ export default function TenantsPage({
                 <td className="px-1 py-1"></td>
                 <td className="px-1 py-1"></td>
                 <td className="px-1 py-1"></td>
-                <td className="px-1 py-1"></td>
-                <td className="px-1 py-1"></td>
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={13} className="px-3 py-8 text-center text-gray text-sm">
+                  <td colSpan={11} className="px-3 py-8 text-center text-gray text-sm">
                     No tenants found
                   </td>
                 </tr>
@@ -997,23 +991,21 @@ export default function TenantsPage({
                           {t.moveOut ? formatDate(t.moveOut) : "open-end"}
                         </span>
                       </td>
-                      <td className="px-3 py-2 text-center">
-                        <IssuesPill issues={issues} />
-                      </td>
-                      <td className="px-1 py-2 text-center" />
                       <td
-                        className="px-1 py-2 relative"
+                        className="px-2 py-2 relative"
                         onClick={(e) => e.stopPropagation()}
                       >
-                        <button
-                          onClick={() =>
-                            setOpenMenuId(openMenuId === t.id ? null : t.id)
-                          }
-                          className="p-1.5 rounded-[5px] hover:bg-background-alt"
-                          aria-label="Open actions menu"
-                        >
-                          <MoreHorizontal className="w-4 h-4" />
-                        </button>
+                        <div className="flex items-center justify-center gap-1.5">
+                          <IssuesPill issues={issues} />
+                          <button
+                            onClick={() =>
+                              setOpenMenuId(openMenuId === t.id ? null : t.id)
+                            }
+                            className="p-1.5 rounded-[5px] hover:bg-background-alt"
+                            aria-label="Open actions menu"
+                          >
+                            <MoreHorizontal className="w-4 h-4" />
+                          </button>
                         {openMenuId === t.id && (
                           <div
                             ref={menuRef}
@@ -1096,6 +1088,7 @@ export default function TenantsPage({
                             )}
                           </div>
                         )}
+                        </div>
                       </td>
                     </tr>
                   );
