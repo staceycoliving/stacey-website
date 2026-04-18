@@ -1,4 +1,4 @@
-Location,PLZ,Address,Zusatz,Apartment,Suite,Category,Price,Name,Email,Start Date,End Date
+Location,ZIP,Address,Floor,Apartment,Suite,Category,Price,Name,Email,Start Date,End Date
 Eimsbüttel,20257,Bei der Apstelkirche 13,EG rechts,1,AK01,Premium,"995,00",Albena Noa Parusheva,albena.parusheva@icloud.com,01.04.2026,open-end
 Eimsbüttel,20257,Bei der Apstelkirche 13,EG rechts,1,AK02,Premium+,"1.095,00",Tilman Jorit Mangelsdorf,tilmanj@live.com,01.05.2025,open-end
 Eimsbüttel,20257,Bei der Apstelkirche 13,EG rechts,1,AK03,Premium+,"1.095,00",Francesco Rollino,francy.rolli02@gmail.com,01.03.2026,open-end
@@ -232,18 +232,18 @@ Fischerinsel,10179,Fischerinsel 14,1.OG,42,F100,Premium,"895,00",Lena Szymanska 
 Vallendar,56179,Löhrstraße 54,VH EG,,V01,Premium+,"595,00",Justus Schrieder,justus.schrieder@icloud.com,19.09.2024,30.04.2025
 Vallendar,56179,Löhrstraße 54,VH EG,,V02,Mighty,"595,00",ChenXing Hu (IBE),Victorhu.hcx@outlook.com,15.08.2024,31.05.2025
 Vallendar,56179,Löhrstraße 54,VH EG,,V03,Premium,"695,00",Chouaib Adraoui,adraoui.c19@gmail.com,15.08.2025,open-end
-Vallendar,56179,Löhrstraße 55,VH 1.OG,,V04,Mighty,"595,00",Dmytro (HA),dsolopov@yahoo.com,10.04.2026,10.07.2026
-Vallendar,56179,Löhrstraße 56,VH 1.OG,,V05,Premium,"695,00",Catharina Theresa Maria Fetsch,catharina.fetsch@web.de,26.08.2025,30.06.2026
+Vallendar,56179,Löhrstraße 54,VH 1.OG,,V04,Mighty,"595,00",Dmytro (HA),dsolopov@yahoo.com,10.04.2026,10.07.2026
+Vallendar,56179,Löhrstraße 54,VH 1.OG,,V05,Premium,"695,00",Catharina Theresa Maria Fetsch,catharina.fetsch@web.de,26.08.2025,30.06.2026
 Vallendar,56179,Löhrstraße 54,VH 1.OG,,V06,Premium+,"595,00",Philipp Bächmann,philippbc4@gmail.com,21.08.2024,31.05.2025
 Vallendar,56179,Löhrstraße 54,VH 1.OG,,V07,Premium+,"595,00",Antoaneta Zaharieva (Christopher Leipnitz),antoaneta.zaharieva@yahoo.com,24.08.2024,31.05.2026
-Vallendar,56179,Löhrstraße 55,VH 1.OG,,V08,Mighty,"595,00",Zubair Sheikh,zubairsheikh.is30@gmail.com,20.08.2025,31.05.2026
-Vallendar,56179,Löhrstraße 56,VH 2.OG,,V09,Mighty,"595,00",Andreas Gronbach,andreas_gronbach@web.de,01.12.2025,30.04.2026
+Vallendar,56179,Löhrstraße 54,VH 1.OG,,V08,Mighty,"595,00",Zubair Sheikh,zubairsheikh.is30@gmail.com,20.08.2025,31.05.2026
+Vallendar,56179,Löhrstraße 54,VH 2.OG,,V09,Mighty,"595,00",Andreas Gronbach,andreas_gronbach@web.de,01.12.2025,30.04.2026
 Vallendar,56179,Löhrstraße 54,VH 2.OG,,V10,Premium+,,Dawid Slawicki (Handwerker),,10.12.2025,21.12.2025
 Vallendar,56179,Löhrstraße 54,VH 2.OG,,V11,Premium+,,Dawid Slawicki (Handwerker),,10.12.2025,21.12.2025
 Vallendar,56179,Löhrstraße 54,VH 2.OG,,V12,Premium,"595,00",Emanoil Ionut Cintita (Spacest),emanoilionut1234@gmail.com,09.12.2025,30.06.2027
-Vallendar,56179,Löhrstraße 55,VH 2.OG,,V13,Mighty,"595,00",Marie Charlotte Grüner,charlotte.gruener@gmx.net,24.08.2025,open-end
-Vallendar,56179,Löhrstraße 56,HH EG,,V14,Premium+,"645,00",Fahad Maqsood & Rijja Afreen,fahad4058@gmail.com,01.03.2026,31.05.2026
-Vallendar,56179,Löhrstraße 55,HH EG,,V15,Premium,"695,00",Mengyang Cheng,chengmengyang1110@gmail.com,15.08.2025,31.05.2026
-Vallendar,56179,Löhrstraße 56,HH 1.OG,,V16,Mighty,"595,00",Vinayak Vinayak (Spacest),geniecreusa@gmail.com,01.10.2024,15.04.2026
+Vallendar,56179,Löhrstraße 54,VH 2.OG,,V13,Mighty,"595,00",Marie Charlotte Grüner,charlotte.gruener@gmx.net,24.08.2025,open-end
+Vallendar,56179,Löhrstraße 54,HH EG,,V14,Premium+,"645,00",Fahad Maqsood & Rijja Afreen,fahad4058@gmail.com,01.03.2026,31.05.2026
+Vallendar,56179,Löhrstraße 54,HH EG,,V15,Premium,"695,00",Mengyang Cheng,chengmengyang1110@gmail.com,15.08.2025,31.05.2026
+Vallendar,56179,Löhrstraße 54,HH 1.OG,,V16,Mighty,"595,00",Vinayak Vinayak (Spacest),geniecreusa@gmail.com,01.10.2024,15.04.2026
 Vallendar,56179,Löhrstraße 54,HH 1.OG,,V17,Premium+,"795,00",Maeve Norton,nortonmaeve@gmail.com,01.02.2025,30.04.2025
 Vallendar,56179,Löhrstraße 54,HH EG,,V18,Duplex,"795,00",Eva Lucie Bruckner,fambruckner@gmx.de,24.08.2025,30.11.2025

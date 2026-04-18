@@ -177,7 +177,7 @@ function withdrawAvailable(t: Tenant): boolean {
 /** Collect every issue this tenant currently has. Used by the compact
  *  multi-issue pill in the list + by the KPI counters up top. */
 type TenantIssue = {
-  code: "overdue" | "no_payment" | "dunning_due" | "leaving_soon" | "widerruf_active";
+  code: "overdue" | "no_payment" | "dunning_due" | "widerruf_active";
   label: string;
   tone: "warn" | "danger" | "info";
 };
@@ -203,12 +203,6 @@ function detectIssues(t: Tenant, nowTs: number): TenantIssue[] {
   });
   if (dunningDue) {
     out.push({ code: "dunning_due", label: "Dunning step due", tone: "warn" });
-  }
-  if (t.moveOut) {
-    const days = Math.floor((new Date(t.moveOut).getTime() - nowTs) / ONE_DAY);
-    if (days >= 0 && days <= 30) {
-      out.push({ code: "leaving_soon", label: `Leaving in ${days}d`, tone: "info" });
-    }
   }
   if (t.booking?.depositPaidAt) {
     const daysSince = Math.floor(
@@ -945,7 +939,7 @@ export default function TenantsPage({
                 <SortableTh label="Name" col="name" sortCol={sortCol} sortDir={sortDir} onSort={toggleSort} />
                 <SortableTh label="Start" col="moveIn" sortCol={sortCol} sortDir={sortDir} onSort={toggleSort} />
                 <SortableTh label="End" col="moveOut" sortCol={sortCol} sortDir={sortDir} onSort={toggleSort} />
-                <th className="px-2 py-2 text-gray uppercase tracking-wide text-center">Health</th>
+                <th className="px-2 py-2 text-gray uppercase tracking-wide text-center">Actions</th>
                 <th className="px-1 py-2 w-8"></th>
                 <th className="px-1 py-2 w-8"></th>
               </tr>
