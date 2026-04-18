@@ -254,7 +254,8 @@ export default function TenantsPage({
       | "all"
       | "active"
       | "leaving"
-      | "issues") ?? "all";
+      | "issues"
+      | "past") ?? "all";
   const search = searchParams.get("q") ?? "";
   const sortCol = (searchParams.get("sortBy") as SortColumn) ?? "name";
   const sortDir = (searchParams.get("sortDir") as SortDirection) ?? "asc";
@@ -347,9 +348,15 @@ export default function TenantsPage({
       : null;
     let rows = tenants.filter((t) => {
       if (filterLocation && t.room.apartment.location.id !== filterLocation) return false;
-      if (filterStatus === "active" && t.moveOut) return false;
-      if (filterStatus === "leaving" && !t.moveOut) return false;
+      const isReturned = t.depositStatus === "RETURNED";
+      // Default "all" hides fully settled tenants (deposit returned).
+      // Use "past" to see them.
+      if (filterStatus === "all" && isReturned) return false;
+      if (filterStatus === "active" && (t.moveOut || isReturned)) return false;
+      if (filterStatus === "leaving" && (!t.moveOut || isReturned)) return false;
+      if (filterStatus === "past" && !isReturned) return false;
       if (filterStatus === "issues") {
+        if (isReturned) return false;
         const issues = issuesByTenant.get(t.id) ?? [];
         if (!issues.some((i) => i.tone !== "info")) return false;
       }
@@ -460,27 +467,30 @@ export default function TenantsPage({
   const counts = useMemo(() => {
     const ONE_DAY = 86_400_000;
     const in30 = nowTs + 30 * ONE_DAY;
-    const active = tenants.filter((t) => !t.moveOut).length;
-    const leaving = tenants.filter((t) => {
+    // KPIs only count current tenants (not deposit-returned)
+    const current = tenants.filter((t) => t.depositStatus !== "RETURNED");
+    const active = current.filter((t) => !t.moveOut).length;
+    const leaving = current.filter((t) => {
       if (!t.moveOut) return false;
       const ts = new Date(t.moveOut).getTime();
       return ts >= nowTs && ts <= in30;
     }).length;
-    const overdue = tenants.filter((t) =>
+    const overdue = current.filter((t) =>
       t.rentPayments.some((p) => p.status === "FAILED")
     ).length;
-    const noPayment = tenants.filter((t) => !t.sepaMandateId && !t.moveOut).length;
-    const widerrufActive = tenants.filter((t) => {
+    const noPayment = current.filter((t) => !t.sepaMandateId && !t.moveOut).length;
+    const widerrufActive = current.filter((t) => {
       if (!t.booking?.depositPaidAt) return false;
       const d = Math.floor(
         (nowTs - new Date(t.booking.depositPaidAt).getTime()) / ONE_DAY
       );
       return d >= 0 && d <= 14;
     }).length;
-    const upcomingMoveIns = tenants.filter((t) => {
+    const upcomingMoveIns = current.filter((t) => {
       const ts = new Date(t.moveIn).getTime();
       return ts >= nowTs && ts <= in30;
     }).length;
+    const past = tenants.filter((t) => t.depositStatus === "RETURNED").length;
     return {
       active,
       leaving,
@@ -488,6 +498,7 @@ export default function TenantsPage({
       noPayment,
       widerrufActive,
       upcomingMoveIns,
+      past,
     };
   }, [tenants, nowTs]);
 
@@ -699,10 +710,11 @@ export default function TenantsPage({
             onChange={(e) => writeParams({ status: e.target.value })}
             className="px-3 py-2 border border-lightgray rounded-[5px] text-sm bg-white"
           >
-            <option value="all">All tenants</option>
+            <option value="all">Current tenants</option>
             <option value="active">Active (no end date)</option>
             <option value="leaving">Leaving (end date set)</option>
             <option value="issues">With issues</option>
+            <option value="past">Past (deposit returned)</option>
           </select>
 
           <div className="inline-flex rounded-[5px] border border-lightgray overflow-hidden ml-auto">
@@ -965,11 +977,12 @@ export default function TenantsPage({
                 filtered.map((t, idx) => {
                   const issues = issuesByTenant.get(t.id) ?? [];
                   const zebra = idx % 2 === 1 ? "bg-background-alt/40" : "";
+                  const movedOut = t.moveOut && new Date(t.moveOut).getTime() < nowTs;
                   return (
                     <tr
                       key={t.id}
                       onClick={() => router.push(`/admin/tenants/${t.id}`)}
-                      className={`border-b border-lightgray/30 hover:bg-blue-50/40 cursor-pointer transition-colors text-sm ${zebra}`}
+                      className={`border-b border-lightgray/30 hover:bg-blue-50/40 cursor-pointer transition-colors text-sm ${zebra} ${movedOut ? "opacity-50" : ""}`}
                     >
                       <td className="px-3 py-2 truncate">{t.room.apartment.location.name}</td>
                       <td className="px-3 py-2 truncate">{t.room.apartment.address ?? buildFullAddress(t)}</td>
