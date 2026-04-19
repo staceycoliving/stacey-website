@@ -65,6 +65,13 @@ const serverSchema = z.object({
 // Client-safe schema. These vars are bundled into the browser.
 const clientSchema = z.object({
   NEXT_PUBLIC_BASE_URL: z.string().url(),
+
+  // Consent + tracking — all optional. If NEXT_PUBLIC_COOKIEBOT_CBID is not
+  // set, GA4 and Google Ads will NOT load (safeguard against accidental
+  // tracking without consent management in place).
+  NEXT_PUBLIC_COOKIEBOT_CBID: z.string().optional().default(""),
+  NEXT_PUBLIC_GA4_ID: z.string().optional().default(""),
+  NEXT_PUBLIC_GOOGLE_ADS_ID: z.string().optional().default(""),
 });
 
 // ─── Parse + expose ───
@@ -85,6 +92,9 @@ if (!_serverEnv.success) {
 
 const _clientEnv = clientSchema.safeParse({
   NEXT_PUBLIC_BASE_URL: process.env.NEXT_PUBLIC_BASE_URL,
+  NEXT_PUBLIC_COOKIEBOT_CBID: process.env.NEXT_PUBLIC_COOKIEBOT_CBID,
+  NEXT_PUBLIC_GA4_ID: process.env.NEXT_PUBLIC_GA4_ID,
+  NEXT_PUBLIC_GOOGLE_ADS_ID: process.env.NEXT_PUBLIC_GOOGLE_ADS_ID,
 });
 if (!_clientEnv.success) {
   console.error(

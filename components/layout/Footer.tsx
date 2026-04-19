@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { locations } from "@/lib/data";
+import CookieSettingsLink from "@/components/legal/CookieSettingsLink";
 
 const hamburg = locations.filter((l) => l.city === "hamburg");
 const berlin = locations.filter((l) => l.city === "berlin");
@@ -64,8 +65,9 @@ export default function Footer() {
             <ul className="space-y-2.5">
               <li><Link href="/faq" className="text-sm text-white/70 transition-colors hover:text-pink">FAQ</Link></li>
               <li><Link href="/partners" className="text-sm text-white/70 transition-colors hover:text-pink">For Partners</Link></li>
-              <li><Link href="/impressum" className="text-sm text-white/70 transition-colors hover:text-pink">Impressum</Link></li>
-              <li><Link href="/datenschutz" className="text-sm text-white/70 transition-colors hover:text-pink">Datenschutz</Link></li>
+              <li><Link href="/imprint" className="text-sm text-white/70 transition-colors hover:text-pink">Imprint</Link></li>
+              <li><Link href="/privacy" className="text-sm text-white/70 transition-colors hover:text-pink">Privacy</Link></li>
+              <li><CookieSettingsLink className="text-sm text-white/70 transition-colors hover:text-pink" /></li>
             </ul>
           </div>
           {/* Contact */}

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Montserrat } from "next/font/google";
 import { env } from "@/lib/env";
+import ConsentScripts from "@/components/legal/ConsentScripts";
 import "./globals.css";
 
 const montserrat = Montserrat({
@@ -76,6 +77,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`h-full antialiased ${montserrat.variable}`}>
+      <head>
+        <ConsentScripts />
+      </head>
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
   );
