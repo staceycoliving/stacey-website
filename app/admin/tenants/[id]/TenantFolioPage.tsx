@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -32,6 +32,7 @@ import {
   ExternalLink,
   Send,
 } from "lucide-react";
+import { toast } from "@/components/admin/ui";
 import WithdrawModal from "../WithdrawModal";
 import DangerZone from "../DangerZone";
 import MoveOutAdjustModal from "../MoveOutAdjustModal";
@@ -701,18 +702,16 @@ function FlagChip({ country }: { country: string }) {
 }
 
 function DaysSincePill({ date }: { date: string }) {
-  const d = Math.floor(
-    (Date.now() - new Date(date).getTime()) / 86_400_000
-  );
+  const [nowTs] = useState(() => Date.now());
+  const d = Math.floor((nowTs - new Date(date).getTime()) / 86_400_000);
   if (d < 0) return null;
   if (d === 0) return <span className="text-gray">(today)</span>;
   return <span className="text-gray">· day {d + 1}</span>;
 }
 
 function DaysUntilPill({ date }: { date: string }) {
-  const d = Math.ceil(
-    (new Date(date).getTime() - Date.now()) / 86_400_000
-  );
+  const [nowTs] = useState(() => Date.now());
+  const d = Math.ceil((new Date(date).getTime() - nowTs) / 86_400_000);
   if (d < 0)
     return <span className="text-gray">({-d}d ago)</span>;
   if (d === 0) return <span className="text-orange-600">(today)</span>;
@@ -1029,7 +1028,7 @@ function ProfileTab({
         router.refresh();
       } else {
         const data = await res.json().catch(() => ({}));
-        alert(`Save failed: ${data.error ?? res.statusText}`);
+        toast.error("Save failed", { description: data.error ?? res.statusText });
       }
     } finally {
       setSaving(false);
@@ -1214,7 +1213,7 @@ function LeaseTab({
         body: JSON.stringify({ paymentMethod: next }),
       });
       if (res.ok) router.refresh();
-      else alert("Change failed");
+      else toast.error("Change failed");
     } finally {
       setChangingPaymentMethod(false);
     }
@@ -1439,7 +1438,7 @@ function LeaseTab({
                           }
                         );
                         if (res.ok) router.refresh();
-                        else alert("Stornierung fehlgeschlagen");
+                        else toast.error("Stornierung fehlgeschlagen");
                       }}
                       className="text-[10px] text-red-600 hover:text-red-800 underline"
                     >
@@ -1518,7 +1517,7 @@ function PaymentsTab({ tenant }: { tenant: Tenant }) {
         { method: "POST" }
       );
       const data = await res.json().catch(() => ({}));
-      alert(data.message ?? "Done");
+      toast.info(data.message ?? "Done");
       router.refresh();
     } finally {
       setBusyRent(null);
@@ -1993,7 +1992,7 @@ function DepositTab({ tenant }: { tenant: Tenant }) {
       });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) {
-        alert(body.error ?? "Action failed");
+        toast.error(body.error ?? "Action failed");
       } else {
         router.refresh();
       }
@@ -3025,7 +3024,7 @@ function ExtraChargeModal({
   async function save() {
     const cents = Math.round(parseFloat(amount.replace(",", ".")) * 100);
     if (!description.trim() || !Number.isFinite(cents) || cents <= 0) {
-      alert("Fill in description and a positive amount");
+      toast.warn("Fill in description and a positive amount");
       return;
     }
     setSaving(true);
@@ -3036,7 +3035,7 @@ function ExtraChargeModal({
         body: JSON.stringify({ description, amount: cents, type, chargeOn }),
       });
       if (res.ok) onSaved();
-      else alert("Save failed");
+      else toast.error("Save failed");
     } finally {
       setSaving(false);
     }
@@ -3126,11 +3125,11 @@ function RentAdjustmentModal({
   async function save() {
     const cents = Math.round(parseFloat(amount.replace(",", ".")) * 100);
     if (!reason.trim() || !Number.isFinite(cents) || cents <= 0) {
-      alert("Fill in reason and a positive amount");
+      toast.warn("Fill in reason and a positive amount");
       return;
     }
     if (!isPermanent && !month) {
-      alert("Select a month for one-off adjustment");
+      toast.warn("Select a month for one-off adjustment");
       return;
     }
     setSaving(true);
@@ -3147,7 +3146,7 @@ function RentAdjustmentModal({
         }),
       });
       if (res.ok) onSaved();
-      else alert("Save failed");
+      else toast.error("Save failed");
     } finally {
       setSaving(false);
     }
@@ -3215,7 +3214,7 @@ function DefectModal({
   async function save() {
     const cents = Math.round(parseFloat(amount.replace(",", ".")) * 100);
     if (!description.trim() || !Number.isFinite(cents) || cents < 0) {
-      alert("Fill in description and amount (can be 0)");
+      toast.warn("Fill in description and amount (can be 0)");
       return;
     }
     setSaving(true);
@@ -3226,7 +3225,7 @@ function DefectModal({
         body: JSON.stringify({ description, deductionAmount: cents }),
       });
       if (res.ok) onSaved();
-      else alert("Save failed");
+      else toast.error("Save failed");
     } finally {
       setSaving(false);
     }
@@ -3428,10 +3427,10 @@ function ResendEmailDropdown({ tenantId }: { tenantId: string }) {
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok) {
-        alert(`✓ Email gesendet an ${data.sentTo}`);
+        toast.success(`Email gesendet an ${data.sentTo}`);
         setOpen(false);
       } else {
-        alert(`Fehler: ${data.error ?? res.statusText}`);
+        toast.error("Fehler", { description: data.error ?? res.statusText });
       }
     } finally {
       setBusy(null);
@@ -3555,7 +3554,7 @@ function RoomTransferModal({
 
   async function save() {
     if (!toRoomId) {
-      alert("Bitte Zielzimmer auswählen");
+      toast.warn("Bitte Zielzimmer auswählen");
       return;
     }
     const rentCents = changeRent
@@ -3580,12 +3579,12 @@ function RoomTransferModal({
         const msg = data.executed
           ? "Zimmerwechsel ausgeführt."
           : `Zimmerwechsel geplant für ${transferDate}.`;
-        alert(msg);
+        toast.info(msg);
         onSuccess();
       } else if (res.status === 409 && data.occupiedBy) {
         setConflict({ name: data.occupiedBy.name });
       } else {
-        alert(`Fehler: ${data.error ?? res.statusText}`);
+        toast.error("Fehler", { description: data.error ?? res.statusText });
       }
     } finally {
       setSaving(false);
@@ -3772,10 +3771,10 @@ function EmailsTab({
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok) {
-        alert(`✓ Resent to ${data.sentTo}`);
+        toast.success(`Resent to ${data.sentTo}`);
         onChanged();
       } else {
-        alert(`Failed: ${data.error ?? res.statusText}`);
+        toast.error("Failed", { description: data.error ?? res.statusText });
       }
     } finally {
       setResendingId(null);
@@ -3949,7 +3948,7 @@ function NoteModal({
         }),
       });
       if (res.ok) onSaved();
-      else alert("Save failed");
+      else toast.error("Save failed");
     } finally {
       setSaving(false);
     }
@@ -4057,7 +4056,7 @@ function RecordPaymentModal({
     if (!rentId) return;
     const cents = Math.round(Number(amount.replace(",", ".")) * 100);
     if (!Number.isFinite(cents) || cents <= 0) {
-      alert("Enter a positive amount");
+      toast.warn("Enter a positive amount");
       return;
     }
     setSaving(true);
@@ -4075,7 +4074,7 @@ function RecordPaymentModal({
       if (res.ok) onSaved();
       else {
         const data = await res.json().catch(() => ({}));
-        alert(`Save failed: ${data.error ?? "Unknown error"}`);
+        toast.error("Save failed", { description: data.error ?? "Unknown error" });
       }
     } finally {
       setSaving(false);
@@ -4202,7 +4201,7 @@ function CommunicationModal({
         }
       );
       if (res.ok) onSaved();
-      else alert("Save failed");
+      else toast.error("Save failed");
     } finally {
       setSaving(false);
     }
@@ -4322,7 +4321,7 @@ function DocumentUploadModal({
         }),
       });
       if (res.ok) onSaved();
-      else alert("Save failed");
+      else toast.error("Save failed");
     } finally {
       setSaving(false);
     }
@@ -4431,7 +4430,7 @@ function MarkRentPaidModal({
   async function save() {
     const cents = Math.round(Number(amount.replace(",", ".")) * 100);
     if (!Number.isFinite(cents) || cents <= 0) {
-      alert("Enter a positive amount");
+      toast.warn("Enter a positive amount");
       return;
     }
     setSaving(true);
@@ -4449,7 +4448,7 @@ function MarkRentPaidModal({
       if (res.ok) onSaved();
       else {
         const data = await res.json().catch(() => ({}));
-        alert(`Save failed: ${data.error ?? res.statusText}`);
+        toast.error("Save failed", { description: data.error ?? res.statusText });
       }
     } finally {
       setSaving(false);

@@ -28,6 +28,7 @@ import {
   CheckCircle2,
   XCircle,
 } from "lucide-react";
+import { toast, Breadcrumbs } from "@/components/admin/ui";
 
 type FunnelPerson = {
   id: string;
@@ -377,7 +378,8 @@ export default function DashboardPage({ data }: { data: Dashboard }) {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-black">Dashboard</h1>
+      <Breadcrumbs items={[{ label: "Dashboard" }]} />
+              <h1 className="text-2xl font-bold text-black">Dashboard</h1>
         <p className="text-sm text-gray mt-1">
           {new Date().toLocaleDateString("de-DE", {
             weekday: "long",
@@ -1441,10 +1443,10 @@ function BookingFunnelSection({
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok) {
-        alert(`✓ Gesendet an ${data.sentTo}`);
+        toast.success(`Gesendet an ${data.sentTo}`);
         router.refresh();
       } else {
-        alert(`Fehler: ${data.error ?? res.statusText}`);
+        toast.error("Fehler", { description: data.error ?? res.statusText });
       }
     } finally {
       setBusyPerson(null);
@@ -2375,7 +2377,7 @@ function ActionItemRow({ row }: { row: ActionRowRich }) {
         if (res.ok) router.refresh();
         else {
           const data = await res.json().catch(() => ({}));
-          alert(`Failed: ${data.error ?? res.statusText}`);
+          toast.error("Failed", { description: data.error ?? res.statusText });
         }
       } finally {
         setBusy(false);
@@ -2395,10 +2397,10 @@ function ActionItemRow({ row }: { row: ActionRowRich }) {
         );
         const data = await res.json().catch(() => ({}));
         if (res.ok) {
-          alert(data.message ?? "Retry ausgelöst.");
+          toast.info(data.message ?? "Retry ausgelöst.");
           router.refresh();
         } else {
-          alert(`Failed: ${data.error ?? res.statusText}`);
+          toast.error("Failed", { description: data.error ?? res.statusText });
         }
       } finally {
         setBusy(false);

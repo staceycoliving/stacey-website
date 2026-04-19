@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { toast } from "@/components/admin/ui";
 
 interface WithdrawModalProps {
   tenantId: string;
@@ -127,16 +128,18 @@ export default function WithdrawModal({
       const data = await res.json().catch(() => ({}));
       if (res.ok) {
         const days = data.daysOccupied ?? 0;
-        alert(
-          [
-            `Widerruf processed${data.withinDeadline ? "" : " (admin override after deadline)"}.`,
-            "",
-            `Refund: ${fmtEur(data.actuallyRefundedCents)} across ${data.refunds?.length ?? 0} Stripe payment(s).`,
-            days > 0
-              ? `Pro-rata retained for ${days} day${days === 1 ? "" : "s"}: ${fmtEur(data.proRataRentRetainedCents)}.`
-              : "Tenant had not moved in — no rent retained.",
-            "Booking Fee €195 retained (non-refundable).",
-          ].join("\n")
+        toast.success(
+          `Widerruf processed${data.withinDeadline ? "" : " (admin override)"}`,
+          {
+            description: [
+              `Refund: ${fmtEur(data.actuallyRefundedCents)} across ${data.refunds?.length ?? 0} Stripe payment(s).`,
+              days > 0
+                ? `Pro-rata retained for ${days} day${days === 1 ? "" : "s"}: ${fmtEur(data.proRataRentRetainedCents)}.`
+                : "Tenant had not moved in — no rent retained.",
+              "Booking Fee €195 retained (non-refundable).",
+            ].join("\n"),
+            duration: 8000,
+          }
         );
         onSuccess?.({
           refunded: Boolean(data.refunded),
@@ -147,7 +150,7 @@ export default function WithdrawModal({
         });
         onClose();
       } else {
-        alert(`Widerruf failed: ${data.error ?? res.statusText}`);
+        toast.error("Widerruf failed", { description: data.error ?? res.statusText });
       }
     } finally {
       setWorking(false);

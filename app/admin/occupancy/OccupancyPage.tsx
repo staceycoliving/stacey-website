@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { Breadcrumbs } from "@/components/admin/ui";
 
 type Tenant = {
   id: string;
@@ -133,7 +134,8 @@ export default function OccupancyPage({
       {/* Header */}
       <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-black">Occupancy plan</h1>
+          <Breadcrumbs items={[{ label: "Occupancy" }]} />
+                    <h1 className="text-2xl font-bold text-black">Occupancy plan</h1>
           <p className="text-sm text-gray mt-1">
             {fmtFullDate(viewStart)} – {fmtFullDate(addDays(viewEnd, -1))}
           </p>

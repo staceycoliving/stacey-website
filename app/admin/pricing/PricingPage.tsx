@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, Check, ExternalLink } from "lucide-react";
+import { toast, Breadcrumbs } from "@/components/admin/ui";
 
 type CategoryRow = {
   category: string;
@@ -147,7 +148,8 @@ export default function PricingPage({ locations }: { locations: LocationRow[] })
     <div>
       <div className="mb-4 flex items-start justify-between gap-4 flex-wrap">
         <div className="max-w-2xl">
-          <h1 className="text-2xl font-bold text-black">Pricing</h1>
+          <Breadcrumbs items={[{ label: "Pricing" }]} />
+                    <h1 className="text-2xl font-bold text-black">Pricing</h1>
           <p className="text-sm text-gray mt-1">
             Preise gelten ab sofort für alle <strong>neuen</strong> Buchungen
             dieser Kategorie an der Location. Bestehende Mieter behalten den
@@ -389,7 +391,7 @@ function CategoryCellEditor({
           if (!skipConfirm) router.refresh(); // parent handles refresh in bulk mode
         } else {
           const data = await res.json().catch(() => ({}));
-          if (!skipConfirm) alert(`Save failed: ${data.error ?? res.statusText}`);
+          if (!skipConfirm) toast.error("Save failed", { description: data.error ?? res.statusText });
         }
       } finally {
         setSaving(false);

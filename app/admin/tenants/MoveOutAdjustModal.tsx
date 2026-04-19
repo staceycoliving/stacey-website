@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { toast } from "@/components/admin/ui";
 
 interface PaidRent {
   /** ISO timestamp of month-start, exactly as Prisma returns it. */
@@ -132,18 +133,22 @@ export default function MoveOutAdjustModal({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        alert(`Save failed: ${data.error ?? res.statusText}`);
+        toast.error("Save failed", { description: data.error ?? res.statusText });
         return;
       }
       const r = data.reconcile;
       if (r?.adjusted) {
-        alert(
-          `Move-out updated. €${(r.overpaymentCents / 100).toFixed(2)} Mietüberzahlung wird bei der Kautionsauszahlung verrechnet.`
-        );
+        toast.success("Move-out updated", {
+          description: `€${(r.overpaymentCents / 100).toFixed(2)} Mietüberzahlung wird bei der Kautionsauszahlung verrechnet.`,
+          duration: 7000,
+        });
       } else if (r?.warnings?.length) {
-        alert(`Move-out updated.\n\nWarnings:\n${r.warnings.join("\n")}`);
+        toast.warn("Move-out updated with warnings", {
+          description: r.warnings.join("\n"),
+          duration: 8000,
+        });
       } else {
-        alert("Move-out updated.");
+        toast.success("Move-out updated.");
       }
       onSuccess();
     } finally {

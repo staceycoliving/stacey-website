@@ -25,7 +25,9 @@ import {
   Send,
   MessageSquare,
   Archive,
+  Inbox,
 } from "lucide-react";
+import { toast, Breadcrumbs, EmptyState, SkeletonText } from "@/components/admin/ui";
 
 type Location = {
   id: string;
@@ -447,7 +449,7 @@ export default function BookingsPage({
       }
     }
     setBulkSending(false);
-    alert(`Reminders: ${sent} gesendet, ${failed} fehlgeschlagen.`);
+    toast.info(`Reminders:  gesendet,  fehlgeschlagen.`);
     router.refresh();
   }
 
@@ -491,7 +493,7 @@ export default function BookingsPage({
       }
     }
     setBulkSending(false);
-    alert(`Archived ${done} stale leads, ${failed} failed.`);
+    toast.info(`Archived  stale leads,  failed.`);
     router.refresh();
   }
 
@@ -515,7 +517,7 @@ export default function BookingsPage({
         router.refresh();
       } else {
         const data = await res.json().catch(() => ({}));
-        alert(`Cancel failed: ${data.error ?? res.statusText}`);
+        toast.error("Cancel failed", { description: data.error ?? res.statusText });
       }
     } catch (err) {
       console.error("Failed to cancel:", err);
@@ -524,7 +526,8 @@ export default function BookingsPage({
   }
 
   return (
-    <div>
+    <div className="space-y-4">
+      <Breadcrumbs items={[{ label: "Bookings" }]} />
       {/* Data-integrity banner — CONFIRMED with no Tenant row is an
           operational bug and should be cleaned up manually. */}
       {confirmedWithoutTenant > 0 && (
@@ -925,8 +928,12 @@ function TableView({
           <tbody>
             {bookings.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-gray">
-                  No bookings found
+                <td colSpan={7} className="px-0 py-0">
+                  <EmptyState
+                    icon={<Inbox className="w-5 h-5" />}
+                    title="No bookings found"
+                    description="Try a different filter or search term."
+                  />
                 </td>
               </tr>
             ) : (
@@ -1005,9 +1012,7 @@ function KanbanView({
             </div>
             <div className="p-2 space-y-2 max-h-[calc(100vh-300px)] overflow-y-auto">
               {col.items.length === 0 ? (
-                <div className="text-xs text-gray text-center py-4">
-                  Empty
-                </div>
+                <EmptyState size="sm" title="Empty" />
               ) : (
                 col.items.map((b) => (
                   <KanbanCard
@@ -1192,11 +1197,11 @@ function ResendBookingEmailDropdown({
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok) {
-        alert(`✓ Gesendet an ${data.sentTo}`);
+        toast.success(`Gesendet an ${data.sentTo}`);
         setOpen(false);
         router.refresh();
       } else {
-        alert(`Fehler: ${data.error ?? res.statusText}`);
+        toast.error("Fehler", { description: data.error ?? res.statusText });
       }
     } finally {
       setBusy(null);
@@ -1920,10 +1925,10 @@ function BookingAdvancedActions({ booking }: { booking: Booking }) {
       );
       const data = await res.json().catch(() => ({}));
       if (res.ok) {
-        alert("✓ Retargeting email sent");
+        toast.success("Retargeting email sent");
         router.refresh();
       } else {
-        alert(`Failed: ${data.error ?? "Unknown"}`);
+        toast.error("Failed", { description: data.error ?? "Unknown" });
       }
     } finally {
       setBusy(false);
@@ -1945,10 +1950,10 @@ function BookingAdvancedActions({ booking }: { booking: Booking }) {
       );
       const data = await res.json().catch(() => ({}));
       if (res.ok) {
-        alert("✓ Refunded €195");
+        toast.success("Refunded €195");
         router.refresh();
       } else {
-        alert(`Refund failed: ${data.error ?? "Unknown"}`);
+        toast.error("Refund failed", { description: data.error ?? "Unknown" });
       }
     } finally {
       setBusy(false);
@@ -2232,7 +2237,7 @@ function ReassignRoomModal({
       if (res.ok) onSuccess();
       else {
         const data = await res.json().catch(() => ({}));
-        alert(`Reassign failed: ${data.error ?? "Unknown"}`);
+        toast.error("Reassign failed", { description: data.error ?? "Unknown" });
       }
     } finally {
       setSaving(false);
@@ -2254,7 +2259,9 @@ function ReassignRoomModal({
         </p>
 
         {loading ? (
-          <p className="text-sm text-gray italic">Loading candidates…</p>
+          <div className="border border-lightgray rounded-[5px] p-3">
+            <SkeletonText lines={4} widths={["w-5/6", "w-4/6", "w-3/4", "w-2/3"]} />
+          </div>
         ) : candidates.length === 0 ? (
           <p className="text-sm text-gray italic">
             No alternative rooms available for this category + date.

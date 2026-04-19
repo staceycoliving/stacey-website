@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -13,7 +13,9 @@ import {
   Copy,
   CheckCircle2,
   ExternalLink,
+  FileText,
 } from "lucide-react";
+import { Breadcrumbs, EmptyState } from "@/components/admin/ui";
 
 type Entry = {
   id: string;
@@ -190,6 +192,29 @@ export default function AuditPage({
   const [expanded, setExpanded] = useState<string | null>(null);
   const filterBarRef = useRef<HTMLDivElement>(null);
 
+  const navigate = useCallback(
+    (patch: Partial<Filters> & { cursor?: number }) => {
+      const next: Record<string, string> = {};
+      const merged = { ...filters, ...patch };
+      for (const key of [
+        "module",
+        "action",
+        "entityType",
+        "entityId",
+        "search",
+        "from",
+        "to",
+      ] as const) {
+        const v = merged[key];
+        if (v) next[key] = v;
+      }
+      if (patch.cursor && patch.cursor > 0) next.cursor = String(patch.cursor);
+      const qs = new URLSearchParams(next).toString();
+      router.push(`/admin/audit${qs ? `?${qs}` : ""}`);
+    },
+    [filters, router]
+  );
+
   // Debounce search input — push to URL after user stops typing
   useEffect(() => {
     if (search === filters.search) return;
@@ -197,27 +222,7 @@ export default function AuditPage({
       navigate({ search, cursor: 0 });
     }, 350);
     return () => clearTimeout(t);
-  }, [search]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  function navigate(patch: Partial<Filters> & { cursor?: number }) {
-    const next: Record<string, string> = {};
-    const merged = { ...filters, ...patch };
-    for (const key of [
-      "module",
-      "action",
-      "entityType",
-      "entityId",
-      "search",
-      "from",
-      "to",
-    ] as const) {
-      const v = merged[key];
-      if (v) next[key] = v;
-    }
-    if (patch.cursor && patch.cursor > 0) next.cursor = String(patch.cursor);
-    const qs = new URLSearchParams(next).toString();
-    router.push(`/admin/audit${qs ? `?${qs}` : ""}`);
-  }
+  }, [search, filters.search, navigate]);
 
   function setDateRange(days: number | "today" | "yesterday" | null) {
     if (days === null) {
@@ -293,7 +298,8 @@ export default function AuditPage({
     <div>
       <div className="mb-4 flex items-start justify-between gap-3 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold text-black">Audit log</h1>
+        <Breadcrumbs items={[{ label: "Audit log" }]} />
+                  <h1 className="text-2xl font-bold text-black">Audit log</h1>
           <p className="text-sm text-gray mt-1">
             Every admin action tracked by{" "}
             <code className="text-xs">audit()</code>. Filter, search, group by
@@ -453,8 +459,12 @@ export default function AuditPage({
 
       {/* Grouped event list */}
       {entries.length === 0 ? (
-        <div className="bg-white rounded-[5px] border border-lightgray p-8 text-center text-sm text-gray">
-          No audit entries match the current filters.
+        <div className="bg-white rounded-[5px] border border-lightgray">
+          <EmptyState
+            icon={<FileText className="w-5 h-5" />}
+            title="No audit entries"
+            description="Nothing matches the current filters."
+          />
         </div>
       ) : (
         <div className="space-y-4">

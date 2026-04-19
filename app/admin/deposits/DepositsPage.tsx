@@ -12,7 +12,9 @@ import {
   Send,
   CheckSquare,
   X,
+  Wallet,
 } from "lucide-react";
+import { toast, Breadcrumbs, EmptyState } from "@/components/admin/ui";
 
 /* ─── Deadline constant ─────────────────────────────────── */
 
@@ -330,7 +332,7 @@ export default function DepositsPage({
       });
       const body = await res.json().catch(() => ({}));
       if (res.ok) router.refresh();
-      else alert(body.error ?? "Action failed");
+      else toast.error(body.error ?? "Action failed");
       return { ok: res.ok, body };
     } finally {
       setUpdating(false);
@@ -342,7 +344,8 @@ export default function DepositsPage({
       {/* Header + stats */}
       <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-black">Deposits</h1>
+          <Breadcrumbs items={[{ label: "Deposits" }]} />
+                    <h1 className="text-2xl font-bold text-black">Deposits</h1>
           <p className="text-sm text-gray mt-1">
             Settlement work tool · refund deadline is{" "}
             <span className="font-semibold">
@@ -532,8 +535,12 @@ export default function DepositsPage({
             <tbody>
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="px-4 py-8 text-center text-gray">
-                    No tenants in this view.
+                  <td colSpan={10} className="px-0 py-0">
+                    <EmptyState
+                      icon={<Wallet className="w-5 h-5" />}
+                      title="No tenants in this view"
+                      description="Try switching to another status tab."
+                    />
                   </td>
                 </tr>
               ) : (

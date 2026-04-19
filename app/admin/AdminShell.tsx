@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Search, User, FileText, Home } from "lucide-react";
+import { ToastProvider } from "@/components/admin/ui";
 
 const NAV_ITEMS = [
   { href: "/admin", label: "Dashboard", exact: true },
@@ -36,6 +37,7 @@ export default function AdminShell({
   }
 
   return (
+    <ToastProvider>
     <div className="min-h-screen bg-background-alt">
       {/* Test mode banner */}
       {testMode?.enabled && (
@@ -117,6 +119,7 @@ export default function AdminShell({
         {children}
       </main>
     </div>
+    </ToastProvider>
   );
 }
 

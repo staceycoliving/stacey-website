@@ -17,7 +17,11 @@ import {
   X,
   Landmark,
   Zap,
+  Receipt,
+  Sparkles,
+  FileText,
 } from "lucide-react";
+import { toast, Breadcrumbs, EmptyState, SkeletonKpiGrid, SkeletonTable } from "@/components/admin/ui";
 
 /* ─── Types ──────────────────────────────────────────────── */
 
@@ -203,7 +207,8 @@ export default function FinancePage({ data }: { data: Data }) {
   return (
     <div>
       <div className="mb-4">
-        <h1 className="text-2xl font-bold text-black">Finance</h1>
+        <Breadcrumbs items={[{ label: "Finance" }]} />
+                <h1 className="text-2xl font-bold text-black">Finance</h1>
         <p className="text-sm text-gray mt-1">
           Revenue, cashflow, rent collection, deposits and DATEV export.
         </p>
@@ -761,7 +766,7 @@ function RentRollTab({
         method: "POST",
       });
       const data = await res.json();
-      alert(data.message ?? "Done");
+      toast.info(data.message ?? "Done");
       onChanged();
     } finally {
       setUpdating(null);
@@ -953,8 +958,12 @@ function RentRollTab({
           <tbody>
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={11} className="px-3 py-6 text-center text-gray">
-                  No rent payments match the current filters.
+                <td colSpan={11} className="px-0 py-0">
+                  <EmptyState
+                    icon={<Receipt className="w-5 h-5" />}
+                    title="No rent payments"
+                    description="No rent rows match the current filters."
+                  />
                 </td>
               </tr>
             ) : (
@@ -1188,15 +1197,18 @@ function RunRentPreviewModal({
       const res = await fetch("/api/admin/run-monthly-rent", { method: "POST" });
       const data = await res.json();
       if (res.ok) {
-        alert(
-          `Done!\n\nMonth: ${data.month}\nCharged: ${data.charged}\nCreated: ${data.created}\nSkipped: ${data.skipped}${data.errors.length > 0 ? `\n\nErrors:\n${data.errors.join("\n")}` : ""}`
-        );
+        toast.success(`Rent run complete · ${data.month}`, {
+          description: `${data.charged} charged · ${data.created} created · ${data.skipped} skipped${
+            data.errors.length > 0 ? `\n\n${data.errors.join("\n")}` : ""
+          }`,
+          duration: 7000,
+        });
         onSuccess();
       } else {
-        alert(`Failed: ${data.error}`);
+        toast.error("Failed", { description: data.error });
       }
     } catch {
-      alert("Failed to run rent collection");
+      toast.error("Failed to run rent collection");
     }
     setRunning(false);
   }
@@ -1223,7 +1235,10 @@ function RunRentPreviewModal({
 
         <div className="p-4 overflow-auto flex-1">
           {loading && (
-            <div className="text-center text-sm text-gray py-8">Loading preview…</div>
+            <div className="space-y-4">
+              <SkeletonKpiGrid count={5} />
+              <SkeletonTable rows={5} cells={6} />
+            </div>
           )}
           {preview && (
             <>
@@ -1421,7 +1436,7 @@ function ArrearsTab({
         { method: "POST" }
       );
       const data = await res.json();
-      alert(data.message ?? "Done");
+      toast.info(data.message ?? "Done");
       onChanged();
     } finally {
       setUpdating(null);
@@ -1566,9 +1581,11 @@ function ArrearsTab({
       </div>
 
       {rows.length === 0 ? (
-        <div className="text-center text-sm text-gray py-8">
-          No outstanding rent. ✨
-        </div>
+        <EmptyState
+          icon={<Sparkles className="w-5 h-5" />}
+          title="No outstanding rent"
+          description="Every tenant is paid up for this period."
+        />
       ) : (
         <>
           <p className="text-xs text-gray mb-2">
@@ -2148,8 +2165,12 @@ function ExtrasTab({ extraCharges }: { extraCharges: ExtraCharge[] }) {
           <tbody>
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-3 py-6 text-center text-gray">
-                  No adjustments match the current filters.
+                <td colSpan={7} className="px-0 py-0">
+                  <EmptyState
+                    icon={<FileText className="w-5 h-5" />}
+                    title="No adjustments"
+                    description="Nothing matches the current filters."
+                  />
                 </td>
               </tr>
             ) : (
@@ -2612,8 +2633,9 @@ function PaymentModal({
         });
         if (!res.ok) {
           const err = await res.json().catch(() => ({}));
-          alert(
-            `Failed for ${r.tenant.firstName} ${r.tenant.lastName}: ${err.error ?? res.statusText}`
+          toast.error(
+            `Failed for ${r.tenant.firstName} ${r.tenant.lastName}`,
+            { description: err.error ?? res.statusText }
           );
           setRunning(false);
           return;
@@ -2622,7 +2644,7 @@ function PaymentModal({
       }
       onSuccess();
     } catch (err) {
-      alert(`Failed: ${err instanceof Error ? err.message : String(err)}`);
+      toast.error("Failed", { description: err instanceof Error ? err.message : String(err) });
       setRunning(false);
     }
   }

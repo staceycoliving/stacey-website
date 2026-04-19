@@ -16,7 +16,9 @@ import {
   RotateCcw,
   StickyNote,
   ExternalLink,
+  CalendarCheck,
 } from "lucide-react";
+import { Breadcrumbs, EmptyState } from "@/components/admin/ui";
 
 type InspectionResult = "CLEAN" | "ISSUE";
 
@@ -130,7 +132,8 @@ export default function HousekeepingPage({
       <div className="print:hidden">
         <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
           <div>
-            <h1 className="text-2xl font-bold text-black">Housekeeping</h1>
+            <Breadcrumbs items={[{ label: "Housekeeping" }]} />
+                        <h1 className="text-2xl font-bold text-black">Housekeeping</h1>
             <p className="text-sm text-gray mt-1">
               {view === "day" ? fmtDateLong(date) : "Week starting " + fmtDateLong(date)}
             </p>
@@ -357,8 +360,12 @@ function DayView({
       </div>
 
       {groupList.length === 0 ? (
-        <div className="bg-white rounded-[5px] border border-lightgray p-6 text-center text-sm text-gray">
-          No move-ins or move-outs on this day.
+        <div className="bg-white rounded-[5px] border border-lightgray">
+          <EmptyState
+            icon={<CalendarCheck className="w-5 h-5" />}
+            title="Nothing scheduled"
+            description="No move-ins or move-outs on this day."
+          />
         </div>
       ) : (
         <div className="space-y-4">

@@ -16,6 +16,7 @@ import {
   X,
   ChevronDown,
 } from "lucide-react";
+import { toast, Breadcrumbs, EmptyState, SkeletonText } from "@/components/admin/ui";
 
 type SentEmail = {
   id: string;
@@ -202,7 +203,7 @@ export default function EmailsPage({
 
   async function quickSend() {
     if (!selectedTenantId || !selectedTemplate) {
-      alert("Mieter und Template auswählen");
+      toast.warn("Mieter und Template auswählen");
       return;
     }
     const tenant = tenants.find((t) => t.id === selectedTenantId);
@@ -211,11 +212,11 @@ export default function EmailsPage({
     const extras: Record<string, string> = {};
     if (selectedTemplate === "termination") {
       if (!terminationReason.trim()) {
-        alert("Kündigungsgrund erforderlich");
+        toast.warn("Kündigungsgrund erforderlich");
         return;
       }
       if (!terminationMoveOutDate) {
-        alert("Auszugsdatum erforderlich");
+        toast.warn("Auszugsdatum erforderlich");
         return;
       }
       extras.terminationReason = terminationReason.trim();
@@ -241,12 +242,12 @@ export default function EmailsPage({
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok) {
-        alert(`✓ Email gesendet an ${data.sentTo}`);
+        toast.success(`Email gesendet an ${data.sentTo}`);
         setSelectedTemplate("");
         setTerminationReason("");
         router.refresh();
       } else {
-        alert(`Fehler: ${data.error ?? res.statusText}`);
+        toast.error("Fehler", { description: data.error ?? res.statusText });
       }
     } finally {
       setSending(false);
@@ -267,10 +268,10 @@ export default function EmailsPage({
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok) {
-        alert(`✓ Resent to ${data.sentTo}`);
+        toast.success(`Resent to ${data.sentTo}`);
         router.refresh();
       } else {
-        alert(`Failed: ${data.error ?? res.statusText}`);
+        toast.error("Failed", { description: data.error ?? res.statusText });
       }
     } finally {
       setResendingId(null);
@@ -282,7 +283,8 @@ export default function EmailsPage({
   return (
     <div>
       <div className="mb-4">
-        <h1 className="text-2xl font-bold text-black">Emails</h1>
+        <Breadcrumbs items={[{ label: "Emails" }]} />
+                <h1 className="text-2xl font-bold text-black">Emails</h1>
         <p className="text-sm text-gray mt-1 max-w-2xl">
           Central log of every email the system sends — automated and
           manual. Failed sends can be retried here, and every template has
@@ -532,8 +534,12 @@ export default function EmailsPage({
             <tbody>
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-3 py-8 text-center text-gray">
-                    No emails match these filters.
+                  <td colSpan={6} className="px-0 py-0">
+                    <EmptyState
+                      icon={<Mail className="w-5 h-5" />}
+                      title="No emails match these filters"
+                      description="Try a different template, status, or search term."
+                    />
                   </td>
                 </tr>
               ) : (
@@ -695,7 +701,7 @@ function PreviewModal({
         </div>
         <div className="p-4 overflow-auto flex-1 space-y-2 text-sm">
           {!data ? (
-            <p className="text-gray">Loading…</p>
+            <SkeletonText lines={6} />
           ) : (
             <>
               <Field label="Template">

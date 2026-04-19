@@ -16,8 +16,10 @@ import {
   MoreHorizontal,
   Search,
   Table as TableIcon,
+  Users,
   X,
 } from "lucide-react";
+import { Breadcrumbs, EmptyState } from "@/components/admin/ui";
 
 type Location = {
   id: string;
@@ -496,9 +498,10 @@ export default function TenantsPage({
   }
 
   return (
-    <div>
+    <div className="space-y-4">
+      <Breadcrumbs items={[{ label: "Tenants" }]} />
       {/* KPIs — 6 action-focused cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         <KpiCard
           label="Active"
           value={counts.active}
@@ -756,8 +759,12 @@ export default function TenantsPage({
             <tbody>
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-3 py-8 text-center text-gray text-sm">
-                    No tenants found
+                  <td colSpan={8} className="px-0 py-0">
+                    <EmptyState
+                      icon={<Users className="w-5 h-5" />}
+                      title="No tenants found"
+                      description="Try changing the search or filters."
+                    />
                   </td>
                 </tr>
               ) : (

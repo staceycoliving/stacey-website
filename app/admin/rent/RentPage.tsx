@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "@/components/admin/ui";
 
 type RentPayment = {
   id: string;
@@ -72,14 +73,18 @@ export default function RentPage({ rentPayments }: { rentPayments: RentPayment[]
       const res = await fetch("/api/admin/run-monthly-rent", { method: "POST" });
       const data = await res.json();
       if (res.ok) {
-        alert(`Done!\n\nMonth: ${data.month}\nTotal tenants: ${data.total}\nCreated: ${data.created}\nCharged: ${data.charged}\nSkipped: ${data.skipped}${data.errors.length > 0 ? `\n\nErrors:\n${data.errors.join("\n")}` : ""}`);
+        toast.success(`Rent run complete · ${data.month}`, {
+          description: `${data.charged} charged · ${data.created} created · ${data.skipped} skipped${
+            data.errors.length > 0 ? `\n\n${data.errors.join("\n")}` : ""
+          }`,
+        });
         router.refresh();
       } else {
-        alert(`Failed: ${data.error}`);
+        toast.error("Failed", { description: data.error });
       }
     } catch (err) {
       console.error(err);
-      alert("Failed to run rent collection");
+      toast.error("Failed to run rent collection");
     }
     setRunning(false);
   }

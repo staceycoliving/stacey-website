@@ -13,6 +13,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
+import { toast, Breadcrumbs } from "@/components/admin/ui";
 
 type Tenant = {
   id: string;
@@ -301,9 +302,10 @@ export default function RoomsPage({
   function refresh() { close(); router.refresh(); }
 
   return (
-    <div>
+    <div className="space-y-4">
+      <Breadcrumbs items={[{ label: "Rooms" }]} />
       {/* Location tabs */}
-      <div className="flex flex-wrap gap-2 mb-4">
+      <div className="flex flex-wrap gap-2">
         {locations.map((loc) => {
           const locRooms = loc.apartments.flatMap((a) => a.rooms);
           const locActive = locRooms.filter((r) => r.status === "ACTIVE");
@@ -576,7 +578,7 @@ function ApartmentBlock({
     if (res.ok) onDeleted();
     else {
       const data = await res.json().catch(() => ({}));
-      alert(`Delete failed: ${data.error ?? res.statusText}`);
+      toast.error("Delete failed", { description: data.error ?? res.statusText });
     }
   }
 
@@ -586,7 +588,7 @@ function ApartmentBlock({
     if (res.ok) onDeleted();
     else {
       const data = await res.json().catch(() => ({}));
-      alert(`Delete failed: ${data.error ?? res.statusText}`);
+      toast.error("Delete failed", { description: data.error ?? res.statusText });
     }
   }
 
@@ -767,7 +769,7 @@ function LocationModal({
 
   async function save() {
     if (!slug || !name || !city || !address) {
-      alert("All fields are required");
+      toast.warn("All fields are required");
       return;
     }
     setSaving(true);
@@ -786,7 +788,7 @@ function LocationModal({
       if (res.ok) onSaved();
       else {
         const data = await res.json().catch(() => ({}));
-        alert(`Save failed: ${data.error ?? res.statusText}`);
+        toast.error("Save failed", { description: data.error ?? res.statusText });
       }
     } finally {
       setSaving(false);
@@ -836,7 +838,7 @@ function ApartmentModal({
 
   async function save() {
     if (!houseNumber || !floor) {
-      alert("House number and floor are required");
+      toast.warn("House number and floor are required");
       return;
     }
     setSaving(true);
@@ -860,7 +862,7 @@ function ApartmentModal({
       if (res.ok) onSaved();
       else {
         const data = await res.json().catch(() => ({}));
-        alert(`Save failed: ${data.error ?? res.statusText}`);
+        toast.error("Save failed", { description: data.error ?? res.statusText });
       }
     } finally {
       setSaving(false);
@@ -928,7 +930,7 @@ function RoomModal({
   async function save() {
     const cents = Math.round(parseFloat(monthlyRent.replace(",", ".")) * 100);
     if (!roomNumber || !Number.isFinite(cents) || cents < 0) {
-      alert("Room number and a valid monthly rent are required");
+      toast.warn("Room number and a valid monthly rent are required");
       return;
     }
     setSaving(true);
@@ -956,7 +958,7 @@ function RoomModal({
       if (res.ok) onSaved();
       else {
         const data = await res.json().catch(() => ({}));
-        alert(`Save failed: ${data.error ?? res.statusText}`);
+        toast.error("Save failed", { description: data.error ?? res.statusText });
       }
     } finally {
       setSaving(false);

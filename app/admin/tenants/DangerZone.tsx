@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "@/components/admin/ui";
 
 const DELETE_REASONS = [
   "DSGVO-Löschanfrage",
@@ -56,7 +57,7 @@ export default function DangerZone({
         { method: isArchived ? "DELETE" : "POST" }
       );
       if (res.ok) router.refresh();
-      else alert("Action failed");
+      else toast.error("Action failed");
     } finally {
       setArchiving(false);
     }
@@ -74,7 +75,7 @@ export default function DangerZone({
       if (res.ok) {
         router.push("/admin/tenants");
       } else {
-        alert(`Delete failed: ${data.error ?? res.statusText}`);
+        toast.error("Delete failed", { description: data.error ?? res.statusText });
       }
     } finally {
       setWorking(false);
