@@ -6,8 +6,12 @@ import { ensureRentPayment, chargeRentPayment } from "@/lib/rent-charge";
  * POST /api/admin/run-monthly-rent
  *
  * Manually triggers the monthly rent collection for the current month.
- * Same logic as the cron, but only for tenants with a SEPA mandate set up
- * (skip legacy tenants without Stripe customer).
+ *
+ * We always create RentPayment records for every active tenant (regardless
+ * of payment method) so the rent roll is complete. Stripe charge is
+ * attempted only for SEPA tenants with a valid mandate — BANK_TRANSFER
+ * tenants are skipped and marked "bank-transfer" for the admin to tick off
+ * manually once the money lands.
  *
  * Charge timing: we still respect the move-in-day rule — `chargeRentPayment`
  * skips with "skipped_too_early" if today is before the tenant's move-in.
@@ -25,8 +29,6 @@ export async function POST() {
     where: {
       OR: [{ moveOut: null }, { moveOut: { gt: monthStart } }],
       moveIn: { lte: monthEnd },
-      stripeCustomerId: { not: null },
-      sepaMandateId: { not: null },
     },
     select: {
       id: true,
@@ -37,12 +39,14 @@ export async function POST() {
       moveOut: true,
       stripeCustomerId: true,
       sepaMandateId: true,
+      paymentMethod: true,
     },
   });
 
   let created = 0;
   let charged = 0;
   let skipped = 0;
+  let skippedBankTransfer = 0;
   const errors: string[] = [];
 
   for (const tenant of tenants) {
@@ -71,6 +75,7 @@ export async function POST() {
       triggerLabel: "manual_run",
     });
     if (result === "charged") charged++;
+    if (result === "skipped_bank_transfer") skippedBankTransfer++;
     if (result === "failed")
       errors.push(`${tenant.firstName} ${tenant.lastName}: charge failed`);
   }
@@ -81,6 +86,7 @@ export async function POST() {
     created,
     charged,
     skipped,
+    skippedBankTransfer,
     errors,
   });
 }

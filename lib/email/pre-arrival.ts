@@ -1,4 +1,6 @@
-import { resend, FROM, layout, detailRow, detailTable, infoBox, ctaButton, formatDate } from "./_shared";
+import { sendTrackedEmail, FROM, layout, detailRow, detailTable, infoBox, ctaButton, formatDate, type SendMeta } from "./_shared";
+
+type Meta = Omit<SendMeta, "templateKey"> | undefined;
 import { env } from "@/lib/env";
 
 interface PreArrivalData {
@@ -15,7 +17,7 @@ interface PreArrivalData {
   locationSlug: string;
 }
 
-export async function sendPreArrival(data: PreArrivalData) {
+export async function sendPreArrival(data: PreArrivalData, meta?: Meta) {
   const checkinUrl = `${env.NEXT_PUBLIC_BASE_URL}/checkin?` + new URLSearchParams({
     reservation: data.reservationId,
     location: data.locationSlug,
@@ -61,10 +63,13 @@ export async function sendPreArrival(data: PreArrivalData) {
     </p>
   `);
 
-  return resend.emails.send({
-    from: FROM,
-    to: data.email,
-    subject: `Your stay at STACEY ${data.locationName} starts tomorrow — complete your registration`,
-    html,
-  });
+  return sendTrackedEmail(
+    {
+      from: FROM,
+      to: data.email,
+      subject: `Your stay at STACEY ${data.locationName} starts tomorrow — complete your registration`,
+      html,
+    },
+    { templateKey: "pre_arrival", ...meta }
+  );
 }

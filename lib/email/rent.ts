@@ -1,4 +1,6 @@
-import { resend, FROM, layout, detailRow, detailTable, ctaButton, warningBox, badge } from "./_shared";
+import { sendTrackedEmail, FROM, layout, detailRow, detailTable, ctaButton, warningBox, badge, type SendMeta } from "./_shared";
+
+type Meta = Omit<SendMeta, "templateKey"> | undefined;
 
 // ─── Rent Reminder (Day 3 — friendly) ─────────────────────────
 
@@ -11,7 +13,7 @@ interface RentReminderData {
   paymentUpdateUrl: string;
 }
 
-export async function sendRentReminder(data: RentReminderData) {
+export async function sendRentReminder(data: RentReminderData, meta?: Meta) {
   const totalEur = (data.totalAmount / 100).toFixed(2);
   const monthRows = data.months.map(m =>
     detailRow(m.month, `€${(m.amount / 100).toFixed(2)}`, { highlight: "orange" })
@@ -35,12 +37,15 @@ export async function sendRentReminder(data: RentReminderData) {
     </p>
   `);
 
-  return resend.emails.send({
-    from: FROM,
-    to: data.email,
-    subject: `Outstanding rent — €${totalEur}`,
-    html,
-  });
+  return sendTrackedEmail(
+    {
+      from: FROM,
+      to: data.email,
+      subject: `Outstanding rent — €${totalEur}`,
+      html,
+    },
+    { templateKey: "rent_reminder", ...meta }
+  );
 }
 
 // ─── 1. Mahnung (Day 14) ────────────────────────────────────
@@ -55,7 +60,7 @@ interface MahnungData {
   paymentUpdateUrl: string;
 }
 
-export async function sendMahnung1(data: MahnungData) {
+export async function sendMahnung1(data: MahnungData, meta?: Meta) {
   const totalEur = (data.totalAmount / 100).toFixed(2);
   const monthRows = data.months.map(m =>
     detailRow(m.month, `€${(m.amount / 100).toFixed(2)}`, { highlight: "orange" })
@@ -82,17 +87,20 @@ export async function sendMahnung1(data: MahnungData) {
     </p>
   `, { accent: "orange" });
 
-  return resend.emails.send({
-    from: FROM,
-    to: data.email,
-    subject: `Outstanding rent — first notice (€${totalEur})`,
-    html,
-  });
+  return sendTrackedEmail(
+    {
+      from: FROM,
+      to: data.email,
+      subject: `Outstanding rent — first notice (€${totalEur})`,
+      html,
+    },
+    { templateKey: "mahnung1", ...meta }
+  );
 }
 
 // ─── 2. Mahnung (Day 30) ──────────────────────────────────
 
-export async function sendMahnung2(data: MahnungData) {
+export async function sendMahnung2(data: MahnungData, meta?: Meta) {
   const totalEur = (data.totalAmount / 100).toFixed(2);
   const monthRows = data.months.map(m =>
     detailRow(m.month, `€${(m.amount / 100).toFixed(2)}`, { highlight: "red" })
@@ -121,10 +129,13 @@ export async function sendMahnung2(data: MahnungData) {
     </p>
   `, { accent: "red" });
 
-  return resend.emails.send({
-    from: FROM,
-    to: data.email,
-    subject: `Outstanding rent — second notice (€${totalEur})`,
-    html,
-  });
+  return sendTrackedEmail(
+    {
+      from: FROM,
+      to: data.email,
+      subject: `Outstanding rent — second notice (€${totalEur})`,
+      html,
+    },
+    { templateKey: "mahnung2", ...meta }
+  );
 }

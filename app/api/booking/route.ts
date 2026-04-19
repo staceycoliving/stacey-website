@@ -53,7 +53,23 @@ export async function POST(request: NextRequest) {
       country,
       moveInReason,
       message,
+      // Lead-source tracking (optional, client-captured)
+      leadSource,
+      leadMedium,
+      leadCampaign,
+      leadReferrer,
     } = body;
+
+    // Helper: truncate long strings so we never blow up storage on weird
+    // referrer URLs or campaign names.
+    const truncate = (v: unknown, max: number) =>
+      typeof v === "string" ? v.slice(0, max) : null;
+    const leadFields = {
+      leadSource: truncate(leadSource, 80),
+      leadMedium: truncate(leadMedium, 80),
+      leadCampaign: truncate(leadCampaign, 200),
+      leadReferrer: truncate(leadReferrer, 500),
+    };
 
     // ─── Validate required fields ───────────────────────────
 
@@ -225,6 +241,10 @@ export async function POST(request: NextRequest) {
           moveInReason: moveInReason || null,
           message: message || null,
           status: "PENDING",
+          leadSource: leadFields.leadSource,
+          leadMedium: leadFields.leadMedium,
+          leadCampaign: leadFields.leadCampaign,
+          leadReferrer: leadFields.leadReferrer,
         },
         include: { room: true },
       });

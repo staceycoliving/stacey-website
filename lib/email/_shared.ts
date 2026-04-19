@@ -5,6 +5,7 @@
 import { Resend } from "resend";
 import { canSendEmail, logSkipped } from "@/lib/test-mode";
 import { env } from "@/lib/env";
+import { prisma } from "@/lib/db";
 
 const resendClient = new Resend(env.RESEND_API_KEY);
 
@@ -27,6 +28,119 @@ export const resend = {
     },
   },
 };
+
+/* ─── Tracked send (with SentEmail logging) ─────────────── */
+
+/** Metadata passed alongside an email send so the SentEmail log entry can
+ *  link back to the tenant/booking + distinguish auto vs manual. */
+export type SendMeta = {
+  /** Canonical template key, e.g. "welcome" / "mahnung1". Required. */
+  templateKey: string;
+  /** Link log entry to a tenant (entityType=tenant, entityId=tenantId). */
+  tenantId?: string | null;
+  /** Link log entry to a booking (entityType=booking, entityId=bookingId).
+   *  Used when no Tenant exists yet (pre-deposit bookings). */
+  bookingId?: string | null;
+  /** Human label: "cron_daily" / "webhook_stripe" / "manual_resend" / "auto". */
+  triggeredBy?: string;
+};
+
+/** Wrapper around `resend.emails.send` that also writes a `SentEmail` log
+ *  entry for success, failure, and test-mode skip. Use this from every
+ *  template file so the email hub + folio email history have a single
+ *  source of truth. */
+export async function sendTrackedEmail(
+  params: Parameters<typeof resendClient.emails.send>[0],
+  meta: SendMeta,
+) {
+  const to = Array.isArray(params.to) ? params.to[0] : params.to;
+  const recipient = String(to ?? "");
+  const entityType = meta.tenantId
+    ? "tenant"
+    : meta.bookingId
+      ? "booking"
+      : null;
+  const entityId = meta.tenantId ?? meta.bookingId ?? null;
+  const triggeredBy = meta.triggeredBy ?? "auto";
+
+  // Base log payload — filled with actual result below.
+  const base = {
+    templateKey: meta.templateKey,
+    recipient,
+    subject: params.subject ?? null,
+    entityType,
+    entityId,
+    triggeredBy,
+  };
+
+  try {
+    const result = await resend.emails.send(params);
+
+    // Test-mode skip: log as "skipped" so the admin can see it was
+    // intentionally filtered out, without counting it as a success.
+    if (result.skipped) {
+      await safeLog({
+        ...base,
+        status: "skipped",
+        resendId: null,
+        error: null,
+      });
+      return result;
+    }
+
+    // result.error comes from the Resend SDK when non-skipped. TS narrows
+    // it to null on the skipped branch, so coerce explicitly.
+    const resendError = (result as { error?: unknown }).error;
+    if (resendError) {
+      await safeLog({
+        ...base,
+        status: "failed",
+        resendId: null,
+        error:
+          typeof resendError === "string"
+            ? resendError
+            : JSON.stringify(resendError),
+      });
+      return result;
+    }
+
+    await safeLog({
+      ...base,
+      status: "sent",
+      resendId: result.data?.id ?? null,
+      error: null,
+    });
+    return result;
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    await safeLog({
+      ...base,
+      status: "failed",
+      resendId: null,
+      error: message,
+    });
+    throw err; // Preserve existing error-handling at call sites.
+  }
+}
+
+/** Logging must never break an email send. Swallow DB errors and warn. */
+async function safeLog(data: {
+  templateKey: string;
+  recipient: string;
+  subject: string | null;
+  entityType: string | null;
+  entityId: string | null;
+  resendId: string | null;
+  status: string;
+  error: string | null;
+  triggeredBy: string;
+}) {
+  try {
+    await prisma.sentEmail.create({ data });
+  } catch (err) {
+    console.warn("[SentEmail] log write failed:", err);
+  }
+}
 
 // Category enum → human-readable name
 const CATEGORY_NAMES: Record<string, string> = {

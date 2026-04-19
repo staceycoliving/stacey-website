@@ -1,4 +1,6 @@
-import { resend, FROM, layout, detailRow, detailTable, badge, ctaButton, warningBox, infoBox, categoryName, formatDate } from "./_shared";
+import { sendTrackedEmail, FROM, layout, detailRow, detailTable, badge, ctaButton, warningBox, infoBox, categoryName, formatDate, type SendMeta } from "./_shared";
+
+type Meta = Omit<SendMeta, "templateKey"> | undefined;
 
 // ─── #2: Booking Fee Confirmed + Deposit Payment Link ─────────
 
@@ -15,7 +17,7 @@ interface DepositPaymentEmail {
   deadlineHours: number;
 }
 
-export async function sendDepositPaymentLink(data: DepositPaymentEmail) {
+export async function sendDepositPaymentLink(data: DepositPaymentEmail, meta?: Meta) {
   const rentEur = (data.monthlyRent / 100).toFixed(2);
   const depositEur = (data.depositAmount / 100).toFixed(2);
 
@@ -46,12 +48,15 @@ export async function sendDepositPaymentLink(data: DepositPaymentEmail) {
     </p>
   `);
 
-  return resend.emails.send({
-    from: FROM,
-    to: data.email,
-    subject: `STACEY ${data.locationName} — Your room is reserved`,
-    html,
-  });
+  return sendTrackedEmail(
+    {
+      from: FROM,
+      to: data.email,
+      subject: `STACEY ${data.locationName} — Your room is reserved`,
+      html,
+    },
+    { templateKey: "deposit_payment_link", ...meta }
+  );
 }
 
 // ─── #3: Deposit Confirmed + Lease PDF + Payment Setup ────────
@@ -67,7 +72,7 @@ interface DepositConfirmationEmail {
   signedLeasePdf?: Buffer;
 }
 
-export async function sendDepositConfirmation(data: DepositConfirmationEmail) {
+export async function sendDepositConfirmation(data: DepositConfirmationEmail, meta?: Meta) {
   const depositEur = (data.depositAmount / 100).toFixed(2);
   const pdfFilename = `${data.firstName.toLowerCase()}_${data.lastName.toLowerCase()}_rentalagreement.pdf`;
 
@@ -121,15 +126,18 @@ export async function sendDepositConfirmation(data: DepositConfirmationEmail) {
     </p>
   `);
 
-  return resend.emails.send({
-    from: FROM,
-    to: data.email,
-    subject: `Deposit received — Welcome to STACEY ${data.locationName}`,
-    html,
-    attachments: data.signedLeasePdf
-      ? [{ filename: pdfFilename, content: data.signedLeasePdf }]
-      : undefined,
-  });
+  return sendTrackedEmail(
+    {
+      from: FROM,
+      to: data.email,
+      subject: `Deposit received — Welcome to STACEY ${data.locationName}`,
+      html,
+      attachments: data.signedLeasePdf
+        ? [{ filename: pdfFilename, content: data.signedLeasePdf }]
+        : undefined,
+    },
+    { templateKey: "deposit_confirmation", ...meta }
+  );
 }
 
 // ─── Deposit Reminder (24h left) ────────────────────────────
@@ -143,7 +151,7 @@ interface DepositReminderEmail {
   hoursLeft: number;
 }
 
-export async function sendDepositReminder(data: DepositReminderEmail) {
+export async function sendDepositReminder(data: DepositReminderEmail, meta?: Meta) {
   const depositEur = (data.depositAmount / 100).toFixed(2);
 
   const html = layout(`
@@ -163,12 +171,15 @@ export async function sendDepositReminder(data: DepositReminderEmail) {
     )}
   `, { accent: "orange" });
 
-  return resend.emails.send({
-    from: FROM,
-    to: data.email,
-    subject: `Reminder: Deposit pending — STACEY ${data.locationName}`,
-    html,
-  });
+  return sendTrackedEmail(
+    {
+      from: FROM,
+      to: data.email,
+      subject: `Reminder: Deposit pending — STACEY ${data.locationName}`,
+      html,
+    },
+    { templateKey: "deposit_reminder", ...meta }
+  );
 }
 
 // ─── Deposit Timeout ────────────────────────────────────────
@@ -179,7 +190,7 @@ interface DepositTimeoutEmail {
   locationName: string;
 }
 
-export async function sendDepositTimeoutNotification(data: DepositTimeoutEmail) {
+export async function sendDepositTimeoutNotification(data: DepositTimeoutEmail, meta?: Meta) {
   const html = layout(`
     <h2 style="margin:0 0 8px;font-size:22px;font-weight:700;">Room reservation expired</h2>
     <p style="margin:0 0 24px;color:#555;font-size:15px;line-height:1.5;">
@@ -191,12 +202,15 @@ export async function sendDepositTimeoutNotification(data: DepositTimeoutEmail) 
     </p>
   `);
 
-  return resend.emails.send({
-    from: FROM,
-    to: data.email,
-    subject: `Room reservation expired — STACEY ${data.locationName}`,
-    html,
-  });
+  return sendTrackedEmail(
+    {
+      from: FROM,
+      to: data.email,
+      subject: `Room reservation expired — STACEY ${data.locationName}`,
+      html,
+    },
+    { templateKey: "deposit_timeout", ...meta }
+  );
 }
 
 // ─── Deposit Return Notification ────────────────────────────
@@ -215,7 +229,7 @@ interface DepositReturnData {
   iban: string;
 }
 
-export async function sendDepositReturnNotification(data: DepositReturnData) {
+export async function sendDepositReturnNotification(data: DepositReturnData, meta?: Meta) {
   const overpayment = data.overpaymentAmount ?? 0;
   const html = layout(`
     <h2 style="margin:0 0 8px;font-size:22px;font-weight:700;">Deposit settlement</h2>
@@ -237,10 +251,13 @@ export async function sendDepositReturnNotification(data: DepositReturnData) {
     </p>
   `);
 
-  return resend.emails.send({
-    from: FROM,
-    to: data.email,
-    subject: `Deposit settlement — STACEY ${data.locationName}`,
-    html,
-  });
+  return sendTrackedEmail(
+    {
+      from: FROM,
+      to: data.email,
+      subject: `Deposit settlement — STACEY ${data.locationName}`,
+      html,
+    },
+    { templateKey: "deposit_return", ...meta }
+  );
 }

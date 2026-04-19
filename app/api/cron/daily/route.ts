@@ -13,6 +13,9 @@ import {
   sendPostStayFeedback,
   sendPreArrival,
   sendCheckoutReminder,
+  sendRetargetingNudge,
+  buildResumeUrl,
+  buildUnsubscribeUrl,
 } from "@/lib/email";
 import { stripe } from "@/lib/stripe";
 import { getReservations, createInvoiceAndGetPdf } from "@/lib/apaleo";
@@ -88,6 +91,7 @@ export async function GET(request: NextRequest) {
     welcomeEmails: await runStep("welcomeEmails", handleWelcomeEmails),
     rentReminders: await runStep("rentReminders", handleRentReminders),
     postStayFeedback: await runStep("postStayFeedback", handlePostStayFeedback),
+    retargeting: await runStep("retargeting", handleBookingRetargeting),
     // SHORT stay (apaleo) — disabled until Matteo enables it
     // Enable by setting ENABLE_SHORT_STAY_EMAILS=true in env
     ...(process.env.ENABLE_SHORT_STAY_EMAILS === "true" ? {
@@ -404,11 +408,11 @@ async function handleRentReminders() {
 
   // Find all unpaid rent payments — past months AND current month if the
   // tenant has already moved in. The chargeRentPayment helper will skip
-  // anything not yet chargeable (today < moveIn).
+  // anything not yet chargeable (today < moveIn) or bank-transfer tenants.
   const unpaidRents = await prisma.rentPayment.findMany({
     where: {
       status: { in: ["PENDING", "FAILED"] },
-      tenant: { bookingId: { not: null } }, // Only frontend-booked tenants (skip legacy)
+      tenant: { paymentMethod: "SEPA" }, // Only auto-retry SEPA — bank-transfer is manual
     },
     include: {
       tenant: {
@@ -461,11 +465,14 @@ async function handleRentReminders() {
 
   // Re-fetch after retries (some may have moved to PROCESSING).
   // The follow-up reminder/Mahnung logic only applies to *past* months.
+  // Bank-transfer tenants are dunned manually by the admin from
+  // /admin/finance — skip them in the auto-emails (the templates are
+  // SEPA-specific wording).
   const stillUnpaid = await prisma.rentPayment.findMany({
     where: {
       status: { in: ["PENDING", "FAILED"] },
       month: { lt: now },
-      tenant: { bookingId: { not: null } },
+      tenant: { paymentMethod: "SEPA" },
     },
     include: {
       tenant: {
@@ -913,3 +920,94 @@ async function handleShortStayPostStayFeedback() {
   return { sent };
 }
 
+
+// ─── 11. Booking retargeting nudges ─────────────────────────
+/**
+ * Auto-nudge PENDING bookings that haven't converted. Two touches max:
+ *   - Day 5 (first nudge): "still interested?"
+ *   - Day 14 (second nudge): "your room is still waiting"
+ *
+ * Conditions for eligibility:
+ *   - status === "PENDING" (has NOT paid booking fee — that auto-disables
+ *     retargeting via the webhook)
+ *   - retargetingEligible === true
+ *   - retargetingSentCount < 2
+ *   - Either no previous send OR last send > 6 days ago (throttle)
+ *   - Guest is reachable (canSendEmail passes test-mode whitelist)
+ */
+async function handleBookingRetargeting() {
+  const now = new Date();
+  const day5 = new Date(now.getTime() - 5 * 86_400_000);
+  const day14 = new Date(now.getTime() - 14 * 86_400_000);
+  const sixDaysAgo = new Date(now.getTime() - 6 * 86_400_000);
+
+  const candidates = await prisma.booking.findMany({
+    where: {
+      status: "PENDING",
+      retargetingEligible: true,
+      retargetingSentCount: { lt: 2 },
+      createdAt: { lte: day5 }, // at least 5 days old
+      OR: [
+        { retargetingLastSentAt: null },
+        { retargetingLastSentAt: { lte: sixDaysAgo } },
+      ],
+    },
+    include: { location: true },
+  });
+
+  let sent = 0;
+  let skipped = 0;
+
+  for (const b of candidates) {
+    const daysSince = Math.floor(
+      (now.getTime() - new Date(b.createdAt).getTime()) / 86_400_000
+    );
+
+    // Second nudge only fires after 14 days
+    if (b.retargetingSentCount >= 1 && new Date(b.createdAt) > day14) {
+      skipped++;
+      continue;
+    }
+
+    if (!canSendEmail(b.email)) {
+      logSkipped(b.email, "retargeting_nudge");
+      skipped++;
+      continue;
+    }
+
+    try {
+      await sendRetargetingNudge(
+        {
+          firstName: b.firstName,
+          email: b.email,
+          locationName: b.location.name,
+          category: b.category,
+          moveInDate: b.moveInDate?.toISOString() ?? null,
+          bookingId: b.id,
+          daysSinceBooking: daysSince,
+          resumeUrl: buildResumeUrl(b.id),
+          unsubscribeUrl: buildUnsubscribeUrl(b.id),
+        },
+        { triggeredBy: "cron_daily" }
+      );
+
+      await prisma.booking.update({
+        where: { id: b.id },
+        data: {
+          retargetingLastSentAt: now,
+          retargetingSentCount: { increment: 1 },
+        },
+      });
+
+      sent++;
+    } catch (err) {
+      reportError(err, {
+        scope: "cron-daily",
+        tags: { step: "retargeting", bookingId: b.id },
+      });
+      skipped++;
+    }
+  }
+
+  return { sent, skipped, evaluated: candidates.length };
+}

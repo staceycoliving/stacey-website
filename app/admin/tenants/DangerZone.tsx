@@ -13,20 +13,29 @@ const DELETE_REASONS = [
 interface DangerZoneProps {
   tenantId: string;
   tenantName: string;
+  archivedAt: string | null;
 }
 
 /**
- * Permanent hard-delete for cleanup scenarios. Lives at the bottom of the
- * tenant folio in a clearly-marked danger area. NOT for normal business
- * workflows — those are Terminate (3-month notice) or Widerruf (refund).
+ * Two destructive actions, ordered from least to most permanent:
  *
- * Type-to-confirm is intentional friction: the user must type the tenant's
- * full name before the delete button enables. Reason is mandatory and goes
- * to the audit log.
+ *   1. Archive (soft-delete) — tenant stays in DB, filtered from default
+ *      lists, all historical data preserved. Recoverable with one click.
+ *      This is the default for "we don't actively work with this tenant
+ *      anymore" (alumni, test accounts, etc.).
+ *
+ *   2. Hard-delete — permanent cleanup. Only for DSGVO requests, real
+ *      duplicates, or test data. Cascade-deletes all rent payments,
+ *      notes, defects, documents, communications, etc. Type-to-confirm.
  */
-export default function DangerZone({ tenantId, tenantName }: DangerZoneProps) {
+export default function DangerZone({
+  tenantId,
+  tenantName,
+  archivedAt,
+}: DangerZoneProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [archiving, setArchiving] = useState(false);
   const [typedName, setTypedName] = useState("");
   const [reason, setReason] = useState(DELETE_REASONS[0]);
   const [reasonNote, setReasonNote] = useState("");
@@ -36,6 +45,22 @@ export default function DangerZone({ tenantId, tenantName }: DangerZoneProps) {
   const nameMatches = typedName.trim() === tenantName;
   const noteOk = !isOtherReason || reasonNote.trim().length > 0;
   const canDelete = nameMatches && noteOk && !working;
+
+  const isArchived = Boolean(archivedAt);
+
+  async function toggleArchive() {
+    setArchiving(true);
+    try {
+      const res = await fetch(
+        `/api/admin/tenants/${tenantId}/archive`,
+        { method: isArchived ? "DELETE" : "POST" }
+      );
+      if (res.ok) router.refresh();
+      else alert("Action failed");
+    } finally {
+      setArchiving(false);
+    }
+  }
 
   async function execute() {
     setWorking(true);
@@ -57,23 +82,48 @@ export default function DangerZone({ tenantId, tenantName }: DangerZoneProps) {
   }
 
   return (
-    <div className="bg-white rounded-[5px] border-2 border-red-200 overflow-hidden">
+    <div className="bg-white rounded-[5px] border-2 border-red-200 overflow-hidden print:hidden">
       <div className="px-4 py-3 bg-red-50 border-b border-red-200">
         <h3 className="text-sm font-bold text-red-700 flex items-center gap-2">
           <span>⚠️</span> Danger Zone
         </h3>
       </div>
+
+      {/* Archive / Unarchive */}
+      <div className="p-4 border-b border-lightgray">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-sm font-semibold text-black">
+              {isArchived ? "Unarchive tenant" : "Archive tenant"}
+            </p>
+            <p className="text-xs text-gray mt-1 max-w-md">
+              {isArchived
+                ? `Tenant was archived on ${new Date(archivedAt!).toLocaleDateString("de-DE")}. Restore to default view — nothing else changes.`
+                : "Hide from default tenant list without deleting any data. All history (payments, notes, documents) is preserved. Reversible."}
+            </p>
+          </div>
+          <button
+            onClick={toggleArchive}
+            disabled={archiving}
+            className="px-3 py-1.5 text-sm border border-lightgray rounded-[5px] hover:bg-background-alt whitespace-nowrap disabled:opacity-50"
+          >
+            {archiving ? "…" : isArchived ? "Unarchive" : "Archive"}
+          </button>
+        </div>
+      </div>
+
+      {/* Permanent delete */}
       <div className="p-4 space-y-3">
         <div className="text-sm">
           <p className="text-black">
             <strong>Permanent hard-delete</strong> — only for data cleanup.
           </p>
           <p className="text-xs text-gray mt-1">
-            For real tenants use{" "}
-            <strong>Terminate</strong> (3-month notice) oder{" "}
-            <strong>Widerruf</strong> (within 14 days). Hard-delete macht{" "}
-            <strong>keinen Stripe-Refund</strong>, keinen Vertragsabschluss,
-            und löscht alle Mietzahlungen + Notizen + Mängel cascade.
+            For real tenants use <strong>Terminate</strong> (3-month notice),{" "}
+            <strong>Widerruf</strong> (within 14 days), or <strong>Archive</strong>{" "}
+            (above). Hard-delete cascades: all rent payments, notes, defects,
+            documents, and communications are removed. <strong>No Stripe
+            refund.</strong>
           </p>
         </div>
         {!open ? (

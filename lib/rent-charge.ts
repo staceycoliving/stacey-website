@@ -319,13 +319,27 @@ export async function chargeRentPayment(
     rentPayment: RentPayment;
     tenant: Pick<
       Tenant,
-      "id" | "firstName" | "lastName" | "stripeCustomerId" | "sepaMandateId" | "moveIn"
+      | "id"
+      | "firstName"
+      | "lastName"
+      | "stripeCustomerId"
+      | "sepaMandateId"
+      | "moveIn"
+      | "paymentMethod"
     >;
     /** Optional metadata key for tracing the charge origin (cron / webhook / setup). */
     triggerLabel: string;
   }
-): Promise<"charged" | "skipped_no_sepa" | "skipped_too_early" | "failed"> {
+): Promise<
+  | "charged"
+  | "skipped_no_sepa"
+  | "skipped_too_early"
+  | "skipped_bank_transfer"
+  | "failed"
+> {
   const { rentPayment, tenant, triggerLabel } = args;
+  // Bank-transfer tenants are collected manually — never auto-charge.
+  if (tenant.paymentMethod === "BANK_TRANSFER") return "skipped_bank_transfer";
   if (!tenant.stripeCustomerId || !tenant.sepaMandateId) return "skipped_no_sepa";
   if (!isChargeableNow({
     rentPaymentMonth: rentPayment.month,

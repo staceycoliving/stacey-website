@@ -22,7 +22,7 @@ export async function PATCH(request: NextRequest) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { tenantId, action, iban } = await request.json();
+  const { tenantId, action, iban, transferredAt } = await request.json();
 
   if (!tenantId || !action) {
     return Response.json({ error: "tenantId and action required" }, { status: 400 });
@@ -185,11 +185,25 @@ export async function PATCH(request: NextRequest) {
 
   // ─── mark_transferred ─────────────────────────────────────
   if (action === "mark_transferred") {
+    // Optional: admin can back-date the transfer (e.g. bulk-marking past
+    // transfers, or today's batch with yesterday's bank-value date).
+    let returnedAt = new Date();
+    if (transferredAt) {
+      const parsed = new Date(transferredAt);
+      if (Number.isNaN(parsed.getTime())) {
+        return Response.json(
+          { error: "transferredAt invalid" },
+          { status: 400 }
+        );
+      }
+      returnedAt = parsed;
+    }
+
     const updated = await prisma.tenant.update({
       where: { id: tenantId },
       data: {
         depositStatus: "RETURNED",
-        depositReturnedAt: new Date(),
+        depositReturnedAt: returnedAt,
       },
     });
 
@@ -202,6 +216,7 @@ export async function PATCH(request: NextRequest) {
       metadata: {
         refundAmount: tenant.depositRefundAmount,
         iban: tenant.depositRefundIban,
+        transferredAt: returnedAt,
       },
     });
 

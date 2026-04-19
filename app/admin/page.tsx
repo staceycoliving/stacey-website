@@ -55,41 +55,136 @@ export default async function AdminDashboardPage() {
     }),
   ]);
 
-  // Batch 2: action items (4 small queries)
-  const [failedRents, depositTimeoutSoon, settlementsPending, missingSepa] =
-    await Promise.all([
-      prisma.rentPayment.findMany({
-        where: { status: "FAILED" },
-        include: { tenant: true },
-        orderBy: { month: "desc" },
-      }),
+  // Deposit-deadline: 6 weeks after move-out (product policy)
+  const depositDeadline = new Date(
+    todayStart.getTime() - 42 * 24 * 60 * 60 * 1000
+  );
 
-      prisma.booking.findMany({
-        where: {
-          status: "DEPOSIT_PENDING",
-          depositDeadline: { lte: in24h, gte: now },
-        },
-        orderBy: { depositDeadline: "asc" },
-      }),
+  // Batch 2: action items
+  const [
+    failedRents,
+    depositTimeoutSoon,
+    settlementsPending,
+    missingSepa,
+    depositOverdue,
+    bankTransfersDue,
+    followUpsTenant,
+    followUpsTeam,
+    retargetingLeads,
+    refundsOwed,
+  ] = await Promise.all([
+    prisma.rentPayment.findMany({
+      where: { status: "FAILED" },
+      include: { tenant: true },
+      orderBy: { month: "desc" },
+    }),
 
-      prisma.tenant.findMany({
-        where: {
-          moveOut: { lt: todayStart },
-          depositStatus: "RECEIVED",
-        },
-        include: { room: { include: { apartment: { include: { location: true } } } } },
-        orderBy: { moveOut: "asc" },
-      }),
+    prisma.booking.findMany({
+      where: {
+        status: "DEPOSIT_PENDING",
+        depositDeadline: { lte: in24h, gte: now },
+      },
+      orderBy: { depositDeadline: "asc" },
+    }),
 
-      prisma.tenant.findMany({
-        where: {
-          sepaMandateId: null,
-          moveIn: { gte: todayStart, lte: in7Days },
+    prisma.tenant.findMany({
+      where: {
+        moveOut: { lt: todayStart },
+        depositStatus: "RECEIVED",
+      },
+      include: { room: { include: { apartment: { include: { location: true } } } } },
+      orderBy: { moveOut: "asc" },
+    }),
+
+    // SEPA tenants approaching move-in with no mandate set up — bank-transfer
+    // legacy tenants don't need one, so gate on paymentMethod.
+    prisma.tenant.findMany({
+      where: {
+        paymentMethod: "SEPA",
+        sepaMandateId: null,
+        moveIn: { gte: todayStart, lte: in7Days },
+      },
+      include: { room: { include: { apartment: { include: { location: true } } } } },
+      orderBy: { moveIn: "asc" },
+    }),
+
+    // Deposits overdue: moved out > 6 weeks ago, still RECEIVED (not refunded)
+    prisma.tenant.findMany({
+      where: {
+        moveOut: { lt: depositDeadline },
+        depositStatus: "RECEIVED",
+      },
+      include: { room: { include: { apartment: { include: { location: true } } } } },
+      orderBy: { moveOut: "asc" },
+    }),
+
+    // Bank-transfer tenants with an open rent for the current month —
+    // admin needs to tick them off after bank statement arrives.
+    prisma.rentPayment.findMany({
+      where: {
+        month: { gte: currentMonthStart, lt: nextMonthStart },
+        status: { in: ["PENDING", "PARTIAL"] },
+        tenant: { paymentMethod: "BANK_TRANSFER" },
+      },
+      include: { tenant: true },
+      orderBy: { month: "asc" },
+    }),
+
+    // Follow-ups due today or earlier (from Folio notes)
+    prisma.note.findMany({
+      where: {
+        followUpAt: { lte: todayStart, gte: new Date(todayStart.getTime() - 30 * 24 * 60 * 60 * 1000) },
+      },
+      include: {
+        tenant: {
+          select: { id: true, firstName: true, lastName: true },
         },
-        include: { room: { include: { apartment: { include: { location: true } } } } },
-        orderBy: { moveIn: "asc" },
-      }),
-    ]);
+      },
+      orderBy: { followUpAt: "asc" },
+    }),
+
+    // Follow-ups on TeamNotes (bookings-attached notes)
+    prisma.teamNote.findMany({
+      where: {
+        followUpAt: { lte: todayStart, gte: new Date(todayStart.getTime() - 30 * 24 * 60 * 60 * 1000) },
+      },
+      orderBy: { followUpAt: "asc" },
+    }),
+
+    // Retargeting-eligible leads (PENDING ≥5d old, still eligible)
+    prisma.booking.findMany({
+      where: {
+        status: "PENDING",
+        retargetingEligible: true,
+        createdAt: { lte: new Date(todayStart.getTime() - 5 * 24 * 60 * 60 * 1000) },
+      },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        createdAt: true,
+        retargetingSentCount: true,
+      },
+      orderBy: { createdAt: "asc" },
+    }),
+
+    // Booking-fee refunds owed: we cancelled, fee was paid, not yet refunded
+    prisma.booking.findMany({
+      where: {
+        cancellationKind: "CANCELLED_BY_STACEY",
+        bookingFeePaidAt: { not: null },
+        bookingFeeRefundedAt: null,
+      },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        updatedAt: true,
+      },
+      orderBy: { updatedAt: "asc" },
+    }),
+  ]);
 
   // Batch 3: upcoming move-ins + recent audit + new bookings + defects + funnel + pinboard + email log
   const [
@@ -533,7 +628,55 @@ export default async function AdminDashboardPage() {
     dunningReminder1.length +
     dunningMahnung1.length +
     dunningMahnung2.length +
-    upcomingTransfers.length;
+    upcomingTransfers.length +
+    depositOverdue.length +
+    bankTransfersDue.length +
+    followUpsTenant.length +
+    followUpsTeam.length +
+    retargetingLeads.length +
+    refundsOwed.length;
+
+  // ─── Cash this month (actual money in, not expected) ──────────
+  // Rent paid where paidAt falls in current calendar month
+  const cashRentThisMonth = currentMonthRents.reduce(
+    (s, r) => s + 0, // placeholder — sum computed below using paidAt separately
+    0
+  );
+  // Use a distinct query against paidAt (can be different month than rent.month)
+  const cashThisMonthRows = await prisma.$queryRawUnsafe<
+    { cents: number }[]
+  >(
+    `SELECT COALESCE(SUM("paidAmount"), 0)::int AS cents
+     FROM "RentPayment"
+     WHERE "paidAt" >= $1 AND "paidAt" < $2`,
+    currentMonthStart,
+    nextMonthStart
+  );
+  const cashRentPaidThisMonth = cashThisMonthRows[0]?.cents ?? cashRentThisMonth;
+
+  const cashFeesThisMonth =
+    (
+      await prisma.booking.count({
+        where: {
+          bookingFeePaidAt: { gte: currentMonthStart, lt: nextMonthStart },
+        },
+      })
+    ) * 19_500;
+
+  const cashExtrasThisMonth = (
+    await prisma.extraCharge.findMany({
+      where: {
+        paidAt: { gte: currentMonthStart, lt: nextMonthStart },
+      },
+      select: { amount: true, type: true },
+    })
+  ).reduce(
+    (s, e) => s + (e.type === "DISCOUNT" ? -e.amount : e.amount),
+    0
+  );
+
+  const cashThisMonthTotal =
+    cashRentPaidThisMonth + cashFeesThisMonth + cashExtrasThisMonth;
 
   // Booking Fee = €195 per CLAUDE.md (non-refundable, separate Stripe charge)
   const BOOKING_FEE_CENTS = 19500;
@@ -721,6 +864,16 @@ export default async function AdminDashboardPage() {
               openCents: rentOpenCents,
               tenantsWithOpen: rentTenantsWithOpen,
             },
+            cashThisMonth: {
+              monthLabel: currentMonthStart.toLocaleDateString("de-DE", {
+                month: "long",
+                year: "numeric",
+              }),
+              totalCents: cashThisMonthTotal,
+              rentCents: cashRentPaidThisMonth,
+              feesCents: cashFeesThisMonth,
+              extrasCents: cashExtrasThisMonth,
+            },
             openRentAmount,
             totalActionItems,
           },
@@ -783,6 +936,63 @@ export default async function AdminDashboardPage() {
               tenantName: `${t.tenant.firstName} ${t.tenant.lastName}`,
               toRoom: t.toRoom.roomNumber,
               transferDate: t.transferDate,
+            })),
+            depositOverdue: depositOverdue.map((t) => ({
+              id: t.id,
+              name: `${t.firstName} ${t.lastName}`,
+              moveOut: t.moveOut,
+              depositAmount: t.depositAmount ?? 0,
+              room: t.room
+                ? `${t.room.apartment.location.name} · ${t.room.roomNumber}`
+                : "—",
+              daysOverdue: t.moveOut
+                ? Math.floor(
+                    (todayStart.getTime() - new Date(t.moveOut).getTime()) /
+                      86_400_000
+                  ) - 42
+                : 0,
+            })),
+            bankTransfersDue: bankTransfersDue.map((r) => ({
+              id: r.id,
+              tenantId: r.tenantId,
+              tenantName: `${r.tenant.firstName} ${r.tenant.lastName}`,
+              month: r.month,
+              amount: r.amount - r.paidAmount,
+            })),
+            followUps: [
+              ...followUpsTenant.map((n) => ({
+                id: `note-${n.id}`,
+                source: "tenant" as const,
+                tenantId: n.tenantId,
+                label: `${n.tenant.firstName} ${n.tenant.lastName}`,
+                content: n.content.slice(0, 120),
+                due: n.followUpAt,
+                tags: n.tags,
+              })),
+              ...followUpsTeam.map((n) => ({
+                id: `teamnote-${n.id}`,
+                source: "team" as const,
+                tenantId: n.tenantId,
+                bookingId: n.bookingId,
+                label: n.bookingId
+                  ? `Booking ${n.bookingId.slice(-8)}`
+                  : "Team note",
+                content: n.content.slice(0, 120),
+                due: n.followUpAt,
+                tags: n.tags,
+              })),
+            ],
+            retargetingLeads: retargetingLeads.map((b) => ({
+              id: b.id,
+              name: `${b.firstName} ${b.lastName}`,
+              email: b.email,
+              createdAt: b.createdAt,
+              sentCount: b.retargetingSentCount,
+            })),
+            refundsOwed: refundsOwed.map((b) => ({
+              id: b.id,
+              name: `${b.firstName} ${b.lastName}`,
+              cancelledAt: b.updatedAt,
             })),
           },
           schedule: {

@@ -1,4 +1,6 @@
-import { resend, FROM, layout, detailRow, detailTable, badge, categoryName, formatDate } from "./_shared";
+import { sendTrackedEmail, FROM, layout, detailRow, detailTable, badge, categoryName, formatDate, type SendMeta } from "./_shared";
+
+type Meta = Omit<SendMeta, "templateKey"> | undefined;
 
 interface ShortStayBooking {
   firstName: string;
@@ -16,7 +18,7 @@ interface ShortStayBooking {
   heroImageUrl?: string; // Location community photo URL
 }
 
-export async function sendShortStayConfirmation(booking: ShortStayBooking) {
+export async function sendShortStayConfirmation(booking: ShortStayBooking, meta?: Meta) {
   const heroSection = booking.heroImageUrl
     ? `<div style="position:relative;">
         <img src="${booking.heroImageUrl}" alt="STACEY ${booking.locationName}" style="width:100%;height:200px;object-fit:cover;display:block;">
@@ -55,10 +57,13 @@ export async function sendShortStayConfirmation(booking: ShortStayBooking) {
     </div>
   `);
 
-  return resend.emails.send({
-    from: FROM,
-    to: booking.email,
-    subject: `Your booking at STACEY ${booking.locationName} is confirmed`,
-    html,
-  });
+  return sendTrackedEmail(
+    {
+      from: FROM,
+      to: booking.email,
+      subject: `Your booking at STACEY ${booking.locationName} is confirmed`,
+      html,
+    },
+    { templateKey: "short_stay_confirmation", bookingId: booking.bookingId, ...meta }
+  );
 }

@@ -62,6 +62,13 @@ type Dashboard = {
       openCents: number;
       tenantsWithOpen: number;
     };
+    cashThisMonth: {
+      monthLabel: string;
+      totalCents: number;
+      rentCents: number;
+      feesCents: number;
+      extrasCents: number;
+    };
     openRentAmount: number;
     totalActionItems: number;
   };
@@ -131,6 +138,43 @@ type Dashboard = {
       tenantName: string;
       toRoom: string;
       transferDate: string;
+    }[];
+    depositOverdue: {
+      id: string;
+      name: string;
+      moveOut: string | null;
+      depositAmount: number;
+      room: string;
+      daysOverdue: number;
+    }[];
+    bankTransfersDue: {
+      id: string;
+      tenantId: string;
+      tenantName: string;
+      month: string;
+      amount: number;
+    }[];
+    followUps: {
+      id: string;
+      source: "tenant" | "team";
+      tenantId: string | null;
+      bookingId?: string | null;
+      label: string;
+      content: string;
+      due: string | null;
+      tags: string[];
+    }[];
+    retargetingLeads: {
+      id: string;
+      name: string;
+      email: string;
+      createdAt: string;
+      sentCount: number;
+    }[];
+    refundsOwed: {
+      id: string;
+      name: string;
+      cancelledAt: string | null;
     }[];
   };
   vacancyPipeline: {
@@ -346,10 +390,11 @@ export default function DashboardPage({ data }: { data: Dashboard }) {
         </p>
       </div>
 
-      {/* KPI Cards: 4 */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* KPI Cards: 5 */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <OccupancyCard snapshots={kpi.occupancy3Months} />
         <MonthlyRentCard rent={kpi.monthlyRent} />
+        <CashThisMonthCard cash={kpi.cashThisMonth} />
         <NewBookingsCard newBookings={newBookings} />
         <KpiCard
           icon={<ClipboardList className="w-4 h-4" />}
@@ -546,6 +591,98 @@ export default function DashboardPage({ data }: { data: Dashboard }) {
             else thisWeek.push(row);
           }
 
+          // Deposits overdue (>6 weeks past moveOut)
+          for (const t of actionItems.depositOverdue) {
+            today.push({
+              key: `depOverdue-${t.id}`,
+              type: "depositOverdue",
+              accent: "danger",
+              label: "Kautionsrückzahlung überfällig",
+              detail: `${t.name} · ${t.room} · ${t.daysOverdue}d über 6-Wochen-Frist · ${fmtEuro(t.depositAmount)}`,
+              hoverDetail: "Mieter ist vor mehr als 6 Wochen ausgezogen, Kaution noch nicht refunded.",
+              href: `/admin/deposits`,
+              sortKey: -t.daysOverdue,
+              tenantKey: `t-${t.id}`,
+              tenantName: t.name,
+            });
+          }
+
+          // Bank-transfer tenants — this-month rent pending
+          for (const r of actionItems.bankTransfersDue) {
+            thisWeek.push({
+              key: `bankRent-${r.id}`,
+              type: "bankTransferDue",
+              accent: "info",
+              label: "Überweisung prüfen",
+              detail: `${r.tenantName} · ${fmtMonth(r.month)} · ${fmtEuro(r.amount)}`,
+              hoverDetail: "Bank-Transfer Mieter. Bankauszug prüfen und manuell als bezahlt markieren.",
+              href: `/admin/tenants/${r.tenantId}?tab=payments`,
+              sortKey: 0,
+              tenantKey: `t-${r.tenantId}`,
+              tenantName: r.tenantName,
+            });
+          }
+
+          // Follow-ups (Notes / TeamNotes with followUpAt <= today)
+          for (const f of actionItems.followUps) {
+            const daysOld = f.due
+              ? Math.floor((nowTs - new Date(f.due).getTime()) / ONE_DAY)
+              : 0;
+            const row: Row = {
+              key: `followup-${f.id}`,
+              type: "followUp",
+              accent: daysOld > 3 ? "warn" : "info",
+              label: "Follow-up fällig",
+              detail: `${f.label} · ${f.content}${daysOld > 0 ? ` · ${daysOld}d overdue` : ""}`,
+              hoverDetail: f.tags.length
+                ? `Tags: ${f.tags.map((t) => "#" + t).join(", ")}`
+                : undefined,
+              href: f.tenantId
+                ? `/admin/tenants/${f.tenantId}?tab=timeline`
+                : "/admin/bookings",
+              sortKey: -daysOld,
+              tenantKey: f.tenantId ? `t-${f.tenantId}` : f.id,
+              tenantName: f.label,
+            };
+            if (daysOld > 0) today.push(row);
+            else thisWeek.push(row);
+          }
+
+          // Retargeting-eligible leads (≥5d old, PENDING)
+          for (const l of actionItems.retargetingLeads) {
+            const daysOld = Math.floor(
+              (nowTs - new Date(l.createdAt).getTime()) / ONE_DAY
+            );
+            thisWeek.push({
+              key: `retarget-${l.id}`,
+              type: "retargeting",
+              accent: "info",
+              label: "Retargeting-Lead",
+              detail: `${l.name} · ${daysOld}d alt${l.sentCount > 0 ? ` · ${l.sentCount} nudge${l.sentCount === 1 ? "" : "s"} sent` : ""}`,
+              hoverDetail: "Lead steckt in PENDING. Auto-Nudge läuft an Tag 5 + 14, oder manuell im Bookings-Folio.",
+              href: `/admin/bookings?status=PENDING&kpiFilter=retargeting`,
+              sortKey: -daysOld,
+              tenantKey: `b-${l.id}`,
+              tenantName: l.name,
+            });
+          }
+
+          // Booking-fee refunds owed (CANCELLED_BY_STACEY + fee paid + not yet refunded)
+          for (const r of actionItems.refundsOwed) {
+            today.push({
+              key: `refund-${r.id}`,
+              type: "refundOwed",
+              accent: "warn",
+              label: "Booking-Fee Refund fällig",
+              detail: `${r.name} · €195 an Gast zurück überweisen`,
+              hoverDetail: "Wir haben storniert, Fee wurde gezahlt, noch nicht refunded.",
+              href: `/admin/bookings?q=${encodeURIComponent(r.name)}`,
+              sortKey: 0,
+              tenantKey: `b-${r.id}`,
+              tenantName: r.name,
+            });
+          }
+
           // Filter by hidden types + sort by urgency
           const filterAndSort = (rs: Row[]) =>
             rs
@@ -707,7 +844,12 @@ type ActionTypeKey =
   | "reminder1"
   | "failedRent"
   | "missingSepa"
-  | "settlement";
+  | "settlement"
+  | "depositOverdue"
+  | "bankTransferDue"
+  | "followUp"
+  | "retargeting"
+  | "refundOwed";
 
 const ACTION_TYPE_META: Record<
   ActionTypeKey,
@@ -747,6 +889,31 @@ const ACTION_TYPE_META: Record<
     label: "Settlement pending",
     icon: PiggyBank,
     accent: "bg-blue-100 text-blue-700",
+  },
+  depositOverdue: {
+    label: "Deposit overdue (>6w)",
+    icon: AlertOctagon,
+    accent: "bg-red-100 text-red-700",
+  },
+  bankTransferDue: {
+    label: "Bank transfer to mark paid",
+    icon: CreditCard,
+    accent: "bg-gray-100 text-gray-700",
+  },
+  followUp: {
+    label: "Follow-up due",
+    icon: BellRing,
+    accent: "bg-blue-100 text-blue-700",
+  },
+  retargeting: {
+    label: "Retargeting lead",
+    icon: MailWarning,
+    accent: "bg-pink-100 text-pink-700",
+  },
+  refundOwed: {
+    label: "Booking fee refund owed",
+    icon: AlertOctagon,
+    accent: "bg-orange-100 text-orange-700",
   },
 };
 
@@ -1893,6 +2060,45 @@ function MonthlyRentCard({
             {rent.tenantsWithOpen} tenant
             {rent.tenantsWithOpen === 1 ? "" : "s"}
           </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** Actual cash in this calendar month: rent paid + booking fees + extras.
+ *  Complementary to MonthlyRentCard which shows expected-for-the-rent-month —
+ *  a tenant paying January rent in March shows up here in March, there in
+ *  January. */
+function CashThisMonthCard({
+  cash,
+}: {
+  cash: Dashboard["kpi"]["cashThisMonth"];
+}) {
+  return (
+    <div className="bg-white rounded-[5px] border border-lightgray p-4">
+      <div className="flex items-center gap-2 text-xs text-gray uppercase tracking-wide">
+        <Wallet className="w-4 h-4" />
+        Cash · {cash.monthLabel}
+      </div>
+      <div className="mt-2 flex items-baseline gap-1.5 flex-wrap">
+        <span className="text-2xl font-bold text-black">
+          {fmtEuro(cash.totalCents)}
+        </span>
+      </div>
+      <div className="text-xs text-gray mt-1.5 space-y-0.5">
+        <div>Rent: {fmtEuro(cash.rentCents)}</div>
+        {cash.feesCents > 0 && (
+          <div>Booking fees: {fmtEuro(cash.feesCents)}</div>
+        )}
+        {cash.extrasCents !== 0 && (
+          <div>
+            Adjustments:{" "}
+            <span className={cash.extrasCents > 0 ? "" : "text-green-700"}>
+              {cash.extrasCents > 0 ? "+" : ""}
+              {fmtEuro(cash.extrasCents)}
+            </span>
+          </div>
         )}
       </div>
     </div>

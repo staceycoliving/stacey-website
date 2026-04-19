@@ -1,4 +1,6 @@
-import { resend, FROM, layout, ctaButton, detailRow, detailTable, formatDate } from "./_shared";
+import { sendTrackedEmail, FROM, layout, ctaButton, detailRow, detailTable, formatDate, type SendMeta } from "./_shared";
+
+type Meta = Omit<SendMeta, "templateKey"> | undefined;
 import { env } from "@/lib/env";
 
 interface PostStayEmailData {
@@ -14,7 +16,7 @@ interface PostStayEmailData {
   invoiceNumber?: string;
 }
 
-export async function sendPostStayFeedback(data: PostStayEmailData) {
+export async function sendPostStayFeedback(data: PostStayEmailData, meta?: Meta) {
   const stayLabel = data.stayType === "SHORT" ? "stay" : "time";
 
   const feedbackUrl = `${env.NEXT_PUBLIC_BASE_URL}/feedback?` + new URLSearchParams({
@@ -71,13 +73,17 @@ export async function sendPostStayFeedback(data: PostStayEmailData) {
     </p>
   `);
 
-  return resend.emails.send({
-    from: FROM,
-    to: data.email,
-    subject: `Thanks for staying at STACEY ${data.locationName}`,
-    html,
-    attachments: data.invoicePdf && data.invoiceNumber
-      ? [{ filename: `invoice_${data.invoiceNumber}.pdf`, content: data.invoicePdf }]
-      : undefined,
-  });
+  return sendTrackedEmail(
+    {
+      from: FROM,
+      to: data.email,
+      subject: `Thanks for staying at STACEY ${data.locationName}`,
+      html,
+      attachments:
+        data.invoicePdf && data.invoiceNumber
+          ? [{ filename: `invoice_${data.invoiceNumber}.pdf`, content: data.invoicePdf }]
+          : undefined,
+    },
+    { templateKey: "post_stay_feedback", ...meta }
+  );
 }

@@ -1,4 +1,6 @@
-import { resend, FROM, layout, detailRow, detailTable, ctaButton, badge, formatDate } from "./_shared";
+import { sendTrackedEmail, FROM, layout, detailRow, detailTable, ctaButton, badge, formatDate, type SendMeta } from "./_shared";
+
+type Meta = Omit<SendMeta, "templateKey"> | undefined;
 
 // ─── Payment Setup Link (manual admin send) ───────────────────
 
@@ -9,7 +11,7 @@ interface PaymentSetupEmail {
   setupUrl: string;
 }
 
-export async function sendPaymentSetupLink(data: PaymentSetupEmail) {
+export async function sendPaymentSetupLink(data: PaymentSetupEmail, meta?: Meta) {
   const html = layout(`
     <h2 style="margin:0 0 8px;font-size:22px;font-weight:700;">Set up your monthly rent payment</h2>
     <p style="margin:0 0 24px;color:#555;font-size:15px;line-height:1.5;">
@@ -23,12 +25,15 @@ export async function sendPaymentSetupLink(data: PaymentSetupEmail) {
     </p>
   `);
 
-  return resend.emails.send({
-    from: FROM,
-    to: data.email,
-    subject: `Set up your monthly rent payment — STACEY ${data.locationName}`,
-    html,
-  });
+  return sendTrackedEmail(
+    {
+      from: FROM,
+      to: data.email,
+      subject: `Set up your monthly rent payment — STACEY ${data.locationName}`,
+      html,
+    },
+    { templateKey: "payment_setup", ...meta }
+  );
 }
 
 // ─── Payment Setup Confirmation ─────────────────────────────
@@ -41,7 +46,7 @@ interface PaymentSetupConfirmationEmail {
   paymentMethodLabel: string;
 }
 
-export async function sendPaymentSetupConfirmation(data: PaymentSetupConfirmationEmail) {
+export async function sendPaymentSetupConfirmation(data: PaymentSetupConfirmationEmail, meta?: Meta) {
   const rentEur = (data.monthlyRent / 100).toFixed(2);
 
   const html = layout(`
@@ -61,12 +66,15 @@ export async function sendPaymentSetupConfirmation(data: PaymentSetupConfirmatio
     </p>
   `);
 
-  return resend.emails.send({
-    from: FROM,
-    to: data.email,
-    subject: `Payment method confirmed — STACEY ${data.locationName}`,
-    html,
-  });
+  return sendTrackedEmail(
+    {
+      from: FROM,
+      to: data.email,
+      subject: `Payment method confirmed — STACEY ${data.locationName}`,
+      html,
+    },
+    { templateKey: "payment_setup_confirmation", ...meta }
+  );
 }
 
 // ─── Payment Setup Reminder (cron: day 1, 3, 7, 14) ────────
@@ -79,7 +87,7 @@ interface PaymentSetupReminderEmail {
   reminderNumber: number;
 }
 
-export async function sendPaymentSetupReminder(data: PaymentSetupReminderEmail) {
+export async function sendPaymentSetupReminder(data: PaymentSetupReminderEmail, meta?: Meta) {
   const isUrgent = data.reminderNumber >= 3;
 
   const html = layout(`
@@ -92,12 +100,15 @@ export async function sendPaymentSetupReminder(data: PaymentSetupReminderEmail) 
     ${isUrgent ? `<p style="font-size:13px;color:#c00;font-weight:600;margin-top:16px;">This is reminder ${data.reminderNumber} of 3. Please complete the setup as soon as possible.</p>` : ""}
   `);
 
-  return resend.emails.send({
-    from: FROM,
-    to: data.email,
-    subject: `${isUrgent ? "Reminder: " : ""}Set up your monthly rent payment — STACEY ${data.locationName}`,
-    html,
-  });
+  return sendTrackedEmail(
+    {
+      from: FROM,
+      to: data.email,
+      subject: `${isUrgent ? "Reminder: " : ""}Set up your monthly rent payment — STACEY ${data.locationName}`,
+      html,
+    },
+    { templateKey: "payment_setup_reminder", ...meta }
+  );
 }
 
 // ─── Payment Final Warning (3 days before move-in, no SEPA) ─
@@ -110,7 +121,7 @@ interface PaymentFinalWarningEmail {
   setupUrl: string;
 }
 
-export async function sendPaymentFinalWarning(data: PaymentFinalWarningEmail) {
+export async function sendPaymentFinalWarning(data: PaymentFinalWarningEmail, meta?: Meta) {
   const html = layout(`
     ${badge("Action required", "red")}
     <h2 style="margin:0 0 8px;font-size:22px;font-weight:700;">Set up payment before your move-in</h2>
@@ -128,10 +139,13 @@ export async function sendPaymentFinalWarning(data: PaymentFinalWarningEmail) {
     </p>
   `, { accent: "red" });
 
-  return resend.emails.send({
-    from: FROM,
-    to: data.email,
-    subject: `Action required — Set up payment for STACEY ${data.locationName}`,
-    html,
-  });
+  return sendTrackedEmail(
+    {
+      from: FROM,
+      to: data.email,
+      subject: `Action required — Set up payment for STACEY ${data.locationName}`,
+      html,
+    },
+    { templateKey: "payment_final_warning", ...meta }
+  );
 }

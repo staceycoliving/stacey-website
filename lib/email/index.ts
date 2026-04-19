@@ -39,3 +39,9 @@ export { sendPreArrival } from "./pre-arrival";
 export { sendCheckoutReminder } from "./checkout-reminder";
 
 export { sendInvoice } from "./invoice";
+
+export {
+  sendRetargetingNudge,
+  buildUnsubscribeUrl,
+  buildResumeUrl,
+} from "./retargeting";

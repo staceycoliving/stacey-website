@@ -1,4 +1,6 @@
-import { resend, FROM, layout, detailRow, detailTable, infoBox, formatDate } from "./_shared";
+import { sendTrackedEmail, FROM, layout, detailRow, detailTable, infoBox, formatDate, type SendMeta } from "./_shared";
+
+type Meta = Omit<SendMeta, "templateKey"> | undefined;
 import { generateWohnungsgeberbestaetigung } from "@/lib/wohnungsgeberbestaetigung";
 import { uploadLongstayDocument } from "@/lib/google-drive";
 
@@ -15,7 +17,7 @@ interface WelcomeEmailData {
   secondPerson?: { firstName: string; lastName: string };
 }
 
-export async function sendWelcomeEmail(data: WelcomeEmailData) {
+export async function sendWelcomeEmail(data: WelcomeEmailData, meta?: Meta) {
   // Generate Wohnungsgeberbestätigung PDF
   let wohnungsgeberPdf: Buffer | null = null;
   try {
@@ -95,13 +97,16 @@ export async function sendWelcomeEmail(data: WelcomeEmailData) {
     </p>
   `);
 
-  return resend.emails.send({
-    from: FROM,
-    to: data.email,
-    subject: `Welcome to STACEY ${data.locationName}!`,
-    html,
-    attachments: wohnungsgeberPdf
-      ? [{ filename: pdfFilename, content: wohnungsgeberPdf }]
-      : undefined,
-  });
+  return sendTrackedEmail(
+    {
+      from: FROM,
+      to: data.email,
+      subject: `Welcome to STACEY ${data.locationName}!`,
+      html,
+      attachments: wohnungsgeberPdf
+        ? [{ filename: pdfFilename, content: wohnungsgeberPdf }]
+        : undefined,
+    },
+    { templateKey: "welcome", ...meta }
+  );
 }

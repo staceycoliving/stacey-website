@@ -5,28 +5,35 @@ import { audit } from "@/lib/audit";
 import {
   sendWelcomeEmail,
   sendPaymentSetupLink,
+  sendPaymentSetupReminder,
   sendRentReminder,
   sendMahnung1,
   sendMahnung2,
   sendDepositReturnNotification,
+  sendTerminationNotice,
+  sendPostStayFeedback,
 } from "@/lib/email";
 
 /**
  * POST /api/admin/emails/resend
  * Body: { templateKey, tenantId }
  *
- * Manual re-send of an automated email. First MVP supports the 7 most
- * common templates — others can be added as the need arises. Each handler
- * pulls fresh data from the DB so the email reflects current state
- * (useful when e.g. a tenant's room changed between the original send
- * and the resend).
+ * Manual re-send of an automated email. Each handler pulls fresh data
+ * from the DB so the email reflects current state. Logging to SentEmail
+ * now happens inside the email wrapper (lib/email/_shared.ts), so we
+ * only need to pass meta.
  */
 export async function POST(request: NextRequest) {
   if (!(await isAuthenticated())) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { templateKey, tenantId } = await request.json();
+  const body = await request.json();
+  const { templateKey, tenantId } = body;
+  // Optional template-specific extras (used by termination):
+  const terminationReason: string | undefined = body.terminationReason;
+  const terminationMoveOutDate: string | undefined = body.terminationMoveOutDate;
+
   if (!templateKey || !tenantId) {
     return Response.json(
       { error: "templateKey and tenantId required" },
@@ -48,9 +55,8 @@ export async function POST(request: NextRequest) {
     return Response.json({ error: "Tenant not found" }, { status: 404 });
   }
   const locationName = tenant.room?.apartment.location.name ?? "STACEY";
+  const meta = { tenantId, triggeredBy: "manual_resend" };
 
-  let logStatus: "sent" | "failed" = "sent";
-  let logError: string | null = null;
   try {
     switch (templateKey) {
       case "welcome":
@@ -60,17 +66,20 @@ export async function POST(request: NextRequest) {
             { status: 400 }
           );
         }
-        await sendWelcomeEmail({
-          firstName: tenant.firstName,
-          lastName: tenant.lastName,
-          email: tenant.email,
-          locationName,
-          locationAddress: tenant.room.apartment.location.address,
-          locationSlug: tenant.room.apartment.location.slug,
-          roomNumber: tenant.room.roomNumber,
-          moveInDate: tenant.moveIn.toISOString(),
-          floor: tenant.room.floorDescription ?? undefined,
-        });
+        await sendWelcomeEmail(
+          {
+            firstName: tenant.firstName,
+            lastName: tenant.lastName,
+            email: tenant.email,
+            locationName,
+            locationAddress: tenant.room.apartment.location.address,
+            locationSlug: tenant.room.apartment.location.slug,
+            roomNumber: tenant.room.roomNumber,
+            moveInDate: tenant.moveIn.toISOString(),
+            floor: tenant.room.floorDescription ?? undefined,
+          },
+          meta
+        );
         break;
 
       case "payment_setup":
@@ -80,15 +89,15 @@ export async function POST(request: NextRequest) {
             { status: 400 }
           );
         }
-        // The setup URL normally comes from a Stripe Checkout Session.
-        // For a manual resend we point to a stable admin-triggered URL
-        // that the tenant route can regenerate on click.
-        await sendPaymentSetupLink({
-          firstName: tenant.firstName,
-          email: tenant.email,
-          locationName,
-          setupUrl: `${process.env.NEXT_PUBLIC_BASE_URL ?? "https://stacey.de"}/payment-setup?tenant=${tenant.id}`,
-        });
+        await sendPaymentSetupLink(
+          {
+            firstName: tenant.firstName,
+            email: tenant.email,
+            locationName,
+            setupUrl: `${process.env.NEXT_PUBLIC_BASE_URL ?? "https://stacey.de"}/payment-setup?tenant=${tenant.id}`,
+          },
+          meta
+        );
         break;
 
       case "rent_reminder": {
@@ -104,14 +113,17 @@ export async function POST(request: NextRequest) {
           amount: r.amount - r.paidAmount,
         }));
         const totalAmount = months.reduce((s, m) => s + m.amount, 0);
-        await sendRentReminder({
-          firstName: tenant.firstName,
-          email: tenant.email,
-          locationName,
-          months,
-          totalAmount,
-          paymentUpdateUrl: `${process.env.NEXT_PUBLIC_BASE_URL ?? "https://stacey.de"}/payment-setup?tenant=${tenant.id}`,
-        });
+        await sendRentReminder(
+          {
+            firstName: tenant.firstName,
+            email: tenant.email,
+            locationName,
+            months,
+            totalAmount,
+            paymentUpdateUrl: `${process.env.NEXT_PUBLIC_BASE_URL ?? "https://stacey.de"}/payment-setup?tenant=${tenant.id}`,
+          },
+          meta
+        );
         break;
       }
 
@@ -130,15 +142,18 @@ export async function POST(request: NextRequest) {
         }));
         const totalAmount = months.reduce((s, m) => s + m.amount, 0);
         const sender = templateKey === "mahnung1" ? sendMahnung1 : sendMahnung2;
-        await sender({
-          firstName: tenant.firstName,
-          lastName: tenant.lastName,
-          email: tenant.email,
-          locationName,
-          months,
-          totalAmount,
-          paymentUpdateUrl: `${process.env.NEXT_PUBLIC_BASE_URL ?? "https://stacey.de"}/payment-setup?tenant=${tenant.id}`,
-        });
+        await sender(
+          {
+            firstName: tenant.firstName,
+            lastName: tenant.lastName,
+            email: tenant.email,
+            locationName,
+            months,
+            totalAmount,
+            paymentUpdateUrl: `${process.env.NEXT_PUBLIC_BASE_URL ?? "https://stacey.de"}/payment-setup?tenant=${tenant.id}`,
+          },
+          meta
+        );
         break;
       }
 
@@ -149,19 +164,84 @@ export async function POST(request: NextRequest) {
             { status: 400 }
           );
         }
-        await sendDepositReturnNotification({
-          firstName: tenant.firstName,
-          email: tenant.email,
-          locationName,
-          depositAmount: tenant.depositAmount ?? 0,
-          damagesAmount: tenant.damagesAmount ?? 0,
-          arrearsAmount: tenant.arrearsAmount ?? 0,
-          overpaymentAmount: tenant.rentOverpaymentAmount ?? 0,
-          refundAmount: tenant.depositRefundAmount ?? 0,
-          iban: tenant.depositRefundIban,
-        });
+        await sendDepositReturnNotification(
+          {
+            firstName: tenant.firstName,
+            email: tenant.email,
+            locationName,
+            depositAmount: tenant.depositAmount ?? 0,
+            damagesAmount: tenant.damagesAmount ?? 0,
+            arrearsAmount: tenant.arrearsAmount ?? 0,
+            overpaymentAmount: tenant.rentOverpaymentAmount ?? 0,
+            refundAmount: tenant.depositRefundAmount ?? 0,
+            iban: tenant.depositRefundIban,
+          },
+          meta
+        );
         break;
       }
+
+      case "payment_setup_reminder":
+        if (!tenant.stripeCustomerId) {
+          return Response.json(
+            { error: "Tenant has no Stripe customer — payment setup link needs Stripe account first" },
+            { status: 400 }
+          );
+        }
+        await sendPaymentSetupReminder(
+          {
+            firstName: tenant.firstName,
+            email: tenant.email,
+            locationName,
+            setupUrl: `${process.env.NEXT_PUBLIC_BASE_URL ?? "https://stacey.de"}/payment-setup?tenant=${tenant.id}`,
+            reminderNumber: 1, // manual sends are always treated as a first-pass nudge
+          },
+          meta
+        );
+        break;
+
+      case "termination": {
+        if (!terminationReason || !terminationMoveOutDate) {
+          return Response.json(
+            {
+              error:
+                "terminationReason and terminationMoveOutDate are required for the termination template",
+            },
+            { status: 400 }
+          );
+        }
+        await sendTerminationNotice(
+          {
+            firstName: tenant.firstName,
+            lastName: tenant.lastName,
+            email: tenant.email,
+            locationName,
+            moveOutDate: terminationMoveOutDate,
+            reason: terminationReason,
+          },
+          meta
+        );
+        break;
+      }
+
+      case "post_stay_feedback":
+        if (!tenant.room) {
+          return Response.json(
+            { error: "Tenant has no room assigned — post-stay feedback needs a location" },
+            { status: 400 }
+          );
+        }
+        await sendPostStayFeedback(
+          {
+            firstName: tenant.firstName,
+            email: tenant.email,
+            locationName,
+            locationSlug: tenant.room.apartment.location.slug,
+            stayType: "LONG",
+          },
+          meta
+        );
+        break;
 
       default:
         return Response.json(
@@ -171,36 +251,12 @@ export async function POST(request: NextRequest) {
     }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    logStatus = "failed";
-    logError = msg;
-    await prisma.sentEmail.create({
-      data: {
-        templateKey,
-        recipient: tenant.email,
-        entityType: "tenant",
-        entityId: tenantId,
-        status: logStatus,
-        error: logError,
-        triggeredBy: "manual_resend",
-      },
-    });
+    // Wrapper already logged the failure to SentEmail.
     return Response.json(
       { error: `Email send failed: ${msg}` },
       { status: 500 }
     );
   }
-
-  // Success path — log and audit
-  await prisma.sentEmail.create({
-    data: {
-      templateKey,
-      recipient: tenant.email,
-      entityType: "tenant",
-      entityId: tenantId,
-      status: logStatus,
-      triggeredBy: "manual_resend",
-    },
-  });
 
   await audit(request, {
     module: "email",

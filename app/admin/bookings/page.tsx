@@ -57,6 +57,52 @@ export default async function AdminBookingsPage() {
     (notesByBooking[n.bookingId] ??= []).push(n);
   }
 
+  // ── Emails grouped by bookingId (for detail-panel Email-history) ──
+  const bookingIds = bookings.map((b) => b.id);
+  const bookingEmails = bookingIds.length
+    ? await prisma.sentEmail.findMany({
+        where: {
+          entityType: "booking",
+          entityId: { in: bookingIds },
+        },
+        orderBy: { sentAt: "desc" },
+      })
+    : [];
+  const emailsByBooking: Record<string, typeof bookingEmails> = {};
+  for (const e of bookingEmails) {
+    if (!e.entityId) continue;
+    (emailsByBooking[e.entityId] ??= []).push(e);
+  }
+
+  // ── Audit events grouped by bookingId ──
+  const bookingAudit = bookingIds.length
+    ? await prisma.auditLog.findMany({
+        where: {
+          entityType: "booking",
+          entityId: { in: bookingIds },
+        },
+        orderBy: { at: "desc" },
+        take: 500,
+      })
+    : [];
+  const auditByBooking: Record<string, typeof bookingAudit> = {};
+  for (const a of bookingAudit) {
+    if (!a.entityId) continue;
+    (auditByBooking[a.entityId] ??= []).push(a);
+  }
+
+  // ── Duplicate detection: emails that appear more than once in the
+  //    visible bookings window, so the UI can flag them. ──
+  const emailCounts = new Map<string, number>();
+  for (const b of bookings) {
+    const k = b.email.toLowerCase().trim();
+    emailCounts.set(k, (emailCounts.get(k) ?? 0) + 1);
+  }
+  const duplicateEmails: Record<string, number> = {};
+  for (const [email, n] of emailCounts) {
+    if (n > 1) duplicateEmails[email] = n;
+  }
+
   // KPIs are computed on the server to keep the client component pure
   // (React Compiler in Next.js 16 rejects impure calls like Date.now() in
   // useMemo). Date.now() here is fine — this is a Server Component.
@@ -95,6 +141,9 @@ export default async function AdminBookingsPage() {
         b.status === "PENDING" &&
         nowMs - new Date(b.createdAt).getTime() > 14 * day
     ).length,
+    retargetingEligible: bookings.filter(
+      (b) => b.status === "PENDING" && b.retargetingEligible
+    ).length,
     // Data-integrity check: CONFIRMED means deposit paid → a Tenant row
     // should have been created by the webhook. If it's null, something
     // went wrong and we need to investigate.
@@ -109,6 +158,9 @@ export default async function AdminBookingsPage() {
       locations={JSON.parse(JSON.stringify(locations))}
       kpis={kpis}
       notesByBooking={JSON.parse(JSON.stringify(notesByBooking))}
+      emailsByBooking={JSON.parse(JSON.stringify(emailsByBooking))}
+      auditByBooking={JSON.parse(JSON.stringify(auditByBooking))}
+      duplicateEmails={duplicateEmails}
     />
   );
 }

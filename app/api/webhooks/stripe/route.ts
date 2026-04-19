@@ -215,7 +215,9 @@ async function handleBookingFeePaid(bookingId: string, sessionId: string) {
   const deadline = new Date();
   deadline.setHours(deadline.getHours() + DEPOSIT_DEADLINE_HOURS);
 
-  // Update booking: PAID → DEPOSIT_PENDING
+  // Update booking: PAID → DEPOSIT_PENDING.
+  // Auto-disable retargeting — booking fee paid = guest is engaged, stop
+  // nudging them (would be embarrassing to keep asking "still interested?").
   await prisma.booking.update({
     where: { id: bookingId },
     data: {
@@ -224,6 +226,7 @@ async function handleBookingFeePaid(bookingId: string, sessionId: string) {
       depositPaymentLinkId: depositSession.id,
       depositPaymentLinkUrl: depositSession.url,
       depositDeadline: deadline,
+      retargetingEligible: false,
     },
   });
 
@@ -745,6 +748,7 @@ async function handlePaymentSetupCompleted(tenantId: string, session: any) {
         stripeCustomerId: true,
         sepaMandateId: true,
         moveIn: true,
+        paymentMethod: true,
       },
     });
     if (!refreshedTenant) return;

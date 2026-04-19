@@ -1,4 +1,6 @@
-import { resend, FROM, layout, detailRow, formatDate } from "./_shared";
+import { sendTrackedEmail, FROM, layout, detailRow, formatDate, type SendMeta } from "./_shared";
+
+type Meta = Omit<SendMeta, "templateKey"> | undefined;
 
 interface TerminationData {
   firstName: string;
@@ -9,7 +11,7 @@ interface TerminationData {
   reason: string;
 }
 
-export async function sendTerminationNotice(data: TerminationData) {
+export async function sendTerminationNotice(data: TerminationData, meta?: Meta) {
   const html = layout(`
     <h2 style="margin:0 0 8px;font-size:20px;">Termination notice</h2>
     <p style="margin:0 0 24px;color:#555;font-size:15px;">
@@ -31,10 +33,13 @@ export async function sendTerminationNotice(data: TerminationData) {
     </p>
   `);
 
-  return resend.emails.send({
-    from: FROM,
-    to: data.email,
-    subject: `Termination notice — STACEY ${data.locationName}`,
-    html,
-  });
+  return sendTrackedEmail(
+    {
+      from: FROM,
+      to: data.email,
+      subject: `Termination notice — STACEY ${data.locationName}`,
+      html,
+    },
+    { templateKey: "termination", ...meta }
+  );
 }

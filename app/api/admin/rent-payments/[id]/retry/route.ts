@@ -36,6 +36,19 @@ export async function POST(
       { status: 409 }
     );
   }
+  // Bank-transfer tenants can't be auto-retried — admin marks them paid
+  // after seeing the bank statement.
+  if (rent.tenant.paymentMethod === "BANK_TRANSFER") {
+    return Response.json(
+      {
+        ok: false,
+        result: "skipped_bank_transfer",
+        message:
+          "Mieter zahlt per Überweisung — nach Zahlungseingang manuell auf Paid setzen.",
+      },
+      { status: 400 }
+    );
+  }
 
   // Flip back to PENDING so chargeRentPayment doesn't think it's in flight.
   if (rent.status !== "PENDING") {

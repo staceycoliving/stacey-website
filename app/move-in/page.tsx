@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState, useRef, useCallback } from "react";
+import { Suspense, useState, useRef, useCallback, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -47,6 +47,50 @@ export default function MoveInPage() {
 // ─── The flow ───
 function MoveInFlow() {
   const searchParams = useSearchParams();
+
+  // ─── Lead source capture (UTM + referrer) ───
+  // Read once on mount and stash in localStorage so it survives reloads /
+  // step-back navigation during the booking flow. Whatever is in
+  // localStorage when the booking POST fires gets sent along.
+  const leadSourceRef = useRef<{
+    source: string | null;
+    medium: string | null;
+    campaign: string | null;
+    referrer: string | null;
+  }>({ source: null, medium: null, campaign: null, referrer: null });
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    // Already captured earlier in this session? Re-use.
+    try {
+      const stored = window.localStorage.getItem("stacey_lead_source");
+      if (stored) {
+        leadSourceRef.current = JSON.parse(stored);
+        return;
+      }
+    } catch {
+      /* ignore corrupt storage */
+    }
+
+    const url = new URL(window.location.href);
+    const params = url.searchParams;
+    const source = params.get("utm_source");
+    const medium = params.get("utm_medium");
+    const campaign = params.get("utm_campaign");
+    const referrerRaw = document.referrer || "";
+    // Ignore referrer if it's our own domain (not useful)
+    const referrer =
+      referrerRaw && !referrerRaw.startsWith(window.location.origin)
+        ? referrerRaw
+        : null;
+    const captured = { source, medium, campaign, referrer };
+    leadSourceRef.current = captured;
+    try {
+      window.localStorage.setItem("stacey_lead_source", JSON.stringify(captured));
+    } catch {
+      /* ignore quota/private-mode */
+    }
+  }, []);
 
   // ─── Intro state (progressive fields) ───
   const [stayType, setStayType] = useState<StayType | null>(null);
@@ -348,6 +392,11 @@ function MoveInFlow() {
             country,
             moveInReason,
             message,
+            // Lead-source tracking — captured on page load from URL + referrer
+            leadSource: leadSourceRef.current.source,
+            leadMedium: leadSourceRef.current.medium,
+            leadCampaign: leadSourceRef.current.campaign,
+            leadReferrer: leadSourceRef.current.referrer,
           }),
         });
         const bookingBody = await bookingRes.json();

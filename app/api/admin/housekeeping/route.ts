@@ -4,10 +4,12 @@ import { prisma } from "@/lib/db";
 import type {
   CleaningTaskStatus,
   CleaningTaskType,
+  InspectionResult,
 } from "@/lib/generated/prisma/client";
 
 const VALID_STATUSES: CleaningTaskStatus[] = ["OPEN", "IN_PROGRESS", "DONE"];
 const VALID_TYPES: CleaningTaskType[] = ["MOVE_IN", "MOVE_OUT"];
+const VALID_INSPECTIONS: InspectionResult[] = ["CLEAN", "ISSUE"];
 
 /**
  * POST /api/admin/housekeeping
@@ -54,6 +56,20 @@ export async function POST(request: NextRequest) {
   }
   if (body.notes !== undefined) {
     updateData.notes = body.notes ? String(body.notes).trim() : null;
+  }
+  if (body.inspectionResult !== undefined) {
+    if (body.inspectionResult === null) {
+      updateData.inspectionResult = null;
+    } else if (!VALID_INSPECTIONS.includes(body.inspectionResult)) {
+      return Response.json({ error: "Invalid inspectionResult" }, { status: 400 });
+    } else {
+      updateData.inspectionResult = body.inspectionResult;
+    }
+  }
+  if (body.inspectionNotes !== undefined) {
+    updateData.inspectionNotes = body.inspectionNotes
+      ? String(body.inspectionNotes).trim()
+      : null;
   }
 
   const task = await prisma.cleaningTask.upsert({

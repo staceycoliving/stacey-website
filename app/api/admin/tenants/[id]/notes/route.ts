@@ -11,7 +11,8 @@ export async function POST(
   }
 
   const { id } = await ctx.params;
-  const { content } = await request.json();
+  const body = await request.json();
+  const { content, tags, sticky, followUpAt } = body;
 
   if (!content || typeof content !== "string") {
     return Response.json({ error: "content required" }, { status: 400 });
@@ -21,6 +22,11 @@ export async function POST(
     data: {
       tenantId: id,
       content: content.trim(),
+      tags: Array.isArray(tags)
+        ? tags.map((t: unknown) => String(t).trim()).filter(Boolean)
+        : [],
+      sticky: Boolean(sticky),
+      followUpAt: followUpAt ? new Date(followUpAt) : null,
     },
   });
 

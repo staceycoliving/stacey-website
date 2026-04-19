@@ -11,18 +11,38 @@ export default async function AdminEmailsPage() {
   const [emails, tenants] = await Promise.all([
     prisma.sentEmail.findMany({
       orderBy: { sentAt: "desc" },
-      take: 500, // cap — we rotate the log ourselves if it grows
+      take: 500,
     }),
-    // For the "send one now" quick-send box — list of tenants by name.
     prisma.tenant.findMany({
       select: { id: true, firstName: true, lastName: true, email: true },
       orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
     }),
   ]);
 
+  // Resolve tenant name for each recipient — by linked entityId first,
+  // then by matching email address (fallback for older logs without
+  // tenant linkage).
+  const tenantById = new Map(tenants.map((t) => [t.id, t]));
+  const tenantByEmail = new Map(tenants.map((t) => [t.email.toLowerCase(), t]));
+
+  const enriched = emails.map((e) => {
+    let matched =
+      e.entityType === "tenant" && e.entityId
+        ? tenantById.get(e.entityId)
+        : null;
+    if (!matched) matched = tenantByEmail.get(e.recipient.toLowerCase());
+    return {
+      ...e,
+      tenantId: matched?.id ?? null,
+      tenantName: matched
+        ? `${matched.firstName} ${matched.lastName}`
+        : null,
+    };
+  });
+
   return (
     <EmailsPage
-      emails={JSON.parse(JSON.stringify(emails))}
+      emails={JSON.parse(JSON.stringify(enriched))}
       tenants={tenants.map((t) => ({
         id: t.id,
         name: `${t.firstName} ${t.lastName}`,

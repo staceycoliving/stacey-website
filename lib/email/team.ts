@@ -1,4 +1,6 @@
-import { resend, FROM, TEAM_EMAIL, internalLayout, detailRow, detailTable, badge, ctaButton, categoryName, formatDate } from "./_shared";
+import { sendTrackedEmail, FROM, TEAM_EMAIL, internalLayout, detailRow, detailTable, badge, ctaButton, categoryName, formatDate, type SendMeta } from "./_shared";
+
+type Meta = Omit<SendMeta, "templateKey"> | undefined;
 import { env } from "@/lib/env";
 
 interface TeamNotification {
@@ -18,7 +20,7 @@ interface TeamNotification {
   depositAmount?: number; // in cents, only for deposit-confirmed notifications
 }
 
-export async function sendTeamNotification(booking: TeamNotification) {
+export async function sendTeamNotification(booking: TeamNotification, meta?: Meta) {
   const isShort = booking.stayType === "SHORT";
   const dateRows = isShort
     ? detailRow("Check-in", formatDate(booking.checkIn!)) +
@@ -51,10 +53,13 @@ export async function sendTeamNotification(booking: TeamNotification) {
     ${ctaButton("Open Admin Dashboard", `${env.NEXT_PUBLIC_BASE_URL}/admin`)}
   `);
 
-  return resend.emails.send({
-    from: FROM,
-    to: TEAM_EMAIL,
-    subject: `[${isShort ? "SHORT" : "LONG"}] ${booking.firstName} ${booking.lastName} — STACEY ${booking.locationName}`,
-    html,
-  });
+  return sendTrackedEmail(
+    {
+      from: FROM,
+      to: TEAM_EMAIL,
+      subject: `[${isShort ? "SHORT" : "LONG"}] ${booking.firstName} ${booking.lastName} — STACEY ${booking.locationName}`,
+      html,
+    },
+    { templateKey: "team_notification", bookingId: booking.bookingId, ...meta }
+  );
 }

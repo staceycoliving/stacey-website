@@ -21,9 +21,11 @@ export async function GET(request: NextRequest) {
   // Include tenants who moved in during this month (anteilig) — even if
   // their move-in is later this month, we create the record now and the
   // daily cron will charge it on the actual move-in day.
+  //
+  // BANK_TRANSFER tenants get a RentPayment record too (admin marks them
+  // paid manually after bank-statement check).
   const tenants = await prisma.tenant.findMany({
     where: {
-      bookingId: { not: null }, // Only tenants booked via frontend
       OR: [{ moveOut: null }, { moveOut: { gt: monthStart } }],
       moveIn: { lte: monthEnd },
     },
@@ -36,12 +38,14 @@ export async function GET(request: NextRequest) {
       moveOut: true,
       stripeCustomerId: true,
       sepaMandateId: true,
+      paymentMethod: true,
     },
   });
 
   let created = 0;
   let charged = 0;
   let skipped = 0;
+  let skippedBankTransfer = 0;
 
   for (const tenant of tenants) {
     if (tenant.monthlyRent <= 0) {
@@ -76,13 +80,15 @@ export async function GET(request: NextRequest) {
       triggerLabel: "monthly_cron",
     });
     if (result === "charged") charged++;
+    if (result === "skipped_bank_transfer") skippedBankTransfer++;
   }
 
   return Response.json({
-    message: `Monthly rent: ${created} new records, ${charged} SEPA charged, ${skipped} skipped`,
+    message: `Monthly rent: ${created} new records, ${charged} SEPA charged, ${skippedBankTransfer} bank-transfer pending, ${skipped} skipped`,
     created,
     charged,
     skipped,
+    skippedBankTransfer,
     total: tenants.length,
   });
 }

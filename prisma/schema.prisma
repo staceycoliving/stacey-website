@@ -121,6 +121,10 @@ model Tenant {
   stripeCustomerId String?
   sepaMandateId    String?
 
+  // How the tenant pays rent. SEPA = auto-charged by monthly cron.
+  // BANK_TRANSFER = admin marks paid manually after bank-statement check.
+  paymentMethod    PaymentMethod @default(SEPA)
+
   // Kaution
   depositAmount       Int?
   depositStatus       DepositStatus @default(PENDING)
@@ -130,6 +134,14 @@ model Tenant {
   depositRefundAmount Int?          // Kaution + Überzahlung - Mängel - Rückstände
   depositRefundIban   String?
   depositReturnedAt   DateTime?
+
+  // Emergency contact + profile extras
+  emergencyContactName  String?
+  emergencyContactPhone String?
+  language              String  @default("en") // "en" | "de" (Email/UI language)
+
+  // Soft-delete — set when admin archives the tenant from DangerZone.
+  archivedAt            DateTime?
 
   // Emails
   welcomeEmailSentAt           DateTime?
@@ -143,9 +155,13 @@ model Tenant {
   defects         Defect[]
   notes           Note[]
   roomTransfers   RoomTransfer[]
+  documents       TenantDocument[]
+  communications  TenantCommunication[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([archivedAt])
 }
 
 // ─── Room Transfer History ──────────────────────────────────
@@ -252,11 +268,72 @@ model Note {
   tenantId  String
   tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
-  content   String
-  createdBy String?
-  createdAt DateTime @default(now())
+  content    String
+  tags       String[] @default([])
+  sticky     Boolean  @default(false)
+  followUpAt DateTime?
+  createdBy  String?
+  createdAt  DateTime @default(now())
 
   @@index([tenantId])
+  @@index([followUpAt])
+  @@index([sticky])
+}
+
+// ─── Uploaded / generated documents attached to a tenant ─────
+model TenantDocument {
+  id          String   @id @default(cuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  filename    String
+  category    TenantDocumentCategory @default(OTHER)
+  url         String   // Google Drive link / public URL
+  description String?
+  uploadedBy  String?
+  uploadedAt  DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([category])
+}
+
+enum TenantDocumentCategory {
+  CONTRACT
+  COMPLIANCE
+  FINANCIAL
+  CORRESPONDENCE
+  OTHER
+}
+
+// ─── Manual communication log (calls, SMS, WhatsApp, in-person) ──
+model TenantCommunication {
+  id         String   @id @default(cuid())
+  tenantId   String
+  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  type       CommunicationType
+  direction  CommunicationDirection
+  summary    String
+  at         DateTime
+  createdBy  String?
+  createdAt  DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([at])
+}
+
+enum CommunicationType {
+  PHONE
+  SMS
+  WHATSAPP
+  IN_PERSON
+  LETTER
+  OTHER
+}
+
+enum CommunicationDirection {
+  IN
+  OUT
 }
 
 // ─── BUCHUNGEN (SHORT + LONG) ───────────────────────────
@@ -316,13 +393,31 @@ model Booking {
   tenant     Tenant?
 
   // Status
-  status             BookingStatus @default(PENDING)
-  cancellationReason String?       // z.B. "Widerruf", "Deposit timeout", "Kundenwunsch"
+  status             BookingStatus     @default(PENDING)
+  cancellationReason String?           // Freitext für Detail (optional)
+  cancellationKind   CancellationKind? // strukturierte Kategorie
 
   // Widerruf-spezifisch (gesetzt vom withdraw route)
   cancellationDate       DateTime?  // Wann der Widerruf bei uns einging
   proRataRentRetained    Int?       // anteilige Miete einbehalten in Cent (wenn schon eingezogen)
   depositRefundedAmount  Int?       // tatsächlich an Kunde refundeter Betrag in Cent
+
+  // Booking-Fee refund (nur bei CANCELLED_BY_STACEY manuell ausgelöst)
+  bookingFeeRefundedAt   DateTime?
+  bookingFeeRefundAmount Int?       // Cent
+  bookingFeeRefundId     String?    // Stripe Refund ID
+
+  // Lead source tracking (auto-capture via UTM + referrer)
+  leadSource         String?        // z.B. "google", "facebook", "direct", "referral"
+  leadMedium         String?        // z.B. "cpc", "organic", "email"
+  leadCampaign       String?        // z.B. "summer24-hamburg"
+  leadReferrer       String?        // document.referrer at landing
+  leadSourceOverride String?        // Admin-manueller Override ("Walk-in", "Empfehlung", etc.)
+
+  // Retargeting eligibility (auto-off ab bookingFeePaidAt)
+  retargetingEligible   Boolean   @default(true)
+  retargetingLastSentAt DateTime?
+  retargetingSentCount  Int       @default(0)
 
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
@@ -331,6 +426,17 @@ model Booking {
   @@index([status])
   @@index([checkIn, checkOut])
   @@index([depositDeadline])
+  @@index([retargetingEligible])
+  @@index([leadSource])
+}
+
+enum CancellationKind {
+  WIDERRUF_BY_TENANT    // 14-day Widerruf (booking fee kept)
+  CANCELLED_BY_STACEY   // We cancel (overbooking, supply issue) — full refund
+  DEPOSIT_TIMEOUT       // Auto: deposit not paid in time — booking fee kept
+  LEAD_ABANDONED        // Stale lead manually archived — nothing to refund
+  TENANT_NO_SHOW        // Paid deposit but never moved in — case-by-case
+  OTHER                 // Free-text reason
 }
 
 enum BookingStatus {
@@ -347,6 +453,11 @@ enum DepositStatus {
   RECEIVED     // Eingegangen
   RETURNED     // Zurückgezahlt
   RETAINED     // Einbehalten
+}
+
+enum PaymentMethod {
+  SEPA          // Auto-charged by monthly cron
+  BANK_TRANSFER // Admin marks paid manually after bank statement
 }
 
 // ─── MIET-TRACKING ──────────────────────────────────────
@@ -413,18 +524,21 @@ model WebhookEvent {
 // Not scoped to a specific tenant by default; optional tenantId link
 // lets admins attach a note to a tenant from their folio.
 model TeamNote {
-  id        String   @id @default(dbgenerated("gen_random_uuid()::text"))
-  content   String
-  author    String?  // display name — free text for now, no user auth yet
-  sticky    Boolean  @default(false)
-  tenantId  String?
-  bookingId String?  // attach a note to a pre-move-in booking
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id         String    @id @default(dbgenerated("gen_random_uuid()::text"))
+  content    String
+  author     String?   // display name — free text for now, no user auth yet
+  sticky     Boolean   @default(false)
+  tenantId   String?
+  bookingId  String?   // attach a note to a pre-move-in booking
+  tags       String[]  @default([])
+  followUpAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 
   @@index([createdAt])
   @@index([sticky])
   @@index([bookingId])
+  @@index([followUpAt])
 }
 
 // Log of every email sent (auto or manual). Feeds the dashboard widget
@@ -500,12 +614,23 @@ model CleaningTask {
   assignedTo   String?
   notes        String?
 
+  // Move-out inspection result, only set on MOVE_OUT tasks.
+  // "ISSUE" is just a hand-off flag — the actual Defect record
+  // with deduction + photos is still created in the tenant folio.
+  inspectionResult InspectionResult?
+  inspectionNotes  String?
+
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
   @@index([date])
   @@index([locationSlug])
   @@index([status])
+}
+
+enum InspectionResult {
+  CLEAN
+  ISSUE
 }
 
 enum CleaningTaskType {

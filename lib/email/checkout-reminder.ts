@@ -1,4 +1,6 @@
-import { resend, FROM, layout, detailRow, detailTable, formatDate } from "./_shared";
+import { sendTrackedEmail, FROM, layout, detailRow, detailTable, formatDate, type SendMeta } from "./_shared";
+
+type Meta = Omit<SendMeta, "templateKey"> | undefined;
 
 interface CheckoutReminderData {
   firstName: string;
@@ -8,7 +10,7 @@ interface CheckoutReminderData {
   checkOut: string;
 }
 
-export async function sendCheckoutReminder(data: CheckoutReminderData) {
+export async function sendCheckoutReminder(data: CheckoutReminderData, meta?: Meta) {
   const html = layout(`
     <h2 style="margin:0 0 8px;font-size:22px;font-weight:700;">Check-out tomorrow</h2>
     <p style="margin:0 0 24px;color:#555;font-size:15px;line-height:1.5;">
@@ -32,10 +34,13 @@ export async function sendCheckoutReminder(data: CheckoutReminderData) {
     </p>
   `);
 
-  return resend.emails.send({
-    from: FROM,
-    to: data.email,
-    subject: `Check-out reminder — STACEY ${data.locationName}`,
-    html,
-  });
+  return sendTrackedEmail(
+    {
+      from: FROM,
+      to: data.email,
+      subject: `Check-out reminder — STACEY ${data.locationName}`,
+      html,
+    },
+    { templateKey: "checkout_reminder", ...meta }
+  );
 }
