@@ -19,17 +19,12 @@ import {
   Circle,
   Pin,
   Trash2,
-  Mail,
-  Phone,
-  Copy,
   AlertTriangle,
-  RefreshCw,
   DoorOpen,
   Euro,
   Send,
   MessageSquare,
   Archive,
-  ExternalLink,
 } from "lucide-react";
 
 type Location = {
@@ -1557,7 +1552,7 @@ function BookingDetailPanel({
               )}
               {booking.message && (
                 <div className="text-sm text-black whitespace-pre-wrap">
-                  "{booking.message}"
+                  &ldquo;{booking.message}&rdquo;
                 </div>
               )}
               <a

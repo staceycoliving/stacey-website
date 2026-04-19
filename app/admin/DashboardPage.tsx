@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   Home,
-  Calendar,
   ArrowRight,
   ClipboardList,
   Wallet,
@@ -26,7 +25,6 @@ import {
   Send,
   Pin,
   Trash2,
-  Mail,
   CheckCircle2,
   XCircle,
 } from "lucide-react";
@@ -1470,13 +1468,8 @@ function BookingFunnelSection({
       <Card>
         <div className="p-4">
           <div className="flex items-stretch gap-1">
-            {stages.map((s, i) => {
+            {stages.map((s) => {
               const pct = funnel.total > 0 ? (s.count / funnel.total) * 100 : 0;
-              const next = stages[i + 1];
-              const dropOff =
-                next && s.count > 0
-                  ? Math.round(((s.count - next.count) / s.count) * 100)
-                  : 0;
               const isOpen = openStage === s.key;
               const canExpand = !s.isTerminal && s.stage !== null;
 
@@ -2515,23 +2508,6 @@ function ActionTypesLegend({
           </button>
         );
       })}
-    </div>
-  );
-}
-
-function CardHeader({
-  title,
-  icon,
-}: {
-  title: string;
-  icon?: React.ReactNode;
-}) {
-  return (
-    <div className="px-4 py-3 border-b border-lightgray">
-      <div className="flex items-center gap-2 font-semibold text-black text-sm">
-        {icon}
-        {title}
-      </div>
     </div>
   );
 }
