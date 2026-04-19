@@ -169,6 +169,7 @@ async function handleDepositTimeouts() {
       where: { id: booking.id },
       data: {
         status: "CANCELLED",
+        cancellationKind: "DEPOSIT_TIMEOUT",
         cancellationReason: "Auto: deposit deadline missed (48h)",
       },
     });
