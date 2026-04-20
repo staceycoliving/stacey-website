@@ -183,15 +183,15 @@ export default function PartnersPage() {
 
         {/* KPI Bar — Boarding Pass style */}
         <div className="relative mx-auto max-w-5xl px-4 pb-16 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
+          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4 sm:gap-4">
             {kpis.map((k) => (
               <div
                 key={k.label}
-                className="relative overflow-hidden rounded-[5px] border-2 border-dashed border-white/20 bg-white/[0.04] p-5 text-center backdrop-blur-sm"
+                className="relative overflow-hidden rounded-[5px] border-2 border-dashed border-white/20 bg-white/[0.04] p-4 text-center backdrop-blur-sm sm:p-5"
               >
                 <div className="absolute -right-3 top-1/2 h-6 w-6 -translate-y-1/2 rounded-full bg-[#1A1A1A]" />
                 <div className="absolute -left-3 top-1/2 h-6 w-6 -translate-y-1/2 rounded-full bg-[#1A1A1A]" />
-                <p className="text-3xl font-extrabold text-white sm:text-4xl">
+                <p className="text-2xl font-extrabold text-white sm:text-4xl">
                   {k.value}
                 </p>
                 <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-white/40">

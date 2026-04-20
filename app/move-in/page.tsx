@@ -947,7 +947,7 @@ function MoveInFlow() {
                   </div>
 
                   {/* Right: Sticky booking card (1/3) */}
-                  <div className="mt-10 lg:mt-0">
+                  <div className="mt-6 lg:mt-0">
                     <div className="lg:sticky lg:top-24">
                       <div className="rounded-[5px] bg-black p-6 text-white">
                         {/* Room image */}

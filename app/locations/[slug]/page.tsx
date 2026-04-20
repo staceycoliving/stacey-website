@@ -371,7 +371,7 @@ function LocationDetail({ location }: { location: Location }) {
       </section>
 
       {/* ── MAIN GRID: Header → Further Information + Sticky Booking ── */}
-      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-6xl px-4 pb-24 sm:px-6 lg:px-8 lg:pb-0">
         <div className="relative grid grid-cols-1 gap-x-8 gap-y-0 py-10 lg:grid-cols-3">
 
           {/* ── LEFT COLUMN (2/3) ── */}
@@ -625,7 +625,7 @@ function LocationDetail({ location }: { location: Location }) {
               >
                 Open in Google Maps <ArrowRight size={14} />
               </a>
-              <div ref={neighborhoodMapRef} className="mt-6 h-[400px] w-full overflow-hidden rounded-[5px]" />
+              <div ref={neighborhoodMapRef} className="mt-6 h-[260px] w-full overflow-hidden rounded-[5px] sm:h-[400px]" />
             </div>
             </FadeIn>
 
@@ -855,7 +855,7 @@ function LocationDetail({ location }: { location: Location }) {
               <ChevronLeft size={24} />
             </button>
             <div
-              className="flex h-[65vh] w-full max-w-4xl items-center justify-center"
+              className="flex max-h-[75vh] w-full max-w-4xl items-center justify-center sm:max-h-[65vh]"
               onClick={(e) => e.stopPropagation()}
             >
               <img
@@ -980,6 +980,30 @@ function LocationDetail({ location }: { location: Location }) {
           </div>
         </div>
       )}
+
+      {/* Sticky mobile booking bar — always visible on mobile, desktop uses right-column sticky */}
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-lightgray bg-white/95 px-4 py-3 backdrop-blur-lg lg:hidden">
+        <div className="mx-auto flex max-w-md items-center justify-between gap-3">
+          <div className="min-w-0">
+            <p className="truncate text-[10px] font-bold uppercase tracking-widest text-gray">
+              Starting from
+            </p>
+            <p className="truncate text-lg font-extrabold leading-none">
+              €{isShort
+                ? (lowestNightlyPrice || location.priceFrom)
+                : (lowestMonthlyPrice || location.priceFrom)
+              }
+              <span className="text-xs font-normal text-gray"> {isShort ? "/night" : "/month"}</span>
+            </p>
+          </div>
+          <button
+            onClick={() => document.getElementById("rooms")?.scrollIntoView({ behavior: "smooth" })}
+            className="flex-shrink-0 rounded-[5px] bg-black px-6 py-3 text-sm font-semibold text-white active:opacity-80"
+          >
+            See rooms
+          </button>
+        </div>
+      </div>
 
       <Footer />
     </>

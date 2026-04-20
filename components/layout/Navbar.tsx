@@ -218,30 +218,104 @@ export default function Navbar({
         </div>
       </div>
 
-      {/* Mobile menu */}
+      {/* Mobile menu — full-screen drawer with location previews */}
       <div
         className={clsx(
-          "fixed inset-0 top-14 z-40 bg-white/95 backdrop-blur-lg transition-transform duration-300 lg:hidden",
+          "fixed inset-0 top-14 z-40 bg-white transition-transform duration-300 lg:hidden",
           mobileOpen ? "translate-x-0" : "translate-x-full"
         )}
+        aria-hidden={!mobileOpen}
       >
-        <div className="flex flex-col items-center gap-6 pt-12">
-          {navCities.map((city) => (
-            <div key={city.slug} className="text-center">
-              <Link
-                href={`/${city.slug}`}
-                onClick={() => setMobileOpen(false)}
-                className="text-lg font-semibold text-black"
-              >
-                {city.name}
-              </Link>
-              <p className="text-xs text-gray">{city.locs.length} {city.locs.length === 1 ? "location" : "locations"}</p>
+        <div className="h-[calc(100vh-3.5rem)] overflow-y-auto overscroll-contain pb-32">
+          <div className="mx-auto max-w-md px-5 pb-8 pt-6">
+            {navCities.map((city) => (
+              <div key={city.slug} className="mb-7">
+                <p className="mb-3 text-[10px] font-bold uppercase tracking-widest text-gray">
+                  {city.name} · {city.locs.length} {city.locs.length === 1 ? "location" : "locations"}
+                </p>
+                <div className="space-y-1.5">
+                  {city.locs.map((loc) => {
+                    const price = (() => {
+                      if (loc.stayType === "SHORT" && basePrices[loc.slug]) {
+                        const prices = Object.values(basePrices[loc.slug]);
+                        if (prices.length > 0) return Math.min(...prices);
+                      }
+                      return loc.priceFrom;
+                    })();
+                    return (
+                      <Link
+                        key={loc.slug}
+                        href={`/locations/${loc.slug}`}
+                        onClick={() => setMobileOpen(false)}
+                        className="flex items-center gap-3 rounded-[5px] bg-[#FAFAFA] p-2.5 active:bg-[#F0F0F0]"
+                      >
+                        <div className="relative h-12 w-16 flex-shrink-0 overflow-hidden rounded-[3px]">
+                          <Image src={loc.images[0]} alt={loc.name} fill className="object-cover" sizes="64px" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-semibold text-black">{loc.name}</p>
+                          <p className="truncate text-[11px] text-gray">
+                            from €{price}
+                            {loc.stayType === "SHORT" ? "/night" : "/mo"}
+                          </p>
+                        </div>
+                        <span
+                          className={clsx(
+                            "flex-shrink-0 rounded-[5px] px-2 py-0.5 text-[9px] font-bold",
+                            loc.stayType === "SHORT" ? "bg-black text-white" : "bg-pink text-white"
+                          )}
+                        >
+                          {loc.stayType === "SHORT" ? "SHORT" : "LONG"}
+                        </span>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+
+            {/* Secondary nav */}
+            <div className="mt-2 border-t border-lightgray pt-5">
+              <div className="grid grid-cols-2 gap-2">
+                <Link
+                  href="/why-stacey"
+                  onClick={() => setMobileOpen(false)}
+                  className="rounded-[5px] bg-[#FAFAFA] px-4 py-2.5 text-center text-sm font-medium text-black active:bg-[#F0F0F0]"
+                >
+                  Why STACEY
+                </Link>
+                <Link
+                  href="/faq"
+                  onClick={() => setMobileOpen(false)}
+                  className="rounded-[5px] bg-[#FAFAFA] px-4 py-2.5 text-center text-sm font-medium text-black active:bg-[#F0F0F0]"
+                >
+                  FAQ
+                </Link>
+                <Link
+                  href="/partners"
+                  onClick={() => setMobileOpen(false)}
+                  className="rounded-[5px] bg-[#FAFAFA] px-4 py-2.5 text-center text-sm font-medium text-black active:bg-[#F0F0F0]"
+                >
+                  For Partners
+                </Link>
+                <a
+                  href="mailto:booking@stacey.de"
+                  onClick={() => setMobileOpen(false)}
+                  className="rounded-[5px] bg-[#FAFAFA] px-4 py-2.5 text-center text-sm font-medium text-black active:bg-[#F0F0F0]"
+                >
+                  Contact
+                </a>
+              </div>
             </div>
-          ))}
+          </div>
+        </div>
+
+        {/* Sticky CTA at bottom of drawer */}
+        <div className="absolute inset-x-0 bottom-0 border-t border-lightgray bg-white/95 p-4 backdrop-blur-lg">
           <Link
             href="/move-in"
             onClick={() => setMobileOpen(false)}
-            className="mt-4 rounded-[5px] bg-black px-8 py-3 text-base font-semibold text-white transition-all duration-200 hover:opacity-80"
+            className="block w-full rounded-[5px] bg-black px-6 py-3.5 text-center text-sm font-semibold text-white active:opacity-80"
           >
             {ctaLabel}
           </Link>
