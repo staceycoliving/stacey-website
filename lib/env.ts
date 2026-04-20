@@ -46,6 +46,10 @@ const serverSchema = z.object({
   // Optional: comma-separated whitelist for outgoing emails (test mode)
   TEST_MODE_EMAILS: z.string().optional().default(""),
 
+  // Optional: where /api/partners-inquiry delivers lead emails.
+  // Falls back to booking@stacey.de if not set.
+  PARTNERS_INQUIRY_EMAIL: z.string().email().optional(),
+
   // Optional: Sentry server-side DSN (errors only sent if set)
   SENTRY_DSN: z.string().url().optional(),
 
