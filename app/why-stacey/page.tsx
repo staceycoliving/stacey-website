@@ -57,15 +57,16 @@ export default function WhyStaceyPage() {
             Our <span className="italic font-light">mission</span>
           </h2>
           <p className="mt-4 leading-relaxed text-gray">
-            STACEY members save around €550 every month compared to a traditional studio
-            apartment — and gain friends for life in return. For us it is not about the
-            money. It is all about creating an international community of young
-            professionals who share a home, a philosophy, and plenty of good evenings.
+            STACEY members often spend significantly less than they would on a comparable
+            studio apartment in the same city — and gain a real community in return. For
+            us it is not primarily about the money. It is about creating an international
+            community of young professionals who share a home, a philosophy, and plenty
+            of good evenings.
           </p>
           <p className="mt-4 leading-relaxed text-gray">
             Living at STACEY means you&apos;re always invited and never obligated. Join the
-            community dinner or close your door — both are perfectly fine. Move-in takes
-            30 minutes. All you bring is your suitcase.
+            community dinner or close your door — both are perfectly fine. The move-in
+            process is fast and paperless; just bring your personal belongings.
           </p>
         </div>
       </section>
@@ -83,12 +84,12 @@ export default function WhyStaceyPage() {
                 text: "Your own furnished bedroom — bedding included — plus generous common areas: living rooms, work zones and kitchens stocked with essentials. Move-in ready from day one.",
               },
               {
-                title: "All Services Included",
-                text: "Weekly professional cleaning of common areas, WiFi, on-site WeWash laundry, plus repair and maintenance handled by our team. One bill covers the rental essentials — laundry and the German broadcasting fee are handled separately.",
+                title: "Most Services Included",
+                text: "Weekly professional cleaning of common areas, WiFi, on-site laundry facilities and repair and maintenance handled by our team. One bill covers the rental essentials. Laundry and the German broadcasting fee (GEZ / Rundfunkbeitrag) are handled separately by each member.",
               },
               {
                 title: "A Real Community",
-                text: "Every location has a Community Manager organizing regular events — potlucks, movie nights, book clubs. Slack channels connect members across all our cities. And you can transfer between STACEY locations whenever life takes you somewhere new.",
+                text: "Every location has a Community Manager who helps you settle in and organises community get-togethers — from shared dinners to casual evenings. Members stay connected across our cities, and you can apply to transfer between STACEY locations whenever availability allows.",
               },
             ].map((value) => (
               <div key={value.title} className="rounded-[5px] bg-white p-6 shadow-sm">
