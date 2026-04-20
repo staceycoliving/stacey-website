@@ -12,6 +12,11 @@ export type Room = {
   images?: string[];
 };
 
+export type MatterportTour = {
+  label?: string; // optional tab label when multiple tours exist
+  url: string;    // full my.matterport.com/show/?m=... URL
+};
+
 export type Location = {
   slug: string;
   city: "hamburg" | "berlin" | "vallendar";
@@ -29,6 +34,8 @@ export type Location = {
   rooms: Room[];
   nearbyLocationSlugs: string[];
   communityManager: { name: string; email: string; image: string };
+  matterportTours?: MatterportTour[];
+  youtubeVideoId?: string; // fallback/alternative to matterport — embed via youtube-nocookie
 };
 
 export type Feature = {
@@ -176,6 +183,9 @@ export const locations: Location[] = [
       },
     ],
     nearbyLocationSlugs: ["eppendorf", "eimsbuettel", "st-pauli"],
+    matterportTours: [
+      { url: "https://my.matterport.com/show/?m=XegesAR7kDJ" },
+    ],
     communityManager: {
       name: "Bruno",
       email: "booking@stacey.de",
@@ -327,6 +337,9 @@ export const locations: Location[] = [
       },
     ],
     nearbyLocationSlugs: ["muehlenkamp", "eimsbuettel"],
+    matterportTours: [
+      { url: "https://my.matterport.com/show/?m=wb6bCryfUBT" },
+    ],
     communityManager: {
       name: "Bruno",
       email: "booking@stacey.de",
@@ -452,6 +465,9 @@ export const locations: Location[] = [
       },
     ],
     nearbyLocationSlugs: ["alster", "st-pauli"],
+    matterportTours: [
+      { url: "https://my.matterport.com/show/?m=kD5Bg43Heyf" },
+    ],
     communityManager: {
       name: "Bruno",
       email: "booking@stacey.de",
@@ -579,6 +595,9 @@ export const locations: Location[] = [
       },
     ],
     nearbyLocationSlugs: ["downtown", "muehlenkamp"],
+    matterportTours: [
+      { url: "https://my.matterport.com/show/?m=J8T1ognFHCN" },
+    ],
     communityManager: {
       name: "Bruno",
       email: "booking@stacey.de",
@@ -681,6 +700,7 @@ export const locations: Location[] = [
       },
     ],
     nearbyLocationSlugs: ["downtown", "eimsbuettel"],
+    youtubeVideoId: "Sj3TH2Y56f0",
     communityManager: {
       name: "Bruno",
       email: "booking@stacey.de",
@@ -780,6 +800,9 @@ export const locations: Location[] = [
       },
     ],
     nearbyLocationSlugs: ["eppendorf", "st-pauli", "muehlenkamp"],
+    matterportTours: [
+      { url: "https://my.matterport.com/show/?m=5jtAswD96Sg" },
+    ],
     communityManager: {
       name: "Bruno",
       email: "booking@stacey.de",
@@ -956,6 +979,10 @@ export const locations: Location[] = [
       },
     ],
     nearbyLocationSlugs: [],
+    matterportTours: [
+      { label: "Coworking", url: "https://my.matterport.com/show/?m=sNM4sxRtSye" },
+      { label: "Lounge", url: "https://my.matterport.com/show/?m=sipx4CvFb6X" },
+    ],
     communityManager: {
       name: "Bruno",
       email: "booking@stacey.de",
@@ -1067,6 +1094,9 @@ export const locations: Location[] = [
       },
     ],
     nearbyLocationSlugs: [],
+    matterportTours: [
+      { url: "https://my.matterport.com/show/?m=j9aPCG2DxxG" },
+    ],
     communityManager: {
       name: "Bruno",
       email: "booking@stacey.de",

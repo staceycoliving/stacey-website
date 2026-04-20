@@ -10,7 +10,7 @@ import { useParams } from "next/navigation";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { getLocationBySlug, getNearbyLocations, locations, ROOM_NAME_TO_CATEGORY, formatMoveInLabel } from "@/lib/data";
-import type { Location } from "@/lib/data";
+import type { Location, MatterportTour } from "@/lib/data";
 import { expandMoveInDates, isMoveInDateBookable, filterRoomsForPersons } from "@/lib/availability";
 import BookingCard from "@/components/locations/BookingCard";
 
@@ -590,29 +590,24 @@ function LocationDetail({ location }: { location: Location }) {
             </FadeIn>
 
             {/* Community Space */}
-            <FadeIn>
-            <div className="mt-16">
-              <span className="rounded-[5px] bg-pink px-2.5 py-1 text-[10px] font-bold text-white">360 VIRTUAL TOUR</span>
-              <h2 className="mt-3 text-2xl font-extrabold tracking-tight sm:text-3xl">
-                Community <span className="italic font-light">space</span>
-              </h2>
-              <p className="mt-2 text-sm leading-relaxed text-gray">{location.communitySpaceDescription}</p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                <span className="rounded-[5px] bg-[#E5E5E5] px-3 py-1.5 text-xs font-bold">Lounge</span>
-                <span className="rounded-[5px] bg-[#E5E5E5] px-3 py-1.5 text-xs font-bold">Kitchen</span>
-                <span className="rounded-[5px] bg-[#E5E5E5] px-3 py-1.5 text-xs font-bold">Coworking</span>
+            {(location.matterportTours?.length || location.youtubeVideoId) && (
+              <FadeIn>
+              <div className="mt-16">
+                <span className="rounded-[5px] bg-pink px-2.5 py-1 text-[10px] font-bold text-white">
+                  {location.matterportTours?.length ? "360 VIRTUAL TOUR" : "VIDEO TOUR"}
+                </span>
+                <h2 className="mt-3 text-2xl font-extrabold tracking-tight sm:text-3xl">
+                  Community <span className="italic font-light">space</span>
+                </h2>
+                <p className="mt-2 text-sm leading-relaxed text-gray">{location.communitySpaceDescription}</p>
+                {location.matterportTours?.length ? (
+                  <MatterportViewer tours={location.matterportTours} locationName={location.name} />
+                ) : location.youtubeVideoId ? (
+                  <YoutubeViewer videoId={location.youtubeVideoId} locationName={location.name} />
+                ) : null}
               </div>
-              <div className="relative mt-6 aspect-video overflow-hidden rounded-[5px]">
-                <iframe
-                  src="https://my.matterport.com/show/?m=XegesAR7kDJ&play=1&qs=1"
-                  className="absolute inset-0 h-full w-full"
-                  allowFullScreen
-                  allow="xr-spatial-tracking"
-                  title="STACEY Community Space 3D Tour"
-                />
-              </div>
-            </div>
-            </FadeIn>
+              </FadeIn>
+            )}
 
             {/* Neighborhood */}
             <FadeIn>
@@ -988,5 +983,73 @@ function LocationDetail({ location }: { location: Location }) {
 
       <Footer />
     </>
+  );
+}
+
+// ─── Matterport Viewer ─────────────────────────────────────
+// 1 tour → direct iframe. Multiple tours → tab switcher.
+
+function MatterportViewer({
+  tours,
+  locationName,
+}: {
+  tours: MatterportTour[];
+  locationName: string;
+}) {
+  const [activeIdx, setActiveIdx] = useState(0);
+  const active = tours[activeIdx] ?? tours[0];
+
+  return (
+    <div className="mt-6">
+      {tours.length > 1 && (
+        <div className="mb-3 flex flex-wrap gap-2">
+          {tours.map((t, i) => (
+            <button
+              key={i}
+              type="button"
+              onClick={() => setActiveIdx(i)}
+              className={`rounded-[5px] px-3 py-1.5 text-xs font-bold transition-colors ${
+                i === activeIdx
+                  ? "bg-black text-white"
+                  : "bg-[#E5E5E5] text-black hover:bg-[#d8d8d8]"
+              }`}
+            >
+              {t.label ?? `Tour ${i + 1}`}
+            </button>
+          ))}
+        </div>
+      )}
+      <div className="relative aspect-video overflow-hidden rounded-[5px]">
+        <iframe
+          key={active.url}
+          src={`${active.url}&play=1&qs=1`}
+          className="absolute inset-0 h-full w-full"
+          allowFullScreen
+          allow="xr-spatial-tracking"
+          title={`${locationName} 3D Tour${active.label ? ` — ${active.label}` : ""}`}
+        />
+      </div>
+    </div>
+  );
+}
+
+// youtube-nocookie.com → no tracking cookies until user plays the video.
+function YoutubeViewer({
+  videoId,
+  locationName,
+}: {
+  videoId: string;
+  locationName: string;
+}) {
+  return (
+    <div className="relative mt-6 aspect-video overflow-hidden rounded-[5px]">
+      <iframe
+        src={`https://www.youtube-nocookie.com/embed/${videoId}?rel=0`}
+        className="absolute inset-0 h-full w-full"
+        allowFullScreen
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        title={`${locationName} Video Tour`}
+      />
+    </div>
   );
 }
