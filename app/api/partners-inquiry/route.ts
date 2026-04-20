@@ -65,10 +65,8 @@ export async function POST(req: Request) {
     .filter(Boolean)
     .join("\n");
 
-  const debug = new URL(req.url).searchParams.get("debug") === "1";
-
   try {
-    const result = await resend.emails.send({
+    await resend.emails.send({
       from: "STACEY Partners <booking@stacey.de>",
       to: PARTNER_EMAIL,
       replyTo: d.email,
@@ -76,18 +74,6 @@ export async function POST(req: Request) {
       html,
       text,
     });
-    if (debug) {
-      return NextResponse.json({
-        ok: true,
-        debug: {
-          recipientEnv: process.env.PARTNERS_INQUIRY_EMAIL ?? null,
-          resolvedRecipient: PARTNER_EMAIL,
-          skipped: "skipped" in result ? result.skipped : undefined,
-          resendId: result.data?.id ?? null,
-          resendError: result.error ?? null,
-        },
-      });
-    }
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("partners inquiry email failed:", err);
