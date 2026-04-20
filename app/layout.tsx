@@ -13,7 +13,7 @@ const montserrat = Montserrat({
 
 const TITLE = "STACEY — Coliving. Just Better.";
 const DESCRIPTION =
-  "STACEY offers furnished coliving apartments in Hamburg, Berlin, and Vallendar. All-inclusive, community included. Short stays from 5 nights, long stays from 3 months.";
+  "STACEY offers furnished coliving apartments in Hamburg, Berlin, and Vallendar. Almost everything included — community built-in. Short stays from 5 nights, long stays from 3 months.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(env.NEXT_PUBLIC_BASE_URL),
@@ -30,7 +30,7 @@ export const metadata: Metadata = {
     "Berlin",
     "Vallendar",
     "furnished apartment",
-    "all-inclusive rent",
+    "inclusive rent",
     "shared living",
     "STACEY",
   ],

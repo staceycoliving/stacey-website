@@ -328,7 +328,7 @@ export default function HomePage() {
                 </div>
                 {persons === null && stayType === "LONG" && (
                   <p className="mt-4 text-xs text-white/40 sm:text-sm">
-                    All-inclusive from &euro;695/month
+                    Starting from &euro;695/month
                   </p>
                 )}
                 {persons === null && stayType === "SHORT" && lowestShortPrice && (

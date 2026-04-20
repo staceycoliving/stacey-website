@@ -708,7 +708,7 @@ function MoveInFlow() {
                 Find your new <em className="font-light italic">home</em>
               </h1>
               <p className="mt-3 text-sm text-white/50">
-                All-inclusive · fully furnished · 9 locations · 3 cities
+                Almost everything included · fully furnished · 9 locations · 3 cities
               </p>
 
               <SearchFields

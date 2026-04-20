@@ -59,13 +59,13 @@ export const locations: Location[] = [
     address: "Dorotheenstraße 3-5, 22301 Hamburg",
     stayType: "LONG",
     priceFrom: 795,
-    tagline: "Hamburg's #1 coliving address right by the Alster",
+    tagline: "The Cradle of Coliving",
     description:
-      "Since 2019, STACEY has been welcoming tenants from all over the world to Hamburg's #1 coliving address — right next to the beautiful Alster. Our oldest and largest location offers private suites from 8 m² to 25 m² in shared apartments with 1 to 3 other STACEY members.",
+      "Since 2019, STACEY welcomes tenants from all over the world at Hamburg's #1 address for coliving, directly next to the beautiful lake Alster. Our oldest and largest coliving property features private suites ranging from 8 to 25 square meters within shared apartments, surrounded by restaurants, bars and cafés — and wrapped around a quiet inner courtyard.",
     neighborhoodDescription:
-      "Imagine having a wide range of restaurants, cafés and speakeasies right on your doorstep! Our coliving is tucked away on a quiet street between the well-known Mühlenkamp and the green heart of Hamburg — the Alster.",
+      "Winterhude offers a unique blend of serene central living and vibrant social opportunities. Our coliving is tucked away on a quiet street between the well-known Mühlenkamp and the green heart of Hamburg — the Alster. A bus station within 100 meters connects you to downtown in 10 minutes, and the Alster is just around the corner for running or paddleboarding.",
     communitySpaceDescription:
-      "A former electrician's office converted into over 150 m² of community space. Lounge with dining table and Netflix TV. Two fully equipped kitchens. Coworking area and WeWash laundry service.",
+      "A former electrician's office converted into over 150 m² of community space. Lounge seating with Netflix TV, two fully equipped kitchens, a coworking zone and WeWash laundry facilities — the main hub for community dinners and STACEY events throughout the city.",
     neighborhood: "Winterhude",
     roomiesPerApartment: "1 - 3",
     images: [
@@ -199,15 +199,15 @@ export const locations: Location[] = [
     address: "Eppendorfer Weg 270, 20251 Hamburg",
     stayType: "LONG",
     priceFrom: 895,
-    tagline: "Living in the heart of Hamburg's most popular residential area",
+    tagline: "Coliving for Locals",
     description:
-      "Our Eppendorf location sits in the heart of one of Hamburg's most beloved residential neighborhoods. Surrounded by charming boutiques, cozy cafés and beautiful period buildings, this location offers the perfect coliving experience.",
+      "Centrally located in Hamburg Eppendorf, our coliving offers suites ranging from 10 to 20 m² — some with optional balconies. A maximum of 4 suites per apartment strikes the balance between privacy and community living.",
     neighborhoodDescription:
-      "Eppendorf is known for its elegant period architecture, tree-lined streets and a vibrant café culture. The Eppendorfer Baum boulevard has everything you need for daily life.",
+      "Eppendorf is the neighborhood every local wants to live in — green parks, boutique shops and some of Hamburg's most acclaimed brunch spots. The U-Bahn connects you to Sternschanze and the city center within 10 minutes.",
     communitySpaceDescription:
-      "Cozy community area with lounge, kitchen and workspaces for productive days.",
+      "A spacious community space on the ground floor, converted from a former restaurant. Shared kitchen, living areas and a coworking zone with ceiling heights up to 4 meters.",
     neighborhood: "Eppendorf",
-    roomiesPerApartment: "1 - 3",
+    roomiesPerApartment: "2 - 3",
     images: [
       loc("eppendorf", "community", "001-community-ew.webp"),
       loc("eppendorf", "community", "002-community-ew.webp"),
@@ -354,15 +354,15 @@ export const locations: Location[] = [
     stayType: "SHORT",
     priceFrom: 45,
     // Mighty=995, Premium=1095, PremiumBalcony=1145, Premium+=1195, Jumbo=1395
-    tagline: "Right in the heart of Hamburg's city center",
+    tagline: "The Heart of Hamburg",
     description:
-      "Our Downtown location puts you right in the middle of the action — just steps from the Speicherstadt, City Hall and the city's best restaurants. Perfect for shorter stays.",
+      "Directly between the city center and the UNESCO World Heritage Speicherstadt. Suites from 10 to 20 m² with 5-meter-high ceilings, set in a historic building voted Hamburg's most beautiful facade.",
     neighborhoodDescription:
-      "Hamburg's old town blends historic architecture with modern city life. The Speicherstadt and HafenCity are within walking distance.",
+      "Sightseeing right on your doorstep. Restaurants, cafés and every major public transport line are just steps away — perfect for both leisure and business stays in Hamburg's liveable downtown.",
     communitySpaceDescription:
-      "Modern community area with lounge and kitchen in the heart of the city.",
+      "The community space sits directly within the shared apartment — fully equipped kitchen, washing machine, and a Netflix TV & lounge area in the hallway.",
     neighborhood: "Altstadt",
-    roomiesPerApartment: "2 - 3",
+    roomiesPerApartment: "6",
     images: [
       loc("downtown", "community", "000-community-dt.webp"),
       loc("downtown", "community", "001-community-dt.webp"),
@@ -481,15 +481,15 @@ export const locations: Location[] = [
     address: "Gurlittstraße 28, 20099 Hamburg",
     stayType: "SHORT",
     priceFrom: 48,
-    tagline: "Right on the Outer Alster — the most beautiful view in the city",
+    tagline: "Coliving next door to Udo",
     description:
-      "Wake up to views of the Alster! Our location in St. Georg sits right on the Outer Alster and offers short stays in one of Hamburg's most beautiful corners.",
+      "Centrally located in Hamburg St. Georg. Our suites are spread over 4 floors, ranging from 14 to 18 m², some with optional balcony. A converted former office building dedicated exclusively to short-term coliving — with a community kitchen on the top floor and laundry facilities in the basement.",
     neighborhoodDescription:
-      "St. Georg is Hamburg's most diverse neighborhood — colorful, lively and right next to the main train station. The Outer Alster is just a stone's throw away.",
+      "We sit on Gurlittstraße between the Alster lake and the lively Lange Reihe restaurant street — roughly ten minutes on foot from central Hamburg's attractions. St. Georg is colorful, diverse and one of the city's most characterful neighborhoods.",
     communitySpaceDescription:
-      "Bright community room with Alster views, kitchen and lounge area.",
+      "The common space is the heart of every STACEY location. Stainless steel coworking counters, lounge seating and a fully equipped kitchen where residents gather for dinners and community events.",
     neighborhood: "St. Georg",
-    roomiesPerApartment: "2 - 3",
+    roomiesPerApartment: "2",
     images: [
       loc("alster", "community", "01-community-al.webp"),
       loc("alster", "community", "02-community-al.webp"),
@@ -611,15 +611,15 @@ export const locations: Location[] = [
     address: "Detlev-Bremer-Straße 2, 20359 Hamburg",
     stayType: "LONG",
     priceFrom: 895,
-    tagline: "Live in the vibrant heart of St. Pauli",
+    tagline: "Central, Colorful, Diverse",
     description:
-      "St. Pauli is Hamburg's liveliest neighborhood — and our location is right in the thick of it. Here you'll meet creatives, night owls and a community that sticks together.",
+      "Cozy shared living next to the Millerntor stadium. Our 7-bedroom duplex coliving apartment has everything you need within its doors — living room, common kitchen and the old-building charm that (let's be honest) is unmatched by new developments.",
     neighborhoodDescription:
-      "St. Pauli stands for diversity, culture and nightlife. From the Schanzenviertel to the Reeperbahn — there's always something going on.",
+      "St. Pauli sits between Hamburg's nightlife area and Sternschanze — the best of both worlds. You can reach every major Hamburg hotspot within 15 minutes via public transport, and the Elbe river and city center are just around the corner.",
     communitySpaceDescription:
-      "Spacious community area with lounge, kitchen and rooftop terrace.",
+      "Spacious community spaces designed to fit your needs — the #1 reason members join STACEY. The duplex features a lounge and dining area, a fully equipped kitchen, a communal garden for summer afternoons, and laundry facilities in the basement.",
     neighborhood: "St. Pauli",
-    roomiesPerApartment: "2 - 4",
+    roomiesPerApartment: "6",
     images: [
       loc("st-pauli", "community", "001-community-sp.webp"),
       loc("st-pauli", "community", "002-community-sp.webp"),
@@ -714,15 +714,15 @@ export const locations: Location[] = [
     address: "Bei der Apostelkirche 13, 20257 Hamburg",
     stayType: "LONG",
     priceFrom: 795,
-    tagline: "Coliving in Hamburg's trendiest neighborhood",
+    tagline: "Beautiful, Peaceful & Quiet",
     description:
-      "Eimsbüttel is Hamburg's trend district — and we're right in the middle of it. Nestled between Schanze and Eppendorf, this location offers the best of both worlds.",
+      "Our smallest coliving location is in Hamburg-Eimsbüttel, a neighborhood of locals. The shared apartment offers a kitchen and a small inner yard. You can choose between private suites from 6 m² up to 15 m².",
     neighborhoodDescription:
-      "Eimsbüttel charms with its mix of period building character, independent shops and a lively food scene. Eimsbütteler Park is just around the corner.",
+      "Eimsbüttel gives you an authentic Hamburg experience — a diverse community of families, students and long-time residents. Sternschanze and Osterstraße (the neighborhood's shopping and dining hub) are right next door, and downtown is about 20 minutes away.",
     communitySpaceDescription:
-      "Modern community area with open kitchen, lounge and workspace.",
+      "Spacious community spaces designed to fit your needs — the #1 reason members join STACEY. Common areas within the shared apartment, a fully equipped kitchen, a private inner yard/balcony and a WeWash self-service laundry facility.",
     neighborhood: "Eimsbüttel",
-    roomiesPerApartment: "1 - 3",
+    roomiesPerApartment: "3",
     images: [
       loc("eimsbuettel", "community", "001-community-ei.webp"),
       loc("eimsbuettel", "community", "002-community-ei.webp"),
@@ -816,15 +816,15 @@ export const locations: Location[] = [
     address: "Fischerinsel 13-15, 10179 Berlin",
     stayType: "LONG",
     priceFrom: 795,
-    tagline: "Coliving in the center of Germany's capital",
+    tagline: "Most Central Coliving in Berlin",
     description:
-      "Berlin Mitte — the heart of the capital. Our location on Fischerinsel offers coliving with views of the Spree, surrounded by museums, galleries and Europe's best nightlife.",
+      "Fischerinsel 13-15, 10179 Berlin — directly in the mix. 5 minutes to the Berliner Dom, Gendarmenmarkt or Alexanderplatz. Suite sizes span roughly 8 to 36 m² across shared apartments and private studios, with most shared units featuring just one roommate.",
     neighborhoodDescription:
-      "Berlin Mitte is the city's cultural center. Museum Island, Alexanderplatz and countless galleries are all within walking distance.",
+      "On the Fischerinsel, next to the Museumsinsel — a central, Berlin-style living experience between historic landmarks like Alexanderplatz and the Berliner Dom, while still only minutes away from the cool Kreuzberg area. The U-Bahn station Märkisches Museum is directly outside.",
     communitySpaceDescription:
-      "Spacious community area with Spree views, kitchen, lounge and coworking desks.",
+      "This is where coliving truly comes to life. A cozy lounge area with sofa and a large TV, casual seating for group hangouts, plus a home office area with workstations and WiFi throughout.",
     neighborhood: "Mitte",
-    roomiesPerApartment: "2 - 3",
+    roomiesPerApartment: "1",
     images: [
       loc("berlin-mitte", "community", "13-berlin.webp"),
       loc("berlin-mitte", "community", "14-berlin.webp"),
@@ -996,13 +996,13 @@ export const locations: Location[] = [
     address: "Löhrstraße 54, 56179 Vallendar",
     stayType: "LONG",
     priceFrom: 595,
-    tagline: "The perfect home for WHU students and professionals",
+    tagline: "The Cradle of the Spirit",
     description:
-      "Our Vallendar location is the ideal home for WHU students and young professionals. Right near campus, we offer furnished suites with a built-in community.",
+      "Centrally located in Vallendar, less than 4 minutes on foot from all WHU university buildings. The property features spacious terraces and modern community spaces designed for studying and socializing in equal measure.",
     neighborhoodDescription:
-      "Vallendar is a charming small town on the Rhine, known for WHU — Otto Beisheim School of Management. Koblenz is just a few minutes away.",
+      "We sit on Löhrstraße, right in the heart of Vallendar. There's no need for a bike or car — everything you need is within walking distance. Restaurants on Hellenstraße, the WHU campus next door, and Koblenz just a few minutes away by train.",
     communitySpaceDescription:
-      "Community area with study lounge, kitchen and garden — perfect for studying and unwinding.",
+      "The heart of every STACEY location. Cosy working stations, lounge areas with dining, a fully equipped kitchen, an inner yard and a WeWash laundry service — where residents gather for community dinners and STACEY events.",
     neighborhood: "Vallendar",
     roomiesPerApartment: "2 - 4",
     images: [
@@ -1203,7 +1203,7 @@ export const features: Feature[] = [
   {
     icon: "wifi",
     title: "Included Internet",
-    desc: "High-speed internet included at every location.",
+    desc: "WiFi included at every location.",
     image: loc("berlin-mitte", "premium", "001-premium-fi.webp"),
   },
   {
@@ -1235,43 +1235,103 @@ export type FAQItem = {
 
 export const faqItems: FAQItem[] = [
   {
-    question: "What is the minimum stay?",
+    question: "What is coliving and who can apply?",
     answer:
-      "At our LONG-stay locations, the minimum stay is 3 months. At SHORT-stay locations there's no minimum — you can book from a single night up to a maximum of 180 nights.",
+      "Coliving is the new way of shared living, sitting at the intersection of shared apartments and studio apartments. Every member gets their own private suite plus access to generous common spaces. Our members are typically working professionals between the ages of 20 and 40.",
   },
   {
-    question: "What's included in the rent?",
+    question: "What about the community? Who are your members?",
     answer:
-      "Everything! Your rent covers the furnished room, all utilities (electricity, water, heating), high-speed internet, weekly cleaning of shared spaces, access to community spaces and events. All you need is your suitcase.",
+      "STACEY operates locations in Hamburg, Berlin and Vallendar, with over 300 members from all around the world. Most are young professionals, founders and students looking for more than just four walls.",
   },
   {
-    question: "Can I switch rooms?",
+    question: "Are there member events?",
     answer:
-      "Yes! As a STACEY member you get priority when transferring between our locations. Whether you want to move from Hamburg to Berlin or simply switch rooms at the same location — we make it happen.",
+      "Yes — we organize events for our members on a monthly basis. It might be the opening party of a new location, an in-house concert exclusively for our members, or a community dinner at your location's common space.",
   },
   {
-    question: "How does cancellation work?",
+    question: "What services are included?",
     answer:
-      "At LONG-stay locations, there's a one-month notice period to the end of the month after the minimum contract term. For SHORT-stay bookings, the cancellation terms agreed at the time of booking apply.",
+      "Almost everything you need for daily life — furniture and bedding, weekly cleaning of common areas, heating, electricity, water, WiFi, smart-locks, repair and maintenance, plus access to our community events. One bill covers the rental essentials. The few things members handle themselves are laundry (via our on-site WeWash service), the German broadcasting fee (GEZ / Rundfunkbeitrag, required by law for all residents in Germany) and personal expenses such as groceries or toiletries.",
   },
   {
-    question: "Can I move in with my partner?",
+    question: "How can I apply?",
     answer:
-      "Couples are very welcome in our Jumbo suites and select Premium+ suites. These rooms are specifically designed for two people and offer enough space for comfortable shared living.",
+      "The entire process runs online. Pick your location, move-in date and preferred suite on our website, enter your details, sign the lease digitally (eIDAS-compliant via Yousign) and pay the €195 booking fee by credit card or SEPA. Once the deposit is paid within 24 hours, your move-in is confirmed. No paperwork, no waiting on us.",
   },
   {
-    question: "Is there a community team?",
+    question: "How does the pricing work?",
     answer:
-      "Yes! Every location has its own community manager who organizes regular events, helps with questions and makes sure you settle in quickly. There's also a Slack channel for all members.",
+      "Prices vary according to the duration of your stay and the suite you choose. On top of your rent we ask for a reimbursable security deposit, which is returned after check-out if there are no damages.",
   },
   {
-    question: "How do I apply?",
+    question: "Can I register my residency at STACEY?",
     answer:
-      "It's simple: choose your preferred location and suite on our website, fill out the application form and our team will get back to you within 48 hours. The entire process is digital and hassle-free.",
+      "Yes, at our long-stay locations. We provide the \"Wohnungsgeberbestätigung\" (landlord confirmation) before your move-in so you can register your address with the authorities.",
   },
   {
-    question: "What does all-inclusive mean?",
+    question: "What's included in my membership?",
     answer:
-      "All-inclusive means one price, no hidden costs. Your monthly rent includes furniture, bedding, internet, electricity, water, heating, weekly cleaning, access to community spaces and events. You pay one amount — done.",
+      "A fully-furnished room, access to common spaces, smart-locks, WiFi, all utilities, weekly cleaning and monthly member events — no extras to worry about.",
+  },
+  {
+    question: "How does check-in and check-out work?",
+    answer:
+      "Please inform your Community Manager in advance of your check-in and check-out. Any damages discovered at move-out will be deducted from the security deposit.",
+  },
+  {
+    question: "Who is the Community Manager?",
+    answer:
+      "Every location has its own Community Manager who maintains the spaces and is your point of contact for all issues — from broken appliances to lost keys to questions about the neighborhood.",
+  },
+  {
+    question: "Is there a minimum or maximum rental period?",
+    answer:
+      "Long-stay requires a minimum of 3 months with no maximum. Short-stay is flexible and can be booked up to a maximum of 6 months.",
+  },
+  {
+    question: "Can I switch between different locations?",
+    answer:
+      "Yes, as long as there's availability at the other location. Existing members get priority when transferring between STACEY locations — whether from Hamburg to Berlin or just across town.",
+  },
+  {
+    question: "Can I change the furniture in my room?",
+    answer:
+      "Yes, as long as you don't damage walls or ceilings and everything is returned to its original condition when you move out.",
+  },
+  {
+    question: "How do I terminate my lease?",
+    answer:
+      "Long-stay contracts require 3 months' notice. Short-stay end-dates are fixed and agreed during the booking process.",
+  },
+  {
+    question: "Can I invite a friend to stay with me?",
+    answer:
+      "Yes — but keep your cohabitants in mind. For overnight guests, please coordinate with your Community Manager to make sure everyone in the apartment is comfortable.",
+  },
+  {
+    question: "What if something goes wrong during my stay?",
+    answer:
+      "Please contact your Community Manager. They're your first point of contact for anything from maintenance to conflicts with roommates — we'll sort it out together.",
+  },
+  {
+    question: "Can we rent a suite as a couple?",
+    answer:
+      "Yes — couples are welcome in our Jumbo, Jumbo Balcony, Studio and select Premium+ Balcony suites, which are designed with enough space for two.",
+  },
+  {
+    question: "Are pets allowed?",
+    answer:
+      "Unfortunately not — out of consideration for our community, we cannot accept pets at any STACEY location.",
+  },
+  {
+    question: "Do you offer private parking?",
+    answer:
+      "We don't have private parking at any of our houses. All our locations are well-connected by public transport, so a car is rarely needed.",
+  },
+  {
+    question: "Is there a curfew?",
+    answer:
+      "STACEY does not impose any curfew — but we do expect our members to respect the neighborhood and their fellow residents, especially at night.",
   },
 ];

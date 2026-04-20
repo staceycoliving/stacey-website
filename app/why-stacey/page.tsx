@@ -42,10 +42,10 @@ export default function WhyStaceyPage() {
       <section className="bg-gradient-to-br from-[#1A1A1A] via-[#2a2a2a] to-[#1A1A1A] pb-16 pt-28">
         <div className="mx-auto max-w-4xl px-4 text-center">
           <h1 className="font-display text-4xl font-bold text-white sm:text-5xl lg:text-6xl">
-            Why <span className="text-pink">STACEY</span>?
+            Who would want to live their <span className="italic font-light text-pink">life alone?</span>
           </h1>
           <p className="mt-4 text-lg text-white/60">
-            More than just a room. A community, a way of life.
+            Coliving for young professionals in Hamburg, Berlin and Vallendar.
           </p>
         </div>
       </section>
@@ -54,43 +54,44 @@ export default function WhyStaceyPage() {
       <section className="bg-white py-16">
         <div className="mx-auto max-w-3xl px-4">
           <h2 className="font-display text-2xl font-bold sm:text-3xl">
-            Our Mission
+            Our <span className="italic font-light">mission</span>
           </h2>
           <p className="mt-4 leading-relaxed text-gray">
-            STACEY was founded in 2019 in Hamburg with a simple idea: make city living better.
-            We believe that a home is more than four walls — it's the people you share it with.
-            That's why we create places where strangers become friends.
+            STACEY members save around €550 every month compared to a traditional studio
+            apartment — and gain friends for life in return. For us it is not about the
+            money. It is all about creating an international community of young
+            professionals who share a home, a philosophy, and plenty of good evenings.
           </p>
           <p className="mt-4 leading-relaxed text-gray">
-            From our first apartment in Winterhude, we've since expanded to Hamburg, Berlin,
-            and Vallendar. Each location is managed by a Community Manager who organizes events,
-            helps with any issues, and makes sure you settle in quickly.
+            Living at STACEY means you&apos;re always invited and never obligated. Join the
+            community dinner or close your door — both are perfectly fine. Move-in takes
+            30 minutes. All you bring is your suitcase.
           </p>
         </div>
       </section>
 
-      {/* Values */}
+      {/* What you get */}
       <section className="bg-background py-16">
         <div className="mx-auto max-w-3xl px-4">
           <h2 className="font-display text-2xl font-bold sm:text-3xl">
-            Our Values
+            What you <span className="italic font-light">get</span>
           </h2>
           <div className="mt-8 space-y-6">
             {[
               {
-                title: "Community First",
-                text: "Everything we do revolves around our community. From choosing locations to designing common spaces — we always think of people first.",
+                title: "Private & Shared Spaces",
+                text: "Your own furnished bedroom — bedding included — plus generous common areas: living rooms, work zones and kitchens stocked with essentials. Move-in ready from day one.",
               },
               {
-                title: "Simplicity",
-                text: "One price, everything included. No hidden costs, no paperwork. We make moving in as easy as possible.",
+                title: "All Services Included",
+                text: "Weekly professional cleaning of common areas, WiFi, on-site WeWash laundry, plus repair and maintenance handled by our team. One bill covers the rental essentials — laundry and the German broadcasting fee are handled separately.",
               },
               {
-                title: "Quality",
-                text: "We prioritize quality in everything — from furniture to cleaning to events. Because you deserve it.",
+                title: "A Real Community",
+                text: "Every location has a Community Manager organizing regular events — potlucks, movie nights, book clubs. Slack channels connect members across all our cities. And you can transfer between STACEY locations whenever life takes you somewhere new.",
               },
             ].map((value) => (
-              <div key={value.title} className="rounded-2xl bg-white p-6 shadow-sm">
+              <div key={value.title} className="rounded-[5px] bg-white p-6 shadow-sm">
                 <h3 className="font-medium">{value.title}</h3>
                 <p className="mt-2 text-sm text-gray">{value.text}</p>
               </div>
