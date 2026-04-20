@@ -838,15 +838,17 @@ function LocationDetail({ location }: { location: Location }) {
           onClick={() => setLightboxIndex(null)}
         >
           <button
-            className="absolute right-4 top-4 z-10 text-white/70 hover:text-white"
+            aria-label="Close"
+            className="absolute right-3 top-3 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-black/40 text-white/90 backdrop-blur-sm active:bg-black/60 sm:right-4 sm:top-4"
             onClick={() => setLightboxIndex(null)}
           >
-            <X size={28} />
+            <X size={24} />
           </button>
 
           <div className="flex flex-1 items-center justify-center p-4">
             <button
-              className="absolute left-4 top-1/2 -translate-y-1/2 rounded-full bg-white/10 p-2 text-white hover:bg-white/20"
+              aria-label="Previous image"
+              className="absolute left-2 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-sm active:bg-black/60 sm:left-4"
               onClick={(e) => {
                 e.stopPropagation();
                 setLightboxIndex((prev) => (prev! - 1 + lightboxImages.length) % lightboxImages.length);
@@ -865,7 +867,8 @@ function LocationDetail({ location }: { location: Location }) {
               />
             </div>
             <button
-              className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full bg-white/10 p-2 text-white hover:bg-white/20"
+              aria-label="Next image"
+              className="absolute right-2 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-sm active:bg-black/60 sm:right-4"
               onClick={(e) => {
                 e.stopPropagation();
                 setLightboxIndex((prev) => (prev! + 1) % lightboxImages.length);

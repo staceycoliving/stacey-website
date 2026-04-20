@@ -134,7 +134,7 @@ export default function BookingCard({
           <select
             value={moveInDate}
             onChange={(e) => handleGlobalDateChange(e.target.value)}
-            className="w-full appearance-none rounded-[5px] border border-white/20 bg-white/10 px-4 py-3 text-center text-sm text-white outline-none"
+            className="w-full appearance-none rounded-[5px] border border-white/20 bg-white/10 px-4 py-3 text-center text-base text-white outline-none sm:text-sm"
           >
             <option value="" className="text-black">Select a date</option>
             {availableDates.map((d) => (

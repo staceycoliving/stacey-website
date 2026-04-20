@@ -67,8 +67,9 @@ export default function PartnersForm() {
     );
   }
 
+  // text-base on mobile (>=16px prevents iOS auto-zoom on focus), text-sm on desktop for visual density.
   const input =
-    "w-full rounded-[5px] border border-lightgray bg-white px-4 py-3 text-sm outline-none transition-colors focus:border-black";
+    "w-full rounded-[5px] border border-lightgray bg-white px-4 py-3 text-base outline-none transition-colors focus:border-black sm:text-sm";
   const label =
     "mb-1.5 block text-[11px] font-bold uppercase tracking-widest text-black/50";
 

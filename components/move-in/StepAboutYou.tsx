@@ -3,8 +3,9 @@
 import { clsx } from "clsx";
 import type { StayType } from "@/lib/data";
 
+// text-base on mobile (>=16px prevents iOS auto-zoom on focus), text-sm on desktop for visual density.
 const inputClass =
-  "w-full rounded-[5px] border border-[#E8E6E0] px-4 py-3 text-sm outline-none transition-colors placeholder:text-[#C0C0C0] focus:border-black";
+  "w-full rounded-[5px] border border-[#E8E6E0] px-4 py-3 text-base outline-none transition-colors placeholder:text-[#C0C0C0] focus:border-black sm:text-sm";
 
 const reasons = [
   { value: "work", label: "Work / New job" },

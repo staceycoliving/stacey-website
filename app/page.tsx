@@ -424,7 +424,7 @@ export default function HomePage() {
                       <select
                         value={longCity}
                         onChange={(e) => { setLongCity(e.target.value); setLongMoveIn(""); }}
-                        className="w-full appearance-none rounded-[5px] border border-[#E5E5E5] bg-white px-3 py-2.5 text-sm outline-none"
+                        className="w-full appearance-none rounded-[5px] border border-[#E5E5E5] bg-white px-3 py-2.5 text-base outline-none sm:text-sm"
                       >
                         <option value="">Select a city</option>
                         <option value="hamburg">Hamburg</option>
@@ -463,7 +463,7 @@ export default function HomePage() {
                           value={longMoveIn}
                           onChange={(e) => setLongMoveIn(e.target.value)}
                           disabled={loadingLongDates}
-                          className="w-full appearance-none rounded-[5px] border border-[#E5E5E5] bg-white px-3 py-2.5 text-sm outline-none disabled:opacity-50"
+                          className="w-full appearance-none rounded-[5px] border border-[#E5E5E5] bg-white px-3 py-2.5 text-base outline-none disabled:opacity-50 sm:text-sm"
                         >
                           <option value="">{loadingLongDates ? "Checking availability..." : "Select a date"}</option>
                           {longStayDates.map((d) => (
