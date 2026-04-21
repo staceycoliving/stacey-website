@@ -77,10 +77,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`h-full antialiased ${montserrat.variable}`}>
-      <head>
+      <body className="min-h-full flex flex-col">
+        {/* next/script with beforeInteractive self-injects into <head>; do not wrap manually — that clashes with Next.js head management and causes hydration errors. */}
         <ConsentScripts />
-      </head>
-      <body className="min-h-full flex flex-col">{children}</body>
+        {children}
+      </body>
     </html>
   );
 }
