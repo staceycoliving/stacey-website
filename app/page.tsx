@@ -19,7 +19,7 @@ import dynamic from "next/dynamic";
 
 const LocationMap = dynamic(() => import("@/components/ui/LocationMap"), { ssr: false });
 import { locations, ROOM_NAME_TO_CATEGORY, formatMoveInLabel } from "@/lib/data";
-import { expandMoveInDates } from "@/lib/availability";
+import { expandMoveInDates, isMoveInDateBookable } from "@/lib/availability";
 
 
 export default function HomePage() {
@@ -188,9 +188,9 @@ export default function HomePage() {
               const catData = cat ? longAvailability[l.slug]?.[cat] : null;
               if (!catData) return false; // no DB data for this category → hide
               if (!longMoveIn) return true; // no date selected yet → show all
-              // Check if room is available on selected date
+              // Shared 14-day flexibility rule from lib/availability.ts
               return catData.moveInDates
-                ? catData.moveInDates.some((d) => longMoveIn >= d)
+                ? isMoveInDateBookable(longMoveIn, catData.moveInDates)
                 : catData.available > 0;
             }),
         }))
