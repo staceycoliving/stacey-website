@@ -279,6 +279,68 @@ export async function getShortStayAvailability(
 }
 
 /**
+ * Per-day availability across ALL SHORT properties for a wide date range.
+ * Used to grey out unavailable dates in the frontend calendar so users
+ * don't pick dates that are fully booked.
+ *
+ * A date is "unavailable" if no unit group at any SHORT property has
+ * sellableCount >= 1 for the given persons count.
+ */
+export async function getShortStayCalendarAvailability(
+  persons: number,
+  from: string,
+  to: string,
+): Promise<{ unavailableDates: string[] }> {
+  const slugs = Object.keys(PROPERTY_MAP);
+  const results = await Promise.all(
+    slugs.map(async (slug) => {
+      const propertyId = PROPERTY_MAP[slug];
+      try {
+        const data = await apiFetch(
+          `/availability/v1/unit-groups?${new URLSearchParams({
+            propertyId,
+            from,
+            to,
+            adults: String(persons),
+          })}`,
+        );
+        return (data.timeSlices ?? []) as Array<{
+          from?: string;
+          unitGroups?: Array<{ unitGroup?: { name?: string }; sellableCount?: number }>;
+        }>;
+      } catch {
+        return [];
+      }
+    }),
+  );
+
+  // For each calendar date, sum sellable units across all properties & groups.
+  const totalPerDate = new Map<string, number>();
+  for (const slices of results) {
+    for (const slice of slices) {
+      const date = (slice.from ?? "").slice(0, 10);
+      if (!date) continue;
+      let total = totalPerDate.get(date) ?? 0;
+      for (const g of slice.unitGroups ?? []) {
+        const category = APALEO_NAME_TO_CATEGORY[g.unitGroup?.name ?? ""];
+        if (!category) continue;
+        // Persons filter: 2 persons → only couple-friendly categories count.
+        if (persons >= 2 && !COUPLE_CATEGORIES.has(category)) continue;
+        total += g.sellableCount ?? 0;
+      }
+      totalPerDate.set(date, total);
+    }
+  }
+
+  const unavailableDates = [...totalPerDate.entries()]
+    .filter(([, count]) => count === 0)
+    .map(([date]) => date)
+    .sort();
+
+  return { unavailableDates };
+}
+
+/**
  * Create a SHORT stay reservation in apaleo.
  * Returns the apaleo booking/reservation ID.
  */

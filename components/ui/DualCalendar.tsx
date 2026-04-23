@@ -8,12 +8,14 @@ function CalendarMonth({
   checkIn,
   checkOut,
   onSelect,
+  unavailable,
 }: {
   month: number;
   year: number;
   checkIn: string | null;
   checkOut: string | null;
   onSelect: (date: string) => void;
+  unavailable: Set<string>;
 }) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -50,6 +52,7 @@ function CalendarMonth({
           const date = new Date(year, month, day);
           const dateStr = fmt(date);
           const isPast = date < today;
+          const isUnavailable = !isPast && unavailable.has(dateStr);
           const isCheckIn = dateStr === checkIn;
           const isCheckOut = dateStr === checkOut;
           const isSelected = isCheckIn || isCheckOut;
@@ -58,16 +61,21 @@ function CalendarMonth({
           return (
             <button
               key={day}
-              disabled={isPast}
+              disabled={isPast || isUnavailable}
+              aria-label={
+                isUnavailable ? `${dateStr} — not available` : dateStr
+              }
               onClick={() => onSelect(dateStr)}
               className={`rounded-[3px] py-1.5 text-xs transition-colors ${
                 isPast
                   ? "cursor-not-allowed text-[#D9D9D9]"
-                  : isSelected
-                    ? "bg-black font-bold text-white"
-                    : inRange
-                      ? "bg-pink/30 text-black"
-                      : "text-black hover:bg-[#F5F5F5]"
+                  : isUnavailable
+                    ? "cursor-not-allowed text-[#D9D9D9] line-through"
+                    : isSelected
+                      ? "bg-black font-bold text-white"
+                      : inRange
+                        ? "bg-pink/30 text-black"
+                        : "text-black hover:bg-[#F5F5F5]"
               }`}
             >
               {day}
@@ -83,11 +91,17 @@ export default function DualCalendar({
   checkIn,
   checkOut,
   onSelect,
+  unavailableDates,
 }: {
   checkIn: string | null;
   checkOut: string | null;
   onSelect: (date: string) => void;
+  /** Optional set of YYYY-MM-DD strings that should be rendered as
+   *  disabled/strikethrough — fully-booked dates from the live
+   *  availability API. */
+  unavailableDates?: string[];
 }) {
+  const unavailable = new Set(unavailableDates ?? []);
   const [baseMonth, setBaseMonth] = useState(() => {
     const now = new Date();
     return { month: now.getMonth(), year: now.getFullYear() };
@@ -117,9 +131,9 @@ export default function DualCalendar({
         <button onClick={fwd} className="p-1 text-gray hover:text-black">&rarr;</button>
       </div>
       <div className="grid grid-cols-1 gap-6 min-[420px]:grid-cols-2">
-        <CalendarMonth month={baseMonth.month} year={baseMonth.year} checkIn={checkIn} checkOut={checkOut} onSelect={onSelect} />
+        <CalendarMonth month={baseMonth.month} year={baseMonth.year} checkIn={checkIn} checkOut={checkOut} onSelect={onSelect} unavailable={unavailable} />
         <div className="hidden min-[420px]:block">
-          <CalendarMonth month={next.month} year={next.year} checkIn={checkIn} checkOut={checkOut} onSelect={onSelect} />
+          <CalendarMonth month={next.month} year={next.year} checkIn={checkIn} checkOut={checkOut} onSelect={onSelect} unavailable={unavailable} />
         </div>
       </div>
     </div>

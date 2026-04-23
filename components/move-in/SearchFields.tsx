@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { clsx } from "clsx";
 import { ArrowRight } from "lucide-react";
@@ -37,6 +37,28 @@ export default function SearchFields({
   const [calendarOpenInternal, setCalendarOpenInternal] = useState(false);
   const calendarOpen = calendarOpenExternal ?? calendarOpenInternal;
   const setCalendarOpen = setCalendarOpenExternal ?? setCalendarOpenInternal;
+
+  // Fetch fully-booked dates across all SHORT properties so the calendar
+  // can grey them out (Airbnb-style). Re-fetches when `persons` changes
+  // because availability differs for couples.
+  const [unavailableDates, setUnavailableDates] = useState<string[]>([]);
+  useEffect(() => {
+    if (stayType !== "SHORT") return;
+    let cancelled = false;
+    fetch(`/api/short-availability-calendar?persons=${persons}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!cancelled && data?.ok) {
+          setUnavailableDates(data.data.unavailableDates ?? []);
+        }
+      })
+      .catch(() => {
+        /* silently ignore — calendar falls back to accepting any date */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [stayType, persons]);
 
   const formatDateShort = (d: string) =>
     new Date(d + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
@@ -135,7 +157,7 @@ export default function SearchFields({
                 <>
                   <div className="fixed inset-0 z-20" onClick={() => setCalendarOpen(false)} />
                   <div className="absolute right-0 top-full z-30 mt-2 w-[280px] rounded-[5px] bg-white p-4 shadow-xl ring-1 ring-lightgray min-[420px]:w-[340px]">
-                    <DualCalendar checkIn={checkIn} checkOut={checkOut} onSelect={onCalendarSelect} />
+                    <DualCalendar checkIn={checkIn} checkOut={checkOut} onSelect={onCalendarSelect} unavailableDates={unavailableDates} />
                     {checkIn && checkOut && (
                       <div className="mt-3 flex items-center justify-between border-t border-lightgray pt-3">
                         <p className="text-sm font-semibold">{nightCount} nights</p>
@@ -337,7 +359,12 @@ export default function SearchFields({
 
                   {/* Desktop: inline white card, no modal */}
                   <div className="hidden rounded-[5px] bg-white p-5 text-left shadow-lg sm:block">
-                    <DualCalendar checkIn={checkIn} checkOut={checkOut} onSelect={onCalendarSelect} />
+                    <DualCalendar checkIn={checkIn} checkOut={checkOut} onSelect={onCalendarSelect} unavailableDates={unavailableDates} />
+                    {unavailableDates.length > 0 && (
+                      <p className="mt-3 text-[11px] text-gray">
+                        Greyed-out dates are fully booked.
+                      </p>
+                    )}
                     {checkIn && checkOut && (
                       <div className="mt-4 flex items-center justify-between border-t border-[#E8E6E0] pt-4">
                         <p className="text-base font-bold">{nightCount} nights</p>
@@ -369,7 +396,7 @@ export default function SearchFields({
                             Close
                           </button>
                         </div>
-                        <DualCalendar checkIn={checkIn} checkOut={checkOut} onSelect={onCalendarSelect} />
+                        <DualCalendar checkIn={checkIn} checkOut={checkOut} onSelect={onCalendarSelect} unavailableDates={unavailableDates} />
                         {checkIn && checkOut && (
                           <div className="mt-4 flex items-center justify-between border-t border-[#E8E6E0] pt-4">
                             <p className="text-base font-bold">{nightCount} nights</p>
