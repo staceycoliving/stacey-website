@@ -238,18 +238,18 @@ export default function Navbar({
       </div>
 
       {/* Mobile menu — full-screen drawer with location previews.
-          Uses opacity fade instead of translate-x slide — the slide
-          caused the bottom CTA to flicker to the top mid-animation on
-          iOS Safari and some Chrome builds (even with GPU hints). A
-          fade avoids all transform-related layout quirks. */}
+          Single scroll container, Move-in CTA as the last scroll item
+          (not sticky / absolute). Keeps the whole drawer content as one
+          block so the translate-x slide animation has nothing that can
+          shift position mid-flight. */}
       <div
         className={clsx(
-          "fixed inset-0 top-14 z-40 flex flex-col bg-white transition-opacity duration-200 lg:hidden",
-          mobileOpen ? "opacity-100" : "pointer-events-none opacity-0"
+          "fixed inset-0 top-14 z-40 bg-white transition-transform duration-300 lg:hidden",
+          mobileOpen ? "translate-x-0" : "translate-x-full"
         )}
         aria-hidden={!mobileOpen}
       >
-        <div className="flex-1 overflow-y-auto overscroll-contain">
+        <div className="h-[calc(100vh-3.5rem)] overflow-y-auto overscroll-contain">
           <div className="mx-auto max-w-md px-5 pb-8 pt-6">
             {navCities.map((city) => (
               <div key={city.slug} className="mb-7">
@@ -330,18 +330,18 @@ export default function Navbar({
                 </a>
               </div>
             </div>
-          </div>
-        </div>
 
-        {/* Sticky CTA at bottom of drawer */}
-        <div className="flex-shrink-0 border-t border-lightgray bg-white p-4">
-          <Link
-            href="/move-in"
-            onClick={() => setMobileOpen(false)}
-            className="block w-full rounded-[5px] bg-black px-6 py-3.5 text-center text-sm font-semibold text-white active:opacity-80"
-          >
-            {ctaLabel}
-          </Link>
+            {/* Move-in CTA — last scroll item, not sticky. Keeps the
+                drawer's entire content as one block so nothing can
+                shift position during the slide animation. */}
+            <Link
+              href="/move-in"
+              onClick={() => setMobileOpen(false)}
+              className="mt-6 block w-full rounded-[5px] bg-black px-6 py-3.5 text-center text-sm font-semibold text-white active:opacity-80"
+            >
+              {ctaLabel}
+            </Link>
+          </div>
         </div>
       </div>
     </nav>
