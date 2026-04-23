@@ -42,6 +42,7 @@ export default function HomePage() {
 
   // Base nightly prices from apaleo (fetched once on mount)
   const [basePrices, setBasePrices] = useState<Record<string, Record<string, number>>>({});
+  const [carouselIndex, setCarouselIndex] = useState(0);
   useEffect(() => {
     fetch("/api/prices")
       .then((r) => (r.ok ? r.json() : null))
@@ -153,6 +154,31 @@ export default function HomePage() {
       setLoadingLongDates(false);
     });
   }, [stayType, longCity, persons]);
+
+  // Track horizontal scroll position of locations carousel → highlight active dot
+  useEffect(() => {
+    const el = document.getElementById("locations-scroll");
+    if (!el) return;
+    const onScroll = () => {
+      // Each card is w-[85vw] on mobile, plus gap-4 (16px).
+      // Find the card whose left edge is closest to the scroll offset.
+      const cards = el.querySelectorAll<HTMLElement>(":scope > a");
+      if (!cards.length) return;
+      const scrollLeft = el.scrollLeft;
+      let closestIdx = 0;
+      let minDelta = Infinity;
+      cards.forEach((card, i) => {
+        const delta = Math.abs(card.offsetLeft - scrollLeft);
+        if (delta < minDelta) {
+          minDelta = delta;
+          closestIdx = i;
+        }
+      });
+      setCarouselIndex(closestIdx);
+    };
+    el.addEventListener("scroll", onScroll, { passive: true });
+    return () => el.removeEventListener("scroll", onScroll);
+  }, []);
 
   // Compute search results based on hero selections
   const searchResults = (() => {
@@ -271,7 +297,7 @@ export default function HomePage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7 }}
-            className="text-[2.5rem] font-extrabold leading-[1.05] tracking-tight text-white sm:text-5xl lg:text-6xl"
+            className="text-4xl font-extrabold leading-[1.1] tracking-tight text-white sm:text-5xl lg:text-6xl"
           >
             OUR MEMBERS CALL US <span className="italic font-light">HOME.</span>
           </motion.h1>
@@ -336,7 +362,10 @@ export default function HomePage() {
                     Almost everything included from &euro;{lowestShortPrice}/night
                   </p>
                 )}
-                <button onClick={() => setStep(0)} className="mt-4 text-sm text-white/40 hover:text-white/70">
+                <button
+                  onClick={() => setStep(0)}
+                  className="mt-5 inline-flex items-center gap-1.5 rounded-[5px] px-3 py-2 text-sm font-semibold text-white/70 transition-colors hover:text-white"
+                >
                   &larr; Back
                 </button>
               </motion.div>
@@ -357,7 +386,10 @@ export default function HomePage() {
                         {persons === 2 ? "2 persons · couple-friendly rooms" : "1 person"}{lowestShortPrice ? <> · from &euro;{lowestShortPrice}/night</> : ""}
                       </p>
                     </div>
-                    <button onClick={handleReset} className="text-xs text-gray hover:text-black">
+                    <button
+                      onClick={handleReset}
+                      className="-mr-2 rounded-[5px] px-2 py-1.5 text-xs font-semibold text-gray transition-colors hover:bg-[#F5F5F5] hover:text-black"
+                    >
                       Start over
                     </button>
                   </div>
@@ -413,7 +445,10 @@ export default function HomePage() {
                         {persons === 2 ? "2 persons · couple-friendly rooms" : "1 person"} · open-end lease
                       </p>
                     </div>
-                    <button onClick={handleReset} className="text-xs text-gray hover:text-black">
+                    <button
+                      onClick={handleReset}
+                      className="-mr-2 rounded-[5px] px-2 py-1.5 text-xs font-semibold text-gray transition-colors hover:bg-[#F5F5F5] hover:text-black"
+                    >
                       Start over
                     </button>
                   </div>
@@ -634,7 +669,7 @@ export default function HomePage() {
       )}
 
       {/* ── LOCATIONS ─────────────────────────── */}
-      <section className="bg-white pb-16 pt-6">
+      <section className="bg-white py-12 sm:py-16 md:py-20">
         <FadeIn>
         <div className="mx-auto max-w-screen-2xl px-4 sm:px-6 lg:px-8">
 
@@ -741,6 +776,24 @@ export default function HomePage() {
                   >
                     <ChevronDown size={18} className="-rotate-90" />
                   </button>
+
+                  {/* Mobile-only pagination dots — clicks scroll to that card */}
+                  <div className="mt-3 flex items-center justify-center gap-1.5 sm:hidden">
+                    {Array.from({ length: orderedLocations.length + 1 }).map((_, i) => (
+                      <button
+                        key={i}
+                        aria-label={`Go to card ${i + 1}`}
+                        onClick={() => {
+                          const el = document.getElementById("locations-scroll");
+                          const card = el?.querySelectorAll<HTMLElement>(":scope > a")[i];
+                          if (el && card) el.scrollTo({ left: card.offsetLeft, behavior: "smooth" });
+                        }}
+                        className={`h-1.5 rounded-full transition-all duration-300 ${
+                          i === carouselIndex ? "w-6 bg-black" : "w-1.5 bg-black/20"
+                        }`}
+                      />
+                    ))}
+                  </div>
                 </div>
             ))()}
           {/* Map below cards */}

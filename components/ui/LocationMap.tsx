@@ -190,7 +190,7 @@ export default function LocationMap({ onMarkerHover }: { onMarkerHover?: (slug: 
       {/* Map */}
       <div
         ref={mapContainer}
-        className="h-[500px] w-full overflow-hidden rounded-[5px] sm:h-[600px]"
+        className="h-[420px] w-full overflow-hidden rounded-[5px] sm:h-[600px]"
       />
     </div>
   );
