@@ -210,9 +210,16 @@ export default function SearchFields({
         {stayType && (
           <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} transition={{ duration: 0.25 }} className="text-center overflow-hidden">
             <div className="mt-8">
-              <p className="mb-5 text-base font-semibold text-white sm:text-lg">Moving in alone or as a couple?</p>
-              <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center sm:gap-4">
+              <p id="persons-label" className="mb-5 text-base font-semibold text-white sm:text-lg">Moving in alone or as a couple?</p>
+              <div
+                role="radiogroup"
+                aria-labelledby="persons-label"
+                className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center sm:gap-4"
+              >
                 <button
+                  type="button"
+                  role="radio"
+                  aria-checked={persons === 1}
                   onClick={() => onPersons(1)}
                   className={clsx(
                     "w-full rounded-[5px] px-6 py-3.5 text-sm font-bold transition-all duration-200 sm:w-auto sm:px-8 sm:py-4 sm:text-base",
@@ -224,6 +231,9 @@ export default function SearchFields({
                   1 person
                 </button>
                 <button
+                  type="button"
+                  role="radio"
+                  aria-checked={persons === 2}
                   onClick={() => onPersons(2)}
                   className={clsx(
                     "w-full rounded-[5px] px-6 py-3.5 text-sm font-bold transition-all duration-200 sm:w-auto sm:px-8 sm:py-4 sm:text-base",
@@ -244,11 +254,18 @@ export default function SearchFields({
         {stayType === "LONG" && (
           <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} transition={{ duration: 0.25 }} className="text-center overflow-hidden">
             <div className="mt-8">
-              <p className="mb-5 text-base font-semibold text-white sm:text-lg">Where do you want to live?</p>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
+              <p id="city-label" className="mb-5 text-base font-semibold text-white sm:text-lg">Where do you want to live?</p>
+              <div
+                role="radiogroup"
+                aria-labelledby="city-label"
+                className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4"
+              >
                 {[{ value: "hamburg", label: "Hamburg" }, { value: "berlin", label: "Berlin" }, { value: "vallendar", label: "Vallendar" }].map((c) => (
                   <button
                     key={c.value}
+                    type="button"
+                    role="radio"
+                    aria-checked={city === c.value}
                     onClick={() => onCity(c.value)}
                     className={clsx(
                       "w-full rounded-[5px] px-6 py-3.5 text-sm font-bold transition-all duration-200 sm:px-6 sm:py-4 sm:text-base",
@@ -275,7 +292,29 @@ export default function SearchFields({
                   <p className="mb-5 text-base font-semibold text-white sm:text-lg">
                     {!checkIn ? "Select your check-in date" : !checkOut ? "Now select check-out" : "Your dates"}
                   </p>
-                  <div className="rounded-[5px] bg-white p-5 text-left shadow-lg">
+
+                  {/* Mobile: a summary button that opens a full-screen
+                      bottom-sheet modal. Saves ~400px of scroll for the
+                      inline calendar which otherwise dominates the hero. */}
+                  <button
+                    type="button"
+                    onClick={() => setCalendarOpen(true)}
+                    className="block w-full rounded-[5px] bg-white px-5 py-4 text-left shadow-lg sm:hidden"
+                  >
+                    {checkIn && checkOut ? (
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-semibold text-black">
+                          {formatDateShort(checkIn)} → {formatDateShort(checkOut)}
+                        </span>
+                        <span className="text-xs text-gray">{nightCount} nights</span>
+                      </div>
+                    ) : (
+                      <span className="text-sm text-gray">Tap to pick your dates</span>
+                    )}
+                  </button>
+
+                  {/* Desktop: inline white card, no modal */}
+                  <div className="hidden rounded-[5px] bg-white p-5 text-left shadow-lg sm:block">
                     <DualCalendar checkIn={checkIn} checkOut={checkOut} onSelect={onCalendarSelect} />
                     {checkIn && checkOut && (
                       <div className="mt-4 flex items-center justify-between border-t border-[#E8E6E0] pt-4">
@@ -284,21 +323,92 @@ export default function SearchFields({
                       </div>
                     )}
                   </div>
+
+                  {/* Mobile-only bottom-sheet modal */}
+                  {calendarOpen && (
+                    <div
+                      className="fixed inset-0 z-[100] flex flex-col bg-black/60 backdrop-blur-sm sm:hidden"
+                      onClick={() => setCalendarOpen(false)}
+                    >
+                      <div
+                        className="mt-auto max-h-[90vh] overflow-y-auto rounded-t-[20px] bg-white p-5 pb-8 shadow-2xl"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <div className="mb-4 flex items-center justify-between">
+                          <p className="text-base font-bold">
+                            {!checkIn ? "Pick check-in" : !checkOut ? "Pick check-out" : "Your dates"}
+                          </p>
+                          <button
+                            type="button"
+                            aria-label="Close"
+                            onClick={() => setCalendarOpen(false)}
+                            className="-mr-2 rounded-[5px] px-2 py-1 text-sm font-semibold text-gray hover:bg-[#F5F5F5] hover:text-black"
+                          >
+                            Close
+                          </button>
+                        </div>
+                        <DualCalendar checkIn={checkIn} checkOut={checkOut} onSelect={onCalendarSelect} />
+                        {checkIn && checkOut && (
+                          <div className="mt-4 flex items-center justify-between border-t border-[#E8E6E0] pt-4">
+                            <p className="text-base font-bold">{nightCount} nights</p>
+                            {tooShort && <p className="text-sm font-semibold text-pink">Minimum 5 nights</p>}
+                          </div>
+                        )}
+                        {checkIn && checkOut && !tooShort && (
+                          <button
+                            type="button"
+                            onClick={() => setCalendarOpen(false)}
+                            className="mt-5 block w-full rounded-[5px] bg-black py-3.5 text-center text-sm font-semibold text-white active:opacity-80"
+                          >
+                            Done
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </>
               ) : (
                 <>
-                  <p className="mb-5 text-base font-semibold text-white sm:text-lg">When do you want to move in?</p>
-                  <select
-                    value={moveInDate || ""}
-                    onChange={(e) => onMoveInDate(e.target.value || null)}
-                    disabled={loadingDates}
-                    className="w-full rounded-[5px] bg-white px-5 py-4 text-center text-base font-semibold shadow-lg outline-none disabled:opacity-50"
-                  >
-                    <option value="">{loadingDates ? "Checking availability..." : "Select a date"}</option>
-                    {moveInOptions.map((d) => (
-                      <option key={d.value} value={d.value}>{d.label}</option>
-                    ))}
-                  </select>
+                  <p id="movein-label" className="mb-5 text-base font-semibold text-white sm:text-lg">When do you want to move in?</p>
+                  <div className="rounded-[5px] bg-white p-5 text-left shadow-lg">
+                    {loadingDates ? (
+                      <p className="py-3 text-center text-sm text-gray">Checking availability…</p>
+                    ) : moveInOptions.length === 0 ? (
+                      <p className="py-3 text-center text-sm text-gray">No move-in dates available.</p>
+                    ) : (
+                      <div
+                        role="radiogroup"
+                        aria-labelledby="movein-label"
+                        className="grid grid-cols-2 gap-2 sm:grid-cols-3"
+                      >
+                        {moveInOptions.map((d) => (
+                          <button
+                            key={d.value}
+                            type="button"
+                            role="radio"
+                            aria-checked={moveInDate === d.value}
+                            onClick={() => onMoveInDate(d.value)}
+                            className={clsx(
+                              "rounded-[3px] px-2 py-2 text-center text-xs font-semibold transition-colors",
+                              moveInDate === d.value
+                                ? "bg-black text-white"
+                                : "bg-[#F5F5F5] text-black hover:bg-[#EDEDED]",
+                            )}
+                          >
+                            {d.label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    {moveInDate && (
+                      <div className="mt-4 flex items-center justify-between border-t border-[#E8E6E0] pt-4">
+                        <p className="text-sm text-gray">Moving in on</p>
+                        <p className="text-sm font-bold">
+                          {moveInOptions.find((d) => d.value === moveInDate)?.label ?? moveInDate}
+                        </p>
+                      </div>
+                    )}
+                  </div>
                 </>
               )}
             </div>
