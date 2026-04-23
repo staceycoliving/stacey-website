@@ -745,9 +745,15 @@ function MoveInFlow() {
       <Navbar transparent={!showResults} />
 
       <main className="min-h-screen bg-white">
-        {/* ── INTRO — hero image background, like homepage ── */}
+        {/* ── INTRO — hero image background, like homepage ──
+             Natural top-down flow (no justify-center). When the form
+             expands (LONG + grouped date pills) the content grows
+             downward from the top instead of pushing the headline off
+             the top edge. min-h-screen ensures the hero fills at least
+             the viewport so short states (just stayType picked) don't
+             leave dead space. */}
         {!showResults ? (
-          <section className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-4">
+          <section className="relative flex min-h-screen flex-col items-center overflow-hidden px-4 pb-16 pt-28 sm:pt-32">
             {/* Hero background */}
             <Image
               src="/images/website-hero.webp"
