@@ -79,6 +79,7 @@ export default function Navbar({
     : "Move in";
 
   return (
+    <>
     <nav
       className={clsx(
         "fixed top-0 left-0 right-0 z-50",
@@ -244,12 +245,16 @@ export default function Navbar({
           </button>
         </div>
       </div>
+    </nav>
 
-      {/* Mobile menu — full-screen drawer with location previews.
-          Single scroll container, Move-in CTA as the last scroll item
-          (not sticky / absolute). Keeps the whole drawer content as one
-          block so the translate-x slide animation has nothing that can
-          shift position mid-flight. */}
+      {/* Mobile drawer + CTA live OUTSIDE the <nav> element. The nav has
+          `backdrop-blur-lg` when scrolled, which creates a CSS containing
+          block (per spec: any ancestor with backdrop-filter traps
+          position:fixed children). Keeping them inside the nav caused
+          the fixed bottom-0 CTA to render at the bottom of the NAV
+          (= under the STACEY logo at the top of the page) while
+          scrolled. Placing them as siblings of the nav keeps them
+          anchored to the viewport. */}
       <div
         className={clsx(
           "fixed inset-0 top-14 z-40 bg-white transition-transform duration-300 lg:hidden",
@@ -366,6 +371,6 @@ export default function Navbar({
           </Link>
         </div>
       </div>
-    </nav>
+    </>
   );
 }
