@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -62,8 +62,16 @@ export default function HomePage() {
   // Mirror filter state back into the URL as the user fills fields. Uses
   // history.replaceState directly so there's no Next.js re-render and no
   // flash — just a quiet URL rewrite. Shareable + refresh-safe.
+  //
+  // IMPORTANT: skip the initial mount so the mirror doesn't strip the
+  // inbound query params before the hydrate effect has read them.
+  const mirrorMountedRef = useRef(false);
   useEffect(() => {
     if (typeof window === "undefined") return;
+    if (!mirrorMountedRef.current) {
+      mirrorMountedRef.current = true;
+      return;
+    }
     const params = new URLSearchParams();
     if (stayType) params.set("stayType", stayType);
     if (persons !== 1) params.set("persons", String(persons));

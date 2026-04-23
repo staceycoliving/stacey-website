@@ -158,8 +158,18 @@ function MoveInFlow() {
   // filter bar. Shareable links, refresh-safe, plays well with back nav
   // and bfcache. Uses history.replaceState so there's no Next.js
   // re-render.
+  //
+  // IMPORTANT: skip the initial mount. On mount the state is empty
+  // defaults, so writing to URL here would strip incoming query params
+  // BEFORE the hydrate effect above reads them — leaving the /move-in
+  // page on the intro hero instead of jumping to results.
+  const mirrorMountedRef = useRef(false);
   useEffect(() => {
     if (typeof window === "undefined") return;
+    if (!mirrorMountedRef.current) {
+      mirrorMountedRef.current = true;
+      return;
+    }
     const params = new URLSearchParams();
     if (stayType) params.set("stayType", stayType);
     if (persons !== 1) params.set("persons", String(persons));
