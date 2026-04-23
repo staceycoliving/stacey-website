@@ -47,8 +47,18 @@ export default function Navbar({
   }, []);
 
   useEffect(() => {
-    document.body.style.overflow = mobileOpen ? "hidden" : "";
-    return () => { document.body.style.overflow = ""; };
+    if (mobileOpen) {
+      // Lock immediately when opening so background can't scroll.
+      document.body.style.overflow = "hidden";
+      return;
+    }
+    // Delay unlock until the 300ms close transition finishes. Otherwise
+    // the scrollbar reappearing mid-animation reflows the viewport and
+    // the drawer's inner layout jumps (the Move-in CTA flicks upward).
+    const t = setTimeout(() => {
+      document.body.style.overflow = "";
+    }, 300);
+    return () => clearTimeout(t);
   }, [mobileOpen]);
 
   const logoSrc = logoHover
@@ -234,7 +244,7 @@ export default function Navbar({
           browsers). */}
       <div
         className={clsx(
-          "fixed inset-0 top-14 z-40 flex flex-col bg-white transition-transform duration-300 lg:hidden",
+          "fixed inset-0 top-14 z-40 flex flex-col bg-white transition-transform duration-300 [will-change:transform] lg:hidden",
           mobileOpen ? "translate-x-0" : "translate-x-full"
         )}
         aria-hidden={!mobileOpen}
