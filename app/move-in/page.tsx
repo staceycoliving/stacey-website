@@ -100,6 +100,30 @@ function MoveInFlow() {
   const [checkOut, setCheckOut] = useState<string | null>(null);
   const [moveInDate, setMoveInDate] = useState<string | null>(null);
 
+  // Read initial filter state from URL params (when coming from homepage
+  // hero). If the URL has a complete filter set, skip straight to results.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const p = new URL(window.location.href).searchParams;
+    const urlStayType = p.get("stayType");
+    if (urlStayType !== "SHORT" && urlStayType !== "LONG") return;
+    setStayType(urlStayType);
+    const urlPersons = p.get("persons");
+    if (urlPersons === "1" || urlPersons === "2") setPersons(Number(urlPersons) as 1 | 2);
+    const urlCheckIn = p.get("checkIn");
+    const urlCheckOut = p.get("checkOut");
+    const urlCity = p.get("city");
+    const urlMoveIn = p.get("moveIn");
+    if (urlCheckIn) setCheckIn(urlCheckIn);
+    if (urlCheckOut) setCheckOut(urlCheckOut);
+    if (urlCity) setCity(urlCity);
+    if (urlMoveIn) setMoveInDate(urlMoveIn);
+    const complete =
+      (urlStayType === "SHORT" && urlCheckIn && urlCheckOut) ||
+      (urlStayType === "LONG" && urlCity && urlMoveIn);
+    if (complete) setShowResults(true);
+  }, []);
+
   // ─── Results + booking state ───
   const [showResults, setShowResults] = useState(false);
   const [filterCalendarOpen, setFilterCalendarOpen] = useState(false);
