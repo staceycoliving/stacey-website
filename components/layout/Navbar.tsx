@@ -65,9 +65,13 @@ export default function Navbar({
     <nav
       className={clsx(
         "fixed top-0 left-0 right-0 z-50 transition-all duration-300",
-        isDark
-          ? "bg-white/80 shadow-sm backdrop-blur-lg"
-          : "bg-transparent"
+        // When the mobile drawer is open, force a solid white bar so it
+        // visually merges with the drawer below (no translucent seam).
+        mobileOpen
+          ? "bg-white shadow-sm"
+          : isDark
+            ? "bg-white/80 shadow-sm backdrop-blur-lg"
+            : "bg-transparent"
       )}
     >
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
