@@ -175,13 +175,16 @@ export default function SearchFields({
             aria-checked={stayType === "SHORT"}
             onClick={() => onStayType("SHORT")}
             className={clsx(
-              "w-full rounded-[5px] px-6 py-3.5 text-sm font-extrabold tracking-wide transition-all duration-200 sm:w-auto sm:px-8 sm:py-4 sm:text-base",
+              "w-full rounded-[5px] px-6 py-3.5 text-sm font-extrabold tracking-wide transition-all duration-200 sm:flex sm:w-auto sm:min-w-[210px] sm:flex-col sm:gap-0.5 sm:px-8 sm:py-4 sm:text-base",
               stayType === "SHORT"
                 ? "bg-white text-black shadow-lg hover:opacity-80"
                 : "border-2 border-white bg-white/10 text-white backdrop-blur-sm hover:bg-white/20",
             )}
           >
-            SHORT <span className="font-medium">&middot; under 3 months</span>
+            <span>SHORT</span>
+            <span className="text-xs font-medium sm:text-sm">
+              <span className="sm:hidden">&nbsp;&middot;&nbsp;</span>up to 3 months
+            </span>
           </button>
           <button
             type="button"
@@ -189,13 +192,16 @@ export default function SearchFields({
             aria-checked={stayType === "LONG"}
             onClick={() => onStayType("LONG")}
             className={clsx(
-              "w-full rounded-[5px] px-6 py-3.5 text-sm font-extrabold tracking-wide transition-all duration-200 sm:w-auto sm:px-8 sm:py-4 sm:text-base",
+              "w-full rounded-[5px] px-6 py-3.5 text-sm font-extrabold tracking-wide transition-all duration-200 sm:flex sm:w-auto sm:min-w-[210px] sm:flex-col sm:gap-0.5 sm:px-8 sm:py-4 sm:text-base",
               stayType === "LONG"
                 ? "bg-white text-black shadow-lg hover:opacity-80"
                 : "border-2 border-white bg-white/10 text-white backdrop-blur-sm hover:bg-white/20",
             )}
           >
-            LONG <span className="font-medium">&middot; over 3 months</span>
+            <span>LONG</span>
+            <span className="text-xs font-medium sm:text-sm">
+              <span className="sm:hidden">&nbsp;&middot;&nbsp;</span>stay 3+ months
+            </span>
           </button>
         </div>
       </fieldset>
