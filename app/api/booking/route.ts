@@ -180,7 +180,7 @@ export async function POST(request: NextRequest) {
           category: category as RoomCategory,
         },
         include: {
-          tenant: true,
+          tenants: true,
           bookings: {
             where: {
               stayType: "LONG",
@@ -194,18 +194,20 @@ export async function POST(request: NextRequest) {
         throw new Error("NOT_AVAILABLE");
       }
 
-      // Filter to rooms that are free on the requested moveInDate
+      // Filter to rooms that are free on the requested moveInDate.
+      // A room's `tenants` array is usually 0 or 1 (schema allows >1 only
+      // in rare double-booking overrides); the room is free iff every
+      // tenant has already moved out by the requested check-in.
       const freeRooms = allRooms.filter((room: any) => {
-        // Room has active booking → not available
         if (room.bookings.length > 0) return false;
-
-        const tenant = room.tenant;
-        if (!tenant) return true; // No tenant → free
-        if (!tenant.moveOut) return false; // Occupied indefinitely
-        // Tenant has moveOut: room is free if moveOut <= moveInDate
-        const moveOutDate = new Date(tenant.moveOut);
-        moveOutDate.setHours(0, 0, 0, 0);
-        return moveOutDate <= miDate;
+        const tenants = room.tenants ?? [];
+        if (tenants.length === 0) return true;
+        return tenants.every((t: { moveOut: Date | null }) => {
+          if (!t.moveOut) return false;
+          const moveOutDate = new Date(t.moveOut);
+          moveOutDate.setHours(0, 0, 0, 0);
+          return moveOutDate <= miDate;
+        });
       });
 
       if (freeRooms.length === 0) {
