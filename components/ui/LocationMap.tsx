@@ -7,21 +7,9 @@ import { locations } from "@/lib/data";
 
 mapboxgl.accessToken = "pk.eyJ1Ijoic3RhY2V5MjAxOSIsImEiOiJjazFxZHo2bGMwMjFkM2RzeHNlNjd4NjR3In0.BADipEjIKFaTMjt3dX6F-w";
 
-const locationCoords: Record<string, [number, number]> = {
-  muehlenkamp: [10.0134, 53.5875],
-  eppendorf: [9.9858, 53.5895],
-  downtown: [10.0022, 53.5468],
-  alster: [10.0103, 53.5553],
-  "st-pauli": [9.9658, 53.5525],
-
-  eimsbuettel: [9.9603, 53.5745],
-  mitte: [13.4050, 52.5115],
-  vallendar: [7.6187, 50.3964],
-};
-
-// Fallback center + zoom when a city only has one location (bounds would be
-// a single point). For multi-location cities we compute bounds dynamically
-// from the markers instead, so every location fits the viewport.
+// Coordinates now live on each Location in lib/data.ts (loc.coords) so this
+// map + the location-detail map + any future map surface share one source
+// of truth. Fallback center/zoom is used only when a city has ≤1 location.
 const cityFallback: Record<string, { center: [number, number]; zoom: number }> = {
   hamburg: { center: [9.98, 53.565], zoom: 12 },
   berlin: { center: [13.405, 52.511], zoom: 13 },
@@ -61,7 +49,7 @@ export default function LocationMap({ onMarkerHover }: { onMarkerHover?: (slug: 
 
     const cityLocations = locations.filter((l) => l.city === activeCity);
     const coordsList = cityLocations
-      .map((l) => locationCoords[l.slug])
+      .map((l) => l.coords)
       .filter((c): c is [number, number] => Boolean(c));
 
     if (coordsList.length >= 2) {
@@ -86,7 +74,7 @@ export default function LocationMap({ onMarkerHover }: { onMarkerHover?: (slug: 
     }
 
     cityLocations.forEach((loc) => {
-      const coords = locationCoords[loc.slug];
+      const coords = loc.coords;
       if (!coords) return;
 
       // STACEY "S" marker

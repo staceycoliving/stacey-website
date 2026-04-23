@@ -78,21 +78,11 @@ function LocationDetail({ location }: { location: Location }) {
   // Map
   const neighborhoodMapRef = useRef<HTMLDivElement>(null);
   const neighborhoodMapInstance = useRef<any>(null);
-  const locationCoords: Record<string, [number, number]> = {
-    muehlenkamp: [10.0134, 53.5875],
-    eppendorf: [9.9858, 53.5895],
-    downtown: [10.0022, 53.5468],
-    alster: [10.0103, 53.5553],
-    "st-pauli": [9.9658, 53.5525],
-
-    eimsbuettel: [9.9603, 53.5745],
-    mitte: [13.4050, 52.5115],
-    vallendar: [7.6187, 50.3964],
-  };
+  // Coordinates live on Location in lib/data.ts — single source of truth.
 
   useEffect(() => {
     if (!neighborhoodMapRef.current || neighborhoodMapInstance.current) return;
-    const coords = locationCoords[location.slug] || [10.0, 53.55];
+    const coords = location.coords;
 
     // Load mapbox CSS + JS via CDN to avoid Turbopack hanging on mapbox-gl
     const cdnBase = "https://api.mapbox.com/mapbox-gl-js/v3.9.4";

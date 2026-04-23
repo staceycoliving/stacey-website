@@ -22,6 +22,7 @@ export type Location = {
   city: "hamburg" | "berlin" | "vallendar";
   name: string;
   address: string;
+  coords: [number, number]; // [lng, lat] — precise building location (Mapbox-geocoded)
   stayType: StayType;
   priceFrom: number;
   tagline: string;
@@ -57,6 +58,7 @@ export const locations: Location[] = [
     city: "hamburg",
     name: "Mühlenkamp",
     address: "Dorotheenstraße 3-5, 22301 Hamburg",
+    coords: [10.0091, 53.5815],
     stayType: "LONG",
     priceFrom: 795,
     tagline: "The Cradle of Coliving",
@@ -197,6 +199,7 @@ export const locations: Location[] = [
     city: "hamburg",
     name: "Eppendorf",
     address: "Eppendorfer Weg 270, 20251 Hamburg",
+    coords: [9.9792, 53.5841],
     stayType: "LONG",
     priceFrom: 895,
     tagline: "Coliving for Locals",
@@ -351,6 +354,7 @@ export const locations: Location[] = [
     city: "hamburg",
     name: "Downtown",
     address: "Brandstwiete 36, 20457 Hamburg",
+    coords: [9.9967, 53.5471],
     stayType: "SHORT",
     priceFrom: 45,
     // Mighty=995, Premium=1095, PremiumBalcony=1145, Premium+=1195, Jumbo=1395
@@ -479,6 +483,7 @@ export const locations: Location[] = [
     city: "hamburg",
     name: "Alster",
     address: "Gurlittstraße 28, 20099 Hamburg",
+    coords: [10.0096, 53.5581],
     stayType: "SHORT",
     priceFrom: 48,
     tagline: "Coliving next door to Udo",
@@ -609,6 +614,7 @@ export const locations: Location[] = [
     city: "hamburg",
     name: "St. Pauli",
     address: "Detlev-Bremer-Straße 2, 20359 Hamburg",
+    coords: [9.9655, 53.5530],
     stayType: "LONG",
     priceFrom: 895,
     tagline: "Central, Colorful, Diverse",
@@ -712,6 +718,7 @@ export const locations: Location[] = [
     city: "hamburg",
     name: "Eimsbüttel",
     address: "Bei der Apostelkirche 13, 20257 Hamburg",
+    coords: [9.9433, 53.5758],
     stayType: "LONG",
     priceFrom: 795,
     tagline: "Beautiful, Peaceful & Quiet",
@@ -814,6 +821,7 @@ export const locations: Location[] = [
     city: "berlin",
     name: "Mitte",
     address: "Fischerinsel 13-15, 10179 Berlin",
+    coords: [13.4065, 52.5135],
     stayType: "LONG",
     priceFrom: 795,
     tagline: "Most Central Coliving in Berlin",
@@ -993,6 +1001,7 @@ export const locations: Location[] = [
     slug: "vallendar",
     city: "vallendar",
     name: "Vallendar",
+    coords: [7.6167, 50.4002],
     address: "Löhrstraße 54, 56179 Vallendar",
     stayType: "LONG",
     priceFrom: 595,
