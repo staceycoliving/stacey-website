@@ -1,7 +1,7 @@
-import Image from "next/image";
 import Link from "next/link";
 import { locations } from "@/lib/data";
 import CookieSettingsLink from "@/components/legal/CookieSettingsLink";
+import FooterLogo from "@/components/layout/FooterLogo";
 
 const hamburg = locations.filter((l) => l.city === "hamburg");
 const berlin = locations.filter((l) => l.city === "berlin");
@@ -92,9 +92,7 @@ export default function Footer() {
         {/* Bottom bar */}
         <div className="mt-14 flex flex-col items-center justify-between gap-4 border-t border-white/10 pt-8 sm:flex-row">
           <div className="flex items-center gap-4">
-            <div className="relative h-8 w-28">
-              <Image src="/images/stacey-logo-new-pink-001.webp" alt="STACEY" fill className="object-contain" />
-            </div>
+            <FooterLogo />
           </div>
           <p className="text-[11px] text-white/30">&copy; {new Date().getFullYear()} STACEY Real Estate GmbH</p>
         </div>
