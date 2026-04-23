@@ -160,33 +160,55 @@ export default function SearchFields({
   // ─── Full: progressive vertical fields (hero overlay) ───
   return (
     <>
-      <div className="mt-10 text-center sm:mt-12">
-        <p className="mb-5 text-base font-semibold text-white sm:text-lg">How long do you want to stay?</p>
-        <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center sm:gap-4">
-          <button
-            onClick={() => onStayType("SHORT")}
-            className={clsx(
-              "w-full rounded-[5px] px-6 py-3.5 text-sm font-extrabold tracking-wide transition-all duration-200 sm:w-auto sm:px-8 sm:py-4 sm:text-base",
-              stayType === "SHORT"
-                ? "bg-white text-black shadow-lg hover:opacity-80"
-                : "border-2 border-white bg-white/10 text-white backdrop-blur-sm hover:bg-white/20"
-            )}
-          >
-            SHORT <span className="font-medium">&middot; &lt;3 months</span>
-          </button>
-          <button
-            onClick={() => onStayType("LONG")}
-            className={clsx(
-              "w-full rounded-[5px] px-6 py-3.5 text-sm font-extrabold tracking-wide transition-all duration-200 sm:w-auto sm:px-8 sm:py-4 sm:text-base",
-              stayType === "LONG"
-                ? "bg-white text-black shadow-lg hover:opacity-80"
-                : "border-2 border-white bg-white/10 text-white backdrop-blur-sm hover:bg-white/20"
-            )}
-          >
-            LONG <span className="font-medium">&middot; 3+ months</span>
-          </button>
+      <fieldset className="mt-10 text-center sm:mt-12">
+        <legend className="mb-5 block w-full text-base font-semibold text-white sm:text-lg">
+          How long do you want to stay?
+        </legend>
+        <div
+          role="radiogroup"
+          aria-label="Stay type"
+          className="grid grid-cols-1 gap-4 sm:grid-cols-2"
+        >
+          <div className="flex flex-col items-center">
+            <button
+              type="button"
+              role="radio"
+              aria-checked={stayType === "SHORT"}
+              onClick={() => onStayType("SHORT")}
+              className={clsx(
+                "w-full rounded-[5px] px-6 py-3.5 text-sm font-extrabold tracking-wide transition-all duration-200 sm:py-4 sm:text-base",
+                stayType === "SHORT"
+                  ? "bg-white text-black shadow-lg hover:opacity-80"
+                  : "border-2 border-white bg-white/10 text-white backdrop-blur-sm hover:bg-white/20",
+              )}
+            >
+              SHORT
+            </button>
+            <p className="mt-2 text-[11px] leading-tight text-white/70 sm:text-xs">
+              Hotel-style<br />from 5 nights
+            </p>
+          </div>
+          <div className="flex flex-col items-center">
+            <button
+              type="button"
+              role="radio"
+              aria-checked={stayType === "LONG"}
+              onClick={() => onStayType("LONG")}
+              className={clsx(
+                "w-full rounded-[5px] px-6 py-3.5 text-sm font-extrabold tracking-wide transition-all duration-200 sm:py-4 sm:text-base",
+                stayType === "LONG"
+                  ? "bg-white text-black shadow-lg hover:opacity-80"
+                  : "border-2 border-white bg-white/10 text-white backdrop-blur-sm hover:bg-white/20",
+              )}
+            >
+              LONG
+            </button>
+            <p className="mt-2 text-[11px] leading-tight text-white/70 sm:text-xs">
+              Coliving home<br />3+ months
+            </p>
+          </div>
         </div>
-      </div>
+      </fieldset>
 
       <AnimatePresence>
         {stayType && (

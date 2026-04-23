@@ -4,7 +4,8 @@ import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
+import { clsx } from "clsx";
 import { ChevronDown, ArrowRight } from "lucide-react";
 import type { StayType } from "@/lib/data";
 import Navbar from "@/components/layout/Navbar";
@@ -127,6 +128,50 @@ export default function HomePage() {
     (stayType === "SHORT" && checkIn && checkOut && !tooShort) ||
     (stayType === "LONG" && city && moveInDate);
 
+  // Live availability preview — approximate count from data.ts filtered by
+  // persons. Not pricing-accurate but scopes the result set so users
+  // submit with expectations instead of blind hope.
+  const availableCount: number | null = (() => {
+    if (!stayType) return null;
+    if (stayType === "SHORT" && (!checkIn || !checkOut || tooShort)) return null;
+    if (stayType === "LONG" && (!city || !moveInDate)) return null;
+    const pool = locations.filter((l) => {
+      if (l.stayType !== stayType) return false;
+      if (stayType === "LONG" && l.city !== city) return false;
+      return true;
+    });
+    return pool.reduce(
+      (acc, l) =>
+        acc + l.rooms.filter((r) => (persons === 2 ? r.forCouples : true)).length,
+      0,
+    );
+  })();
+
+  // Dynamic submit-button label — action-oriented, adapts to what the user
+  // already picked so the CTA feels earned and informative.
+  const submitLabel = (() => {
+    if (!canSubmit) return "Find my room";
+    if (availableCount !== null && availableCount > 0) {
+      return `See ${availableCount} room${availableCount === 1 ? "" : "s"}`;
+    }
+    return "Find my room";
+  })();
+
+  // Hint showing what's still needed when the button is disabled.
+  const missingHint = (() => {
+    if (canSubmit || !stayType) return null;
+    if (stayType === "SHORT") {
+      if (!checkIn) return "Pick your check-in date to continue.";
+      if (!checkOut) return "Now pick check-out.";
+      if (tooShort) return "Minimum stay is 5 nights.";
+    }
+    if (stayType === "LONG") {
+      if (!city) return "Pick a city to continue.";
+      if (!moveInDate) return "Pick a move-in date to continue.";
+    }
+    return null;
+  })();
+
   const handleSubmit = () => {
     if (!canSubmit || !stayType) return;
     const params = new URLSearchParams({
@@ -163,20 +208,38 @@ export default function HomePage() {
         />
         <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/30 to-black/60" />
 
-        <div className="relative z-30 w-full max-w-md px-5 text-center sm:px-6">
+        <div className="relative z-30 w-full px-5 text-center sm:px-6">
+          {/* Headline uses a wider container so "OUR MEMBERS CALL US HOME."
+              fits on one line on desktop (text-6xl) instead of wrapping
+              awkwardly inside a narrow booking-form container. */}
           <motion.h1
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.4, ease: "easeOut" }}
-            className="text-4xl font-extrabold leading-[1.1] tracking-tight text-white sm:text-5xl lg:text-6xl"
+            className="mx-auto max-w-4xl text-4xl font-extrabold leading-[1.1] tracking-tight text-white sm:text-5xl lg:text-6xl"
           >
             OUR MEMBERS CALL US <span className="italic font-light">HOME.</span>
           </motion.h1>
 
+          {/* Value-prop subhead — tells new visitors what the product is
+              within 2 seconds instead of relying on the brand headline. */}
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.4, delay: 0.1, ease: "easeOut" }}
+            className="mx-auto mt-6 max-w-xl text-base font-medium leading-relaxed text-white sm:text-lg"
+          >
+            Furnished coliving in Hamburg, Berlin &amp; Vallendar.<br className="hidden sm:inline" />
+            From 5&nbsp;nights to open-end.
+          </motion.p>
+
+          {/* SearchFields + submit stay inside a narrow column so fields
+              don't sprawl across the viewport on desktop. */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.4, delay: 0.15, ease: "easeOut" }}
+            className="mx-auto max-w-md"
           >
             <SearchFields
               stayType={stayType} onStayType={setStayType}
@@ -189,24 +252,39 @@ export default function HomePage() {
               variant="full"
             />
 
-            <AnimatePresence>
-              {canSubmit && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="mt-10"
+            {/* Submit button — always rendered. Disabled state shows a hint
+                of what's still needed so users understand scope upfront. */}
+            {stayType && (
+              <motion.div
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.25, ease: "easeOut" }}
+                className="mt-10"
+              >
+                <button
+                  onClick={handleSubmit}
+                  disabled={!canSubmit}
+                  className={clsx(
+                    "inline-flex w-full items-center justify-center gap-2 rounded-[5px] px-10 py-4 text-base font-bold transition-all duration-200 sm:text-lg",
+                    canSubmit
+                      ? "bg-white text-black shadow-lg hover:opacity-80"
+                      : "cursor-not-allowed border-2 border-white/40 bg-white/10 text-white/60 backdrop-blur-sm",
+                  )}
                 >
-                  <button
-                    onClick={handleSubmit}
-                    className="inline-flex w-full items-center justify-center gap-2 rounded-[5px] bg-white px-10 py-4 text-base font-bold text-black transition-all duration-200 hover:opacity-80 sm:text-lg"
-                  >
-                    Show available rooms <ArrowRight size={16} />
-                  </button>
-                </motion.div>
-              )}
-            </AnimatePresence>
+                  {submitLabel} {canSubmit && <ArrowRight size={16} />}
+                </button>
+                {!canSubmit && missingHint && (
+                  <p className="mt-3 text-xs text-white/60">{missingHint}</p>
+                )}
+                {canSubmit && availableCount !== null && (
+                  <p className="mt-3 text-xs font-semibold text-white/80">
+                    {availableCount > 0
+                      ? `${availableCount} room${availableCount === 1 ? "" : "s"} match your filters`
+                      : "No rooms match — try different filters"}
+                  </p>
+                )}
+              </motion.div>
+            )}
           </motion.div>
         </div>
 
@@ -232,9 +310,13 @@ export default function HomePage() {
         <div className="absolute bottom-0 left-0 right-0 z-10 h-24 bg-gradient-to-t from-white to-transparent" />
       </section>
 
-      {/* ── LOCATIONS — low mobile pt so card tops peek under hero ── */}
-      <section className="bg-white pb-12 pt-6 sm:py-16 md:py-20">
-        <FadeIn>
+      {/* ── LOCATIONS — low pt on every breakpoint so card tops peek
+           under the 88vh hero (mobile + desktop). Bottom padding scales
+           normally for rhythm with the next section. ── */}
+      <section className="bg-white pb-12 pt-4 sm:pb-16 sm:pt-6 md:pb-20 md:pt-8">
+        {/* No FadeIn here — this section peeks under the hero on first
+            paint; triggering a scroll-in animation delays the cards
+            and defeats the whole peek-to-tease pattern. */}
         <div className="mx-auto max-w-screen-2xl px-4 sm:px-6 lg:px-8">
 
             {(() => (
@@ -368,7 +450,6 @@ export default function HomePage() {
             <LocationMap />
           </div>
         </div>
-        </FadeIn>
       </section>
 
       <FeaturesSection />
