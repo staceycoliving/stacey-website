@@ -64,7 +64,12 @@ export default function Navbar({
   return (
     <nav
       className={clsx(
-        "fixed top-0 left-0 right-0 z-50 transition-all duration-300",
+        "fixed top-0 left-0 right-0 z-50",
+        // Transition only box-shadow (for the scroll state). Background is
+        // not transitioned because opening the mobile drawer needs an
+        // instant swap to solid white — otherwise the 300ms fade creates
+        // a half-transparent bar during the drawer slide-in.
+        "transition-shadow duration-300",
         // When the mobile drawer is open, force a solid white bar so it
         // visually merges with the drawer below (no translucent seam).
         mobileOpen
@@ -222,15 +227,19 @@ export default function Navbar({
         </div>
       </div>
 
-      {/* Mobile menu — full-screen drawer with location previews */}
+      {/* Mobile menu — full-screen drawer with location previews.
+          Flex column so the sticky CTA sits naturally at the bottom
+          (using absolute positioning here causes the CTA to flicker to
+          the top during the slide-in/out transform animation in some
+          browsers). */}
       <div
         className={clsx(
-          "fixed inset-0 top-14 z-40 bg-white transition-transform duration-300 lg:hidden",
+          "fixed inset-0 top-14 z-40 flex flex-col bg-white transition-transform duration-300 lg:hidden",
           mobileOpen ? "translate-x-0" : "translate-x-full"
         )}
         aria-hidden={!mobileOpen}
       >
-        <div className="h-[calc(100vh-3.5rem)] overflow-y-auto overscroll-contain pb-32">
+        <div className="flex-1 overflow-y-auto overscroll-contain">
           <div className="mx-auto max-w-md px-5 pb-8 pt-6">
             {navCities.map((city) => (
               <div key={city.slug} className="mb-7">
@@ -314,8 +323,9 @@ export default function Navbar({
           </div>
         </div>
 
-        {/* Sticky CTA at bottom of drawer */}
-        <div className="absolute inset-x-0 bottom-0 border-t border-lightgray bg-white/95 p-4 backdrop-blur-lg">
+        {/* Sticky CTA at bottom of drawer — flex-shrink-0 so it stays
+            pinned to the bottom without absolute positioning. */}
+        <div className="flex-shrink-0 border-t border-lightgray bg-white p-4">
           <Link
             href="/move-in"
             onClick={() => setMobileOpen(false)}
