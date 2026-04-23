@@ -12,6 +12,10 @@ import {
   Check,
   Mail,
   MapPin,
+  Ruler,
+  Users,
+  Search,
+  ChevronDown,
 } from "lucide-react";
 import { clsx } from "clsx";
 import Navbar from "@/components/layout/Navbar";
@@ -131,6 +135,7 @@ function MoveInFlow() {
   const [expandedRoomId, setExpandedRoomId] = useState<string | null>(null);
   const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
   const [roomCollapsed, setRoomCollapsed] = useState(false);
+  const [sortBy, setSortBy] = useState<"priceAsc" | "priceDesc" | "sizeAsc" | "sizeDesc">("priceAsc");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
@@ -845,109 +850,240 @@ function MoveInFlow() {
 
         {/* ── RESULTS (like homepage search results) ── */}
         {showResults && !showLease && !filterCalendarOpen && !roomCollapsed && !(stayType === "SHORT" && (!checkIn || !checkOut || tooShort)) && !(stayType === "LONG" && (!city || !moveInDate)) && (
-          <section ref={resultsRef} id="search-results" className="bg-white py-16">
+          <section ref={resultsRef} id="search-results" className="bg-[#FAFAFA] py-12 sm:py-16">
             <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
               {/* Header */}
-              <div>
-                <h2 className="text-2xl font-extrabold tracking-tight sm:text-3xl">
-                  {loadingAvailability ? (
-                    <span className="inline-flex items-center gap-3"><Loader2 size={20} className="animate-spin" /> Checking availability...</span>
-                  ) : (
-                    <>{totalRooms} rooms <span className="italic font-light">available</span></>
-                  )}
-                </h2>
-                <p className="mt-1 text-sm text-gray">{searchSummary}</p>
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                  <h2 className="text-3xl font-extrabold tracking-tight sm:text-4xl">
+                    {loadingAvailability ? (
+                      <span className="inline-flex items-center gap-3">
+                        <Loader2 size={22} className="animate-spin" /> Checking availability…
+                      </span>
+                    ) : totalRooms > 0 ? (
+                      <>
+                        {totalRooms} {totalRooms === 1 ? "room" : "rooms"}{" "}
+                        <span className="italic font-light">available</span>
+                      </>
+                    ) : (
+                      <>No rooms <span className="italic font-light">match</span></>
+                    )}
+                  </h2>
+                  <p className="mt-2 text-sm text-gray">{searchSummary}</p>
+                </div>
+
+                {/* Sort chips — only if there are results */}
+                {totalRooms > 0 && (
+                  <div className="flex items-center gap-2 overflow-x-auto">
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-gray">
+                      Sort
+                    </span>
+                    {([
+                      { key: "priceAsc", label: "Price ↑" },
+                      { key: "priceDesc", label: "Price ↓" },
+                      { key: "sizeAsc", label: "Size ↑" },
+                      { key: "sizeDesc", label: "Size ↓" },
+                    ] as const).map((opt) => (
+                      <button
+                        key={opt.key}
+                        onClick={() => setSortBy(opt.key)}
+                        className={clsx(
+                          "shrink-0 rounded-[5px] px-3 py-1.5 text-xs font-semibold transition-colors",
+                          sortBy === opt.key
+                            ? "bg-black text-white"
+                            : "bg-white text-black ring-1 ring-lightgray hover:bg-[#F0F0F0]",
+                        )}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
 
-              {/* Room grid grouped by location */}
-              {!roomCollapsed && (
-                <div className="mt-8 space-y-12">
-                  {filteredLocations.map((loc) => (
-                    <div key={loc.slug}>
-                      <div className="flex items-center gap-3">
-                        <h3 className="text-lg font-extrabold">STACEY {loc.name}</h3>
-                        <span className="text-xs text-gray">
-                          {loc.neighborhood}, {loc.city.charAt(0).toUpperCase() + loc.city.slice(1)}
-                        </span>
-                        <Link href={`/locations/${loc.slug}`} className="ml-auto text-xs font-semibold text-gray transition-all duration-200 hover:opacity-60">
-                          View location →
-                        </Link>
-                      </div>
-
-                      {loc.rooms.length === 0 && (
-                        <p className="mt-3 text-sm text-gray">Sold out for this date</p>
-                      )}
-                      <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                        {loc.rooms.map((room) => (
-                          <div
-                            key={room.id}
-                            className="group overflow-hidden rounded-[5px] bg-white ring-1 ring-[#E8E6E0] transition-all duration-200 hover:ring-2 hover:ring-black hover:shadow-lg"
-                          >
-                            <div className="relative aspect-[4/3] overflow-hidden">
-                              <Image src={room.image} alt={room.name} fill className="object-cover transition-transform duration-500 group-hover:scale-105" sizes="(max-width: 768px) 100vw, 33vw" />
-                              {room.forCouples && (
-                                <span className="absolute right-2 top-2 rounded-[5px] bg-pink px-2 py-0.5 text-[10px] font-bold text-white">
-                                  Couples
-                                </span>
-                              )}
-                            </div>
-                            <div className="p-4">
-                              <div className="flex items-center justify-between">
-                                <div>
-                                  <p className="text-sm font-bold">{room.name}</p>
-                                  <p className="text-[11px] text-gray">STACEY {loc.name}</p>
-                                </div>
-                                {room.sizeSqm && <p className="text-xs text-gray">{room.sizeSqm} m²</p>}
-                              </div>
-                              <p className="mt-1 text-xl font-extrabold">
-                                {(() => {
-                                  if (stayType === "SHORT") {
-                                    const price = getNightlyPrice(room.name, loc.slug);
-                                    if (price) return <>{"\u20AC"}{price}<span className="text-xs font-normal text-gray">/night</span></>;
-                                  }
-                                  return <>{"\u20AC"}{room.priceMonthly}<span className="text-xs font-normal text-gray">/mo</span></>;
-                                })()}
-                              </p>
-                              <p className="mt-0.5 text-[11px] text-gray">Almost everything included · fully furnished</p>
-                            </div>
-                            {/* Details + Book — visible on hover (desktop) / always visible (mobile) */}
-                            <div className="border-t border-[#E8E6E0] p-4 max-lg:block lg:max-h-0 lg:overflow-hidden lg:border-t-0 lg:p-0 lg:opacity-0 lg:transition-all lg:duration-300 lg:group-hover:max-h-60 lg:group-hover:border-t lg:group-hover:p-4 lg:group-hover:opacity-100">
-                              <p className="text-sm leading-relaxed text-gray">{room.description}</p>
-                              <p className="mt-2 text-xs text-gray">
-                                <span className="font-semibold text-black">Includes:</span> {room.interior}
-                              </p>
-                              <button
-                                onClick={() => handleRoomSelect(room.id)}
-                                disabled={loadingAvailability}
-                                className={clsx(
-                                  "mt-4 flex w-full items-center justify-center gap-2 rounded-[5px] px-6 py-3 text-sm font-semibold transition-all duration-200",
-                                  loadingAvailability
-                                    ? "cursor-not-allowed bg-gray/20 text-gray"
-                                    : "bg-black text-white hover:opacity-80"
-                                )}
-                              >
-                                {loadingAvailability ? (
-                                  <><Loader2 size={14} className="animate-spin" /> Checking...</>
-                                ) : (
-                                  <>Book this room <ArrowRight size={14} /></>
-                                )}
-                              </button>
-                            </div>
+              {/* Location groups with room cards */}
+              {!roomCollapsed && totalRooms > 0 && (
+                <div className="mt-10 space-y-14">
+                  {filteredLocations.map((loc) => {
+                    const sortedRooms = [...loc.rooms].sort((a, b) => {
+                      if (sortBy === "priceAsc") return a.priceMonthly - b.priceMonthly;
+                      if (sortBy === "priceDesc") return b.priceMonthly - a.priceMonthly;
+                      if (sortBy === "sizeAsc") return (a.sizeSqm ?? 999) - (b.sizeSqm ?? 999);
+                      if (sortBy === "sizeDesc") return (b.sizeSqm ?? 0) - (a.sizeSqm ?? 0);
+                      return 0;
+                    });
+                    return (
+                      <div key={loc.slug}>
+                        {/* Location banner card */}
+                        <Link
+                          href={`/locations/${loc.slug}`}
+                          className="group flex items-center gap-4 rounded-[5px] bg-white p-4 shadow-sm ring-1 ring-lightgray transition-all hover:shadow-md sm:p-5"
+                        >
+                          <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-[5px] sm:h-20 sm:w-20">
+                            <Image
+                              src={loc.images[0]}
+                              alt={loc.name}
+                              fill
+                              className="object-cover transition-transform duration-500 group-hover:scale-105"
+                              sizes="(max-width: 640px) 64px, 80px"
+                            />
                           </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
+                          <div className="min-w-0 flex-1">
+                            <h3 className="text-lg font-extrabold tracking-tight sm:text-xl">
+                              STACEY {loc.name}
+                            </h3>
+                            <p className="mt-0.5 text-xs text-gray sm:text-sm">
+                              {loc.neighborhood},{" "}
+                              {loc.city.charAt(0).toUpperCase() + loc.city.slice(1)} · {loc.rooms.length}{" "}
+                              {loc.rooms.length === 1 ? "room type" : "room types"}
+                            </p>
+                          </div>
+                          <span className="hidden shrink-0 items-center gap-1 text-xs font-semibold text-gray transition-all group-hover:translate-x-1 group-hover:text-black sm:flex">
+                            View location <ArrowRight size={14} />
+                          </span>
+                        </Link>
 
-                  {totalRooms === 0 && (
-                    <div className="rounded-[5px] border border-[#E8E6E0] p-8 text-center">
-                      <p className="text-sm font-semibold">No rooms available</p>
-                      <p className="mt-1 text-xs text-gray">Try changing your search criteria.</p>
-                    </div>
-                  )}
+                        {/* Room grid */}
+                        <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                          {sortedRooms.map((room) => {
+                            const price =
+                              stayType === "SHORT"
+                                ? getNightlyPrice(room.name, loc.slug)
+                                : room.priceMonthly;
+                            const unit = stayType === "SHORT" ? "/night" : "/mo";
+                            return (
+                              <div
+                                key={room.id}
+                                className="group flex flex-col overflow-hidden rounded-[5px] bg-white shadow-sm transition-all duration-200 hover:shadow-lg"
+                              >
+                                <div className="relative aspect-[3/2] overflow-hidden">
+                                  <Image
+                                    src={room.image}
+                                    alt={room.name}
+                                    fill
+                                    className="object-cover transition-transform duration-500 group-hover:scale-105"
+                                    sizes="(max-width: 768px) 100vw, 33vw"
+                                  />
+                                  {room.forCouples && (
+                                    <span className="absolute right-3 top-3 rounded-[5px] bg-pink px-2.5 py-1 text-[10px] font-bold text-white shadow-sm">
+                                      Couples OK
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="flex flex-1 flex-col p-5">
+                                  <div className="flex items-start justify-between gap-3">
+                                    <div className="min-w-0">
+                                      <p className="text-base font-extrabold tracking-tight">
+                                        {room.name}
+                                      </p>
+                                      <p className="mt-0.5 text-[11px] text-gray">STACEY {loc.name}</p>
+                                    </div>
+                                    <p className="shrink-0 text-right text-2xl font-extrabold leading-none">
+                                      €{price ?? room.priceMonthly}
+                                      <span className="ml-0.5 text-[11px] font-normal text-gray">
+                                        {unit}
+                                      </span>
+                                    </p>
+                                  </div>
+
+                                  {/* Amenity strip */}
+                                  <div className="mt-4 flex flex-wrap gap-1.5">
+                                    {room.sizeSqm && (
+                                      <span className="inline-flex items-center gap-1 rounded-[5px] bg-[#F5F5F5] px-2 py-1 text-[11px] font-semibold text-gray">
+                                        <Ruler size={12} /> {room.sizeSqm} m²
+                                      </span>
+                                    )}
+                                    {room.forCouples && (
+                                      <span className="inline-flex items-center gap-1 rounded-[5px] bg-[#F5F5F5] px-2 py-1 text-[11px] font-semibold text-gray">
+                                        <Users size={12} /> 1–2 people
+                                      </span>
+                                    )}
+                                    {room.name.toLowerCase().includes("balcony") && (
+                                      <span className="inline-flex items-center gap-1 rounded-[5px] bg-[#F5F5F5] px-2 py-1 text-[11px] font-semibold text-gray">
+                                        🌿 Balcony
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  <p className="mt-3 line-clamp-2 text-sm leading-relaxed text-gray">
+                                    {room.description}
+                                  </p>
+
+                                  {/* Book CTA — always visible, pinned to card bottom */}
+                                  <button
+                                    onClick={() => handleRoomSelect(room.id)}
+                                    disabled={loadingAvailability}
+                                    className={clsx(
+                                      "mt-5 flex w-full items-center justify-center gap-2 rounded-[5px] px-6 py-3 text-sm font-semibold transition-all duration-200",
+                                      loadingAvailability
+                                        ? "cursor-not-allowed bg-[#F5F5F5] text-gray"
+                                        : "bg-black text-white hover:opacity-80",
+                                    )}
+                                  >
+                                    {loadingAvailability ? (
+                                      <>
+                                        <Loader2 size={14} className="animate-spin" /> Checking…
+                                      </>
+                                    ) : (
+                                      <>
+                                        Book this room <ArrowRight size={14} />
+                                      </>
+                                    )}
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
 
+              {/* Empty state — prominent, action-oriented */}
+              {!loadingAvailability && totalRooms === 0 && (
+                <div className="mt-10 rounded-[5px] bg-white p-8 text-center shadow-sm sm:p-12">
+                  <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-pink/20 text-black">
+                    <Search size={22} />
+                  </div>
+                  <h3 className="mt-5 text-xl font-extrabold tracking-tight">
+                    Nothing matches <span className="italic font-light">these filters</span>
+                  </h3>
+                  <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-gray">
+                    Your chosen combination is unusually specific. Try a nearby move-in date or
+                    a different city — coliving availability changes weekly.
+                  </p>
+                  <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (stayType === "LONG") {
+                          setMoveInDate(null);
+                        } else {
+                          setCheckIn(null);
+                          setCheckOut(null);
+                        }
+                        setShowResults(false);
+                      }}
+                      className="rounded-[5px] bg-black px-6 py-3 text-sm font-semibold text-white hover:opacity-80"
+                    >
+                      Try a different date
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCity("");
+                        setMoveInDate(null);
+                        setShowResults(false);
+                      }}
+                      className="rounded-[5px] bg-white px-6 py-3 text-sm font-semibold text-black ring-1 ring-lightgray hover:bg-[#F5F5F5]"
+                    >
+                      Pick another city
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </section>
         )}
