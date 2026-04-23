@@ -24,6 +24,11 @@ export default function Navbar({
 }) {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  // True while the mobile drawer is open OR animating out. The nav bar
+  // reads this (not mobileOpen) so it stays solid white during the
+  // 300ms close slide — otherwise the bar snaps to transparent
+  // immediately while the drawer is still visible.
+  const [drawerVisible, setDrawerVisible] = useState(false);
   const [logoHover, setLogoHover] = useState(false);
   const [megaOpen, setMegaOpen] = useState<string | null>(null);
   const [basePrices, setBasePrices] = useState<Record<string, Record<string, number>>>({});
@@ -48,22 +53,24 @@ export default function Navbar({
 
   useEffect(() => {
     if (mobileOpen) {
+      setDrawerVisible(true);
       // Lock immediately when opening so background can't scroll.
       document.body.style.overflow = "hidden";
       return;
     }
-    // Delay unlock until the 300ms close transition finishes. Otherwise
-    // the scrollbar reappearing mid-animation reflows the viewport and
-    // the drawer's inner layout jumps (the Move-in CTA flicks upward).
+    // Delay drawerVisible unset AND body overflow unlock by 300ms
+    // (= transition duration) so the nav bar stays solid white during
+    // the close slide.
     const t = setTimeout(() => {
       document.body.style.overflow = "";
+      setDrawerVisible(false);
     }, 300);
     return () => clearTimeout(t);
   }, [mobileOpen]);
 
   const logoSrc = logoHover
     ? "/images/stacey-logo-new-pink-001.webp"
-    : isDark || mobileOpen
+    : isDark || drawerVisible
       ? "/images/stacey-logo-new-black-001.webp"
       : "/images/stacey-logo-new-white-001.webp";
 
@@ -80,9 +87,10 @@ export default function Navbar({
         // instant swap to solid white — otherwise the 300ms fade creates
         // a half-transparent bar during the drawer slide-in.
         "transition-shadow duration-300",
-        // When the mobile drawer is open, force a solid white bar so it
-        // visually merges with the drawer below (no translucent seam).
-        mobileOpen
+        // When the mobile drawer is visible (including during its 300ms
+        // close slide) force a solid white bar so it visually merges
+        // with the drawer below (no translucent seam).
+        drawerVisible
           ? "bg-white shadow-sm"
           : isDark
             ? "bg-white/80 shadow-sm backdrop-blur-lg"
@@ -215,21 +223,21 @@ export default function Navbar({
             <span
               className={clsx(
                 "absolute left-0 block h-0.5 w-6 transition-all duration-300",
-                isDark || mobileOpen ? "bg-black" : "bg-white",
+                isDark || drawerVisible ? "bg-black" : "bg-white",
                 mobileOpen ? "top-[11px] rotate-45" : "top-1"
               )}
             />
             <span
               className={clsx(
                 "absolute left-0 top-[11px] block h-0.5 w-6 transition-all duration-300",
-                isDark || mobileOpen ? "bg-black" : "bg-white",
+                isDark || drawerVisible ? "bg-black" : "bg-white",
                 mobileOpen ? "opacity-0" : "opacity-100"
               )}
             />
             <span
               className={clsx(
                 "absolute left-0 block h-0.5 w-6 transition-all duration-300",
-                isDark || mobileOpen ? "bg-black" : "bg-white",
+                isDark || drawerVisible ? "bg-black" : "bg-white",
                 mobileOpen ? "top-[11px] -rotate-45" : "top-[21px]"
               )}
             />
