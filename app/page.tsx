@@ -294,18 +294,18 @@ export default function HomePage() {
 
         <div className="relative z-30 w-full max-w-6xl px-5 text-center sm:px-6">
           <motion.h1
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.4, ease: "easeOut" }}
             className="text-4xl font-extrabold leading-[1.1] tracking-tight text-white sm:text-5xl lg:text-6xl"
           >
             OUR MEMBERS CALL US <span className="italic font-light">HOME.</span>
           </motion.h1>
 
           <motion.div
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3, duration: 0.6 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.4, delay: 0.15, ease: "easeOut" }}
             className="mt-8 sm:mt-10"
           >
             {/* Step 0: Short or Long */}

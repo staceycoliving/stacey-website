@@ -238,14 +238,14 @@ export default function Navbar({
       </div>
 
       {/* Mobile menu — full-screen drawer with location previews.
-          Flex column so the sticky CTA sits naturally at the bottom
-          (using absolute positioning here causes the CTA to flicker to
-          the top during the slide-in/out transform animation in some
-          browsers). */}
+          Uses opacity fade instead of translate-x slide — the slide
+          caused the bottom CTA to flicker to the top mid-animation on
+          iOS Safari and some Chrome builds (even with GPU hints). A
+          fade avoids all transform-related layout quirks. */}
       <div
         className={clsx(
-          "fixed inset-0 top-14 z-40 flex flex-col bg-white transition-transform duration-300 [will-change:transform] lg:hidden",
-          mobileOpen ? "translate-x-0" : "translate-x-full"
+          "fixed inset-0 top-14 z-40 flex flex-col bg-white transition-opacity duration-200 lg:hidden",
+          mobileOpen ? "opacity-100" : "pointer-events-none opacity-0"
         )}
         aria-hidden={!mobileOpen}
       >
@@ -333,13 +333,8 @@ export default function Navbar({
           </div>
         </div>
 
-        {/* Sticky CTA at bottom of drawer. translateZ(0) forces its own
-            compositing layer so it doesn't re-layout during the parent's
-            translate-x slide animation (iOS Safari / older Chrome quirk). */}
-        <div
-          className="flex-shrink-0 border-t border-lightgray bg-white p-4"
-          style={{ transform: "translateZ(0)" }}
-        >
+        {/* Sticky CTA at bottom of drawer */}
+        <div className="flex-shrink-0 border-t border-lightgray bg-white p-4">
           <Link
             href="/move-in"
             onClick={() => setMobileOpen(false)}
