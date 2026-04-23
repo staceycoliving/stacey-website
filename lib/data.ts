@@ -1153,10 +1153,11 @@ export function formatMoveInLabel(dateStr: string): string {
   if (dateStr === todayStr) return "Today";
   const d = new Date(dateStr + "T12:00:00");
   const sameYear = d.getFullYear() === now.getFullYear();
-  return d.toLocaleDateString("en-US", {
-    weekday: "short",
-    month: "short",
+  // EU reading order (day → month → year), no weekday — long-stay users
+  // care about which month + day, not which weekday. Drops the clutter.
+  return d.toLocaleDateString("en-GB", {
     day: "numeric",
+    month: "long",
     ...(sameYear ? {} : { year: "numeric" }),
   });
 }

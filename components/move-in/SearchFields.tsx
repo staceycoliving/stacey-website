@@ -379,24 +379,33 @@ export default function SearchFields({
                       <div
                         role="radiogroup"
                         aria-labelledby="movein-label"
-                        className="grid grid-cols-2 gap-2 sm:grid-cols-3"
+                        className="space-y-4"
                       >
-                        {moveInOptions.map((d) => (
-                          <button
-                            key={d.value}
-                            type="button"
-                            role="radio"
-                            aria-checked={moveInDate === d.value}
-                            onClick={() => onMoveInDate(d.value)}
-                            className={clsx(
-                              "rounded-[3px] px-2 py-2 text-center text-xs font-semibold transition-colors",
-                              moveInDate === d.value
-                                ? "bg-black text-white"
-                                : "bg-[#F5F5F5] text-black hover:bg-[#EDEDED]",
-                            )}
-                          >
-                            {d.label}
-                          </button>
+                        {groupMoveInOptionsByMonth(moveInOptions).map((group) => (
+                          <div key={group.key}>
+                            <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-gray">
+                              {group.label}
+                            </p>
+                            <div className="grid grid-cols-5 gap-1.5 sm:grid-cols-7">
+                              {group.days.map((d) => (
+                                <button
+                                  key={d.value}
+                                  type="button"
+                                  role="radio"
+                                  aria-checked={moveInDate === d.value}
+                                  onClick={() => onMoveInDate(d.value)}
+                                  className={clsx(
+                                    "rounded-[3px] py-2 text-center text-sm font-semibold transition-colors",
+                                    moveInDate === d.value
+                                      ? "bg-black text-white"
+                                      : "bg-[#F5F5F5] text-black hover:bg-[#EDEDED]",
+                                  )}
+                                >
+                                  {d.day}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
                         ))}
                       </div>
                     )}
@@ -417,4 +426,30 @@ export default function SearchFields({
       </AnimatePresence>
     </>
   );
+}
+
+// Group flat moveInOptions (["2026-04-24", "2026-05-01", …]) into month
+// buckets with a header label ("April 2026") and bare day-number pills
+// (24, 1, …). Long-stay users scan by month → day, so surfacing the
+// month header removes cognitive load when many dates span 3-4 months.
+function groupMoveInOptionsByMonth(
+  options: { value: string; label: string }[],
+): { key: string; label: string; days: { value: string; day: number }[] }[] {
+  const buckets = new Map<
+    string,
+    { key: string; label: string; days: { value: string; day: number }[] }
+  >();
+  for (const opt of options) {
+    const d = new Date(opt.value + "T12:00:00");
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    if (!buckets.has(key)) {
+      buckets.set(key, {
+        key,
+        label: d.toLocaleDateString("en-GB", { month: "long", year: "numeric" }),
+        days: [],
+      });
+    }
+    buckets.get(key)!.days.push({ value: opt.value, day: d.getDate() });
+  }
+  return [...buckets.values()].sort((a, b) => a.key.localeCompare(b.key));
 }
