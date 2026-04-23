@@ -160,44 +160,62 @@ export default function SearchFields({
   // ─── Full: progressive vertical fields (hero overlay) ───
   return (
     <>
-      <div className="mt-10 text-left sm:mt-12">
-        <p className="mb-3 text-sm font-semibold text-white/60">How long do you want to stay?</p>
-        <div className="flex gap-3">
+      <div className="mt-10 text-center sm:mt-12">
+        <p className="mb-5 text-base font-semibold text-white sm:text-lg">How long do you want to stay?</p>
+        <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center sm:gap-4">
           <button
             onClick={() => onStayType("SHORT")}
             className={clsx(
-              "flex-1 rounded-[5px] px-6 py-4 text-left transition-all duration-200",
+              "w-full rounded-[5px] px-6 py-3.5 text-sm font-extrabold tracking-wide transition-all duration-200 sm:w-auto sm:px-8 sm:py-4 sm:text-base",
               stayType === "SHORT"
-                ? "bg-white text-black shadow-lg"
-                : "bg-white/10 text-white backdrop-blur-sm hover:bg-white/20"
+                ? "bg-white text-black shadow-lg hover:opacity-80"
+                : "border-2 border-white bg-white/10 text-white backdrop-blur-sm hover:bg-white/20"
             )}
           >
-            <p className="text-base font-extrabold tracking-wide sm:text-lg">SHORT</p>
-            <p className={clsx("mt-1 text-sm", stayType === "SHORT" ? "text-black/50" : "text-white/50")}>Less than 3 months</p>
+            SHORT <span className="font-medium">&middot; &lt;3 months</span>
           </button>
           <button
             onClick={() => onStayType("LONG")}
             className={clsx(
-              "flex-1 rounded-[5px] px-6 py-4 text-left transition-all duration-200",
+              "w-full rounded-[5px] px-6 py-3.5 text-sm font-extrabold tracking-wide transition-all duration-200 sm:w-auto sm:px-8 sm:py-4 sm:text-base",
               stayType === "LONG"
-                ? "bg-white text-black shadow-lg"
-                : "bg-white/10 text-white backdrop-blur-sm hover:bg-white/20"
+                ? "bg-white text-black shadow-lg hover:opacity-80"
+                : "border-2 border-white bg-white/10 text-white backdrop-blur-sm hover:bg-white/20"
             )}
           >
-            <p className="text-base font-extrabold tracking-wide sm:text-lg">LONG</p>
-            <p className={clsx("mt-1 text-sm", stayType === "LONG" ? "text-black/50" : "text-white/50")}>3+ months · open-end</p>
+            LONG <span className="font-medium">&middot; 3+ months</span>
           </button>
         </div>
       </div>
 
       <AnimatePresence>
         {stayType && (
-          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} transition={{ duration: 0.25 }} className="text-left overflow-hidden">
+          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} transition={{ duration: 0.25 }} className="text-center overflow-hidden">
             <div className="mt-8">
-              <p className="mb-3 text-sm font-semibold text-white/60">Moving in alone or as a couple?</p>
-              <div className="flex gap-3">
-                <button onClick={() => onPersons(1)} className={clsx("flex-1 rounded-[5px] px-6 py-4 text-base font-bold transition-all duration-200 sm:text-lg", persons === 1 ? "bg-white text-black shadow-lg" : "bg-white/10 text-white backdrop-blur-sm hover:bg-white/20")}>1 person</button>
-                <button onClick={() => onPersons(2)} className={clsx("flex-1 rounded-[5px] px-6 py-4 text-base font-bold transition-all duration-200 sm:text-lg", persons === 2 ? "bg-white text-black shadow-lg" : "bg-white/10 text-white backdrop-blur-sm hover:bg-white/20")}>2 persons</button>
+              <p className="mb-5 text-base font-semibold text-white sm:text-lg">Moving in alone or as a couple?</p>
+              <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center sm:gap-4">
+                <button
+                  onClick={() => onPersons(1)}
+                  className={clsx(
+                    "w-full rounded-[5px] px-6 py-3.5 text-sm font-bold transition-all duration-200 sm:w-auto sm:px-8 sm:py-4 sm:text-base",
+                    persons === 1
+                      ? "bg-white text-black shadow-lg hover:opacity-80"
+                      : "border-2 border-white bg-white/10 text-white backdrop-blur-sm hover:bg-white/20",
+                  )}
+                >
+                  1 person
+                </button>
+                <button
+                  onClick={() => onPersons(2)}
+                  className={clsx(
+                    "w-full rounded-[5px] px-6 py-3.5 text-sm font-bold transition-all duration-200 sm:w-auto sm:px-8 sm:py-4 sm:text-base",
+                    persons === 2
+                      ? "bg-white text-black shadow-lg hover:opacity-80"
+                      : "border-2 border-white bg-white/10 text-white backdrop-blur-sm hover:bg-white/20",
+                  )}
+                >
+                  2 persons
+                </button>
               </div>
             </div>
           </motion.div>
@@ -206,12 +224,23 @@ export default function SearchFields({
 
       <AnimatePresence>
         {stayType === "LONG" && (
-          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} transition={{ duration: 0.25 }} className="text-left overflow-hidden">
+          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} transition={{ duration: 0.25 }} className="text-center overflow-hidden">
             <div className="mt-8">
-              <p className="mb-3 text-sm font-semibold text-white/60">Where do you want to live?</p>
-              <div className="flex gap-3">
+              <p className="mb-5 text-base font-semibold text-white sm:text-lg">Where do you want to live?</p>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
                 {[{ value: "hamburg", label: "Hamburg" }, { value: "berlin", label: "Berlin" }, { value: "vallendar", label: "Vallendar" }].map((c) => (
-                  <button key={c.value} onClick={() => onCity(c.value)} className={clsx("flex-1 rounded-[5px] px-5 py-4 text-base font-bold transition-all duration-200 sm:text-lg", city === c.value ? "bg-white text-black shadow-lg" : "bg-white/10 text-white backdrop-blur-sm hover:bg-white/20")}>{c.label}</button>
+                  <button
+                    key={c.value}
+                    onClick={() => onCity(c.value)}
+                    className={clsx(
+                      "w-full rounded-[5px] px-6 py-3.5 text-sm font-bold transition-all duration-200 sm:px-6 sm:py-4 sm:text-base",
+                      city === c.value
+                        ? "bg-white text-black shadow-lg hover:opacity-80"
+                        : "border-2 border-white bg-white/10 text-white backdrop-blur-sm hover:bg-white/20",
+                    )}
+                  >
+                    {c.label}
+                  </button>
                 ))}
               </div>
             </div>
@@ -221,12 +250,14 @@ export default function SearchFields({
 
       <AnimatePresence>
         {((stayType === "SHORT") || (stayType === "LONG" && city)) && (
-          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} transition={{ duration: 0.25 }} className="text-left overflow-hidden">
+          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} transition={{ duration: 0.25 }} className="text-center overflow-hidden">
             <div className="mt-8">
               {stayType === "SHORT" ? (
                 <>
-                  <p className="mb-3 text-sm font-semibold text-white/60">{!checkIn ? "Select your check-in date" : !checkOut ? "Now select check-out" : "Your dates"}</p>
-                  <div className="rounded-[5px] bg-white p-5 shadow-lg">
+                  <p className="mb-5 text-base font-semibold text-white sm:text-lg">
+                    {!checkIn ? "Select your check-in date" : !checkOut ? "Now select check-out" : "Your dates"}
+                  </p>
+                  <div className="rounded-[5px] bg-white p-5 text-left shadow-lg">
                     <DualCalendar checkIn={checkIn} checkOut={checkOut} onSelect={onCalendarSelect} />
                     {checkIn && checkOut && (
                       <div className="mt-4 flex items-center justify-between border-t border-[#E8E6E0] pt-4">
@@ -238,12 +269,12 @@ export default function SearchFields({
                 </>
               ) : (
                 <>
-                  <p className="mb-3 text-sm font-semibold text-white/60">When do you want to move in?</p>
+                  <p className="mb-5 text-base font-semibold text-white sm:text-lg">When do you want to move in?</p>
                   <select
                     value={moveInDate || ""}
                     onChange={(e) => onMoveInDate(e.target.value || null)}
                     disabled={loadingDates}
-                    className="w-full rounded-[5px] bg-white px-5 py-4 text-base font-semibold shadow-lg outline-none disabled:opacity-50"
+                    className="w-full rounded-[5px] bg-white px-5 py-4 text-center text-base font-semibold shadow-lg outline-none disabled:opacity-50"
                   >
                     <option value="">{loadingDates ? "Checking availability..." : "Select a date"}</option>
                     {moveInOptions.map((d) => (
