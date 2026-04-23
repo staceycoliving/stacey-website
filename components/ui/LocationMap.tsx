@@ -19,7 +19,10 @@ const locationCoords: Record<string, [number, number]> = {
   vallendar: [7.6187, 50.3964],
 };
 
-const cityCenters: Record<string, { center: [number, number]; zoom: number }> = {
+// Fallback center + zoom when a city only has one location (bounds would be
+// a single point). For multi-location cities we compute bounds dynamically
+// from the markers instead, so every location fits the viewport.
+const cityFallback: Record<string, { center: [number, number]; zoom: number }> = {
   hamburg: { center: [9.98, 53.565], zoom: 12 },
   berlin: { center: [13.405, 52.511], zoom: 13 },
   vallendar: { center: [7.619, 50.396], zoom: 14 },
@@ -37,8 +40,8 @@ export default function LocationMap({ onMarkerHover }: { onMarkerHover?: (slug: 
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
       style: "https://api.mapbox.com/styles/v1/mapbox/streets-v12?access_token=" + mapboxgl.accessToken,
-      center: cityCenters.hamburg.center,
-      zoom: cityCenters.hamburg.zoom,
+      center: cityFallback.hamburg.center,
+      zoom: cityFallback.hamburg.zoom,
       attributionControl: false,
     });
 
@@ -56,10 +59,31 @@ export default function LocationMap({ onMarkerHover }: { onMarkerHover?: (slug: 
     markersRef.current.forEach((m) => m.remove());
     markersRef.current = [];
 
-    const cityConfig = cityCenters[activeCity];
-    map.current.flyTo({ center: cityConfig.center, zoom: cityConfig.zoom, duration: 1000 });
-
     const cityLocations = locations.filter((l) => l.city === activeCity);
+    const coordsList = cityLocations
+      .map((l) => locationCoords[l.slug])
+      .filter((c): c is [number, number] => Boolean(c));
+
+    if (coordsList.length >= 2) {
+      // Multi-location city → fit all markers in the viewport with padding.
+      // padding top is larger so the marker popups don't clip against the
+      // nav controls; bottom padding keeps markers above sticky UI.
+      const bounds = coordsList.reduce(
+        (b, c) => b.extend(c),
+        new mapboxgl.LngLatBounds(coordsList[0], coordsList[0]),
+      );
+      map.current.fitBounds(bounds, {
+        padding: { top: 60, bottom: 60, left: 40, right: 40 },
+        duration: 1000,
+        maxZoom: 14, // don't get too close even if markers are tight together
+      });
+    } else {
+      // Single-location city → fall back to fixed center + zoom.
+      const fallback = cityFallback[activeCity];
+      if (fallback) {
+        map.current.flyTo({ center: fallback.center, zoom: fallback.zoom, duration: 1000 });
+      }
+    }
 
     cityLocations.forEach((loc) => {
       const coords = locationCoords[loc.slug];
