@@ -808,9 +808,12 @@ function MoveInFlow() {
 
           </section>
         ) : (
-          /* ── STICKY FILTER BAR (after first search, hidden once room is booked) ── */
-          <div className={clsx("sticky top-14 z-30 border-b border-lightgray bg-white/95 shadow-sm backdrop-blur-sm", (roomCollapsed || showLease) && "hidden")}>
-            <div className="mx-auto max-w-6xl px-4 py-3 sm:px-6 sm:py-4 lg:px-8">
+          /* ── STICKY FILTER PILL (floating, centered, not a full-width bar) ──
+             pointer-events-none on the outer sticky band so the parts of
+             the page to the LEFT/RIGHT of the pill stay clickable and
+             scrollable. The pill itself re-enables pointer events. */
+          <div className={clsx("pointer-events-none sticky top-16 z-30 flex justify-center px-4 py-3", (roomCollapsed || showLease) && "hidden")}>
+            <div className="pointer-events-auto max-w-[calc(100vw-2rem)] rounded-[5px] bg-white px-3 py-2 shadow-[0_4px_16px_rgba(0,0,0,0.08)] ring-1 ring-black/5">
               <SearchFields
                 stayType={stayType} onStayType={handleStayTypeChangeLive}
                 persons={persons} onPersons={handlePersonsChangeLive}
