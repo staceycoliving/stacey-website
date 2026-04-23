@@ -258,7 +258,7 @@ export default function Navbar({
         aria-hidden={!mobileOpen}
       >
         <div className="h-[calc(100vh-3.5rem)] overflow-y-auto overscroll-contain">
-          <div className="mx-auto max-w-md px-5 pb-8 pt-6">
+          <div className="mx-auto max-w-md px-5 pb-28 pt-6">
             {navCities.map((city) => (
               <div key={city.slug} className="mb-7">
                 <p className="mb-3 text-[10px] font-bold uppercase tracking-widest text-gray">
@@ -339,17 +339,31 @@ export default function Navbar({
               </div>
             </div>
 
-            {/* Move-in CTA — last scroll item, not sticky. Keeps the
-                drawer's entire content as one block so nothing can
-                shift position during the slide animation. */}
-            <Link
-              href="/move-in"
-              onClick={() => setMobileOpen(false)}
-              className="mt-6 block w-full rounded-[5px] bg-black px-6 py-3.5 text-center text-sm font-semibold text-white active:opacity-80"
-            >
-              {ctaLabel}
-            </Link>
           </div>
+        </div>
+      </div>
+
+      {/* Move-in CTA — rendered OUTSIDE the drawer as a separate fixed
+          element so the drawer's horizontal slide and the CTA's vertical
+          slide animate independently. Fixes the iOS Safari bug where a
+          bottom-anchored child jumps during a parent's translate-x
+          (happened whether the child used absolute, flex-shrink-0, or
+          sticky). Uses the same 300ms duration so they appear in sync. */}
+      <div
+        className={clsx(
+          "fixed inset-x-0 bottom-0 z-50 border-t border-lightgray bg-white p-4 transition-transform duration-300 lg:hidden",
+          drawerVisible && mobileOpen ? "translate-y-0" : "translate-y-full"
+        )}
+        aria-hidden={!mobileOpen}
+      >
+        <div className="mx-auto max-w-md">
+          <Link
+            href="/move-in"
+            onClick={() => setMobileOpen(false)}
+            className="block w-full rounded-[5px] bg-black px-6 py-3.5 text-center text-sm font-semibold text-white active:opacity-80"
+          >
+            {ctaLabel}
+          </Link>
         </div>
       </div>
     </nav>
