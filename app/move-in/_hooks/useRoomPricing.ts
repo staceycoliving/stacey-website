@@ -30,14 +30,17 @@ type Result = {
 };
 
 /**
- * useRoomPricing — fetches per-room SHORT-stay pricing once a room is selected.
+ * useRoomPricing — derives SHORT-stay pricing for the currently selected
+ * room from the shared `availability` map.
  *
- * Reuses pricing already cached in `availability` (from the search-results
- * fetch in useAvailability) when present; only hits /api/availability again if
- * the cached entry is missing grandTotal (e.g. user opened a room before the
- * persons-aware availability fetch landed).
+ * Single source of truth: useAvailability already fetches /api/availability
+ * for all SHORT locations when the user enters the results view (with
+ * retry-once on 5xx). This hook just picks the relevant category out and
+ * translates it into the pricing shape the booking card renders. No extra
+ * fetch, so there's no race between two parallel callers.
  *
- * No-op for LONG stay or until a room + dates are picked.
+ * Loading = availability hasn't landed yet for this location.
+ * Null pricing = availability landed but no bookable offer for these dates.
  */
 export function useRoomPricing({
   stayType,
@@ -45,7 +48,6 @@ export function useRoomPricing({
   roomName,
   checkIn,
   checkOut,
-  persons,
   availability,
 }: Params): Result {
   const [selectedRoomPricing, setSelectedRoomPricing] = useState<PricingState>(null);
@@ -60,8 +62,16 @@ export function useRoomPricing({
     const cat = ROOM_NAME_TO_CATEGORY[roomName];
     if (!cat) return;
 
-    // Already have pricing from availability state?
-    const existing = availability[locSlug]?.[cat];
+    // Availability hasn't landed for this location yet — show a skeleton
+    // while useAvailability's background fetch is still in flight.
+    const locEntry = availability[locSlug];
+    if (!locEntry) {
+      setSelectedRoomPricing(null);
+      setPricingLoading(true);
+      return;
+    }
+
+    const existing = locEntry[cat];
     if (existing?.grandTotal) {
       setSelectedRoomPricing({
         totalGross: existing.totalGross!,
@@ -76,41 +86,12 @@ export function useRoomPricing({
       return;
     }
 
-    // Fetch from API
-    let cancelled = false;
-    setPricingLoading(true);
+    // Availability landed but apaleo has no offer for these dates on this
+    // category (fully booked or closed-on-arrival). Let the card tell the
+    // user instead of showing a stuck skeleton.
     setSelectedRoomPricing(null);
-    fetch(`/api/availability?location=${locSlug}&checkIn=${checkIn}&checkOut=${checkOut}&persons=${persons}`)
-      .then((r) => {
-        if (!r.ok) throw new Error(`API ${r.status}`);
-        return r.json();
-      })
-      .then((body) => {
-        if (cancelled) return;
-        const data = body?.ok ? body.data : null;
-        const found = data?.categories?.find((c: { category: string }) => c.category === cat);
-        if (found?.grandTotal) {
-          setSelectedRoomPricing({
-            totalGross: found.totalGross,
-            netAmount: found.netAmount,
-            vatAmount: found.vatAmount,
-            vatPercent: found.vatPercent,
-            cityTaxTotal: found.cityTaxTotal,
-            grandTotal: found.grandTotal,
-            perNight: found.pricePerNight,
-          });
-        }
-        setPricingLoading(false);
-      })
-      .catch((err) => {
-        if (cancelled) return;
-        console.error("Pricing fetch failed:", err);
-        setPricingLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [stayType, locSlug, roomName, checkIn, checkOut, persons, availability]);
+    setPricingLoading(false);
+  }, [stayType, locSlug, roomName, checkIn, checkOut, availability]);
 
   return { selectedRoomPricing, pricingLoading };
 }
