@@ -170,34 +170,11 @@ export default function HomePage() {
     (stayType === "SHORT" && checkIn && checkOut && !tooShort) ||
     (stayType === "LONG" && city && moveInDate);
 
-  // Live availability preview — approximate count from data.ts filtered by
-  // persons. Not pricing-accurate but scopes the result set so users
-  // submit with expectations instead of blind hope.
-  const availableCount: number | null = (() => {
-    if (!stayType) return null;
-    if (stayType === "SHORT" && (!checkIn || !checkOut || tooShort)) return null;
-    if (stayType === "LONG" && (!city || !moveInDate)) return null;
-    const pool = locations.filter((l) => {
-      if (l.stayType !== stayType) return false;
-      if (stayType === "LONG" && l.city !== city) return false;
-      return true;
-    });
-    return pool.reduce(
-      (acc, l) =>
-        acc + l.rooms.filter((r) => (persons === 2 ? r.forCouples : true)).length,
-      0,
-    );
-  })();
-
-  // Dynamic submit-button label — action-oriented, adapts to what the user
-  // already picked so the CTA feels earned and informative.
-  const submitLabel = (() => {
-    if (!canSubmit) return "Find my room";
-    if (availableCount !== null && availableCount > 0) {
-      return `See ${availableCount} room${availableCount === 1 ? "" : "s"}`;
-    }
-    return "Find my room";
-  })();
+  // No pre-submit room-count preview here — the real availability fetch
+  // lives on /move-in, and duplicating it on the homepage risks showing
+  // inflated numbers (the static data.ts count doesn't know which dates
+  // are actually bookable). User gets the real count on the results page.
+  const submitLabel = canSubmit ? "See available rooms" : "Find my room";
 
   // Hint showing what's still needed when the button is disabled.
   const missingHint = (() => {
@@ -305,13 +282,6 @@ export default function HomePage() {
                 </button>
                 {!canSubmit && missingHint && (
                   <p className="mt-3 text-xs text-white/60">{missingHint}</p>
-                )}
-                {canSubmit && availableCount !== null && (
-                  <p className="mt-3 text-xs font-semibold text-white/80">
-                    {availableCount > 0
-                      ? `${availableCount} room${availableCount === 1 ? "" : "s"} match your filters`
-                      : "No rooms match — try different filters"}
-                  </p>
                 )}
               </motion.div>
             )}
