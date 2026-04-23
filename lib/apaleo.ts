@@ -283,14 +283,33 @@ export async function getShortStayAvailability(
  * Used to grey out unavailable dates in the frontend calendar so users
  * don't pick dates that are fully booked.
  *
- * A date is "unavailable" if no unit group at any SHORT property has
- * sellableCount >= 1 for the given persons count.
+ * A date D is "available" as a CHECK-IN iff there exists at least one
+ * (property, category) combination where sellableCount ≥ 1 for EVERY
+ * night in [D, D+1, ..., D+MIN_NIGHTS-1]. Otherwise D is greyed out.
+ *
+ * Why per-day isn't enough: apaleo's sellableCount is per-night. A room
+ * might be free on Mon but booked Tue–Thu — no valid 5-night stay
+ * starting Mon. If we naively show sellableCount>0, users pick Mon →
+ * submit → get "no rooms". With the min-nights rolling check we catch
+ * this ahead of time.
+ *
+ * We request MIN_NIGHTS extra days beyond `to` so the check works at
+ * the very end of the visible range.
  */
+const SHORT_MIN_NIGHTS = 5;
+
+function addDaysStr(dateStr: string, days: number): string {
+  const d = new Date(dateStr + "T12:00:00");
+  d.setDate(d.getDate() + days);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 export async function getShortStayCalendarAvailability(
   persons: number,
   from: string,
   to: string,
 ): Promise<{ unavailableDates: string[] }> {
+  const queryTo = addDaysStr(to, SHORT_MIN_NIGHTS);
   const slugs = Object.keys(PROPERTY_MAP);
   const results = await Promise.all(
     slugs.map(async (slug) => {
@@ -300,7 +319,7 @@ export async function getShortStayCalendarAvailability(
           `/availability/v1/unit-groups?${new URLSearchParams({
             propertyId,
             from,
-            to,
+            to: queryTo,
             adults: String(persons),
           })}`,
         );
@@ -314,28 +333,59 @@ export async function getShortStayCalendarAvailability(
     }),
   );
 
-  // For each calendar date, sum sellable units across all properties & groups.
-  const totalPerDate = new Map<string, number>();
+  // Build a map: category → date → sellableCount, pooled across properties.
+  // A check-in is valid if ANY category in ANY property can cover the
+  // whole min-nights window; since categories are the bookable unit,
+  // we track per (property, category).
+  type PerDay = Map<string, number>; // date → sellableCount
+  const propertyCategoryMaps: PerDay[][] = []; // [propertyIdx][categoryIdx] → PerDay
+  const allDates = new Set<string>();
+
   for (const slices of results) {
+    const byCategory = new Map<string, PerDay>();
     for (const slice of slices) {
       const date = (slice.from ?? "").slice(0, 10);
       if (!date) continue;
-      let total = totalPerDate.get(date) ?? 0;
+      allDates.add(date);
       for (const g of slice.unitGroups ?? []) {
         const category = APALEO_NAME_TO_CATEGORY[g.unitGroup?.name ?? ""];
         if (!category) continue;
-        // Persons filter: 2 persons → only couple-friendly categories count.
         if (persons >= 2 && !COUPLE_CATEGORIES.has(category)) continue;
-        total += g.sellableCount ?? 0;
+        if (!byCategory.has(category)) byCategory.set(category, new Map());
+        byCategory.get(category)!.set(date, g.sellableCount ?? 0);
       }
-      totalPerDate.set(date, total);
     }
+    propertyCategoryMaps.push([...byCategory.values()]);
   }
 
-  const unavailableDates = [...totalPerDate.entries()]
-    .filter(([, count]) => count === 0)
-    .map(([date]) => date)
-    .sort();
+  // For each visible date, is there any category where sellableCount ≥ 1
+  // for all MIN_NIGHTS consecutive days starting here?
+  const visibleDates = [...allDates].sort().filter((d) => d >= from && d <= to);
+  const unavailableDates: string[] = [];
+
+  for (const startDate of visibleDates) {
+    const requiredDates: string[] = [];
+    for (let i = 0; i < SHORT_MIN_NIGHTS; i++) {
+      requiredDates.push(addDaysStr(startDate, i));
+    }
+    let canBook = false;
+    outer: for (const categoryMaps of propertyCategoryMaps) {
+      for (const perDay of categoryMaps) {
+        let allFree = true;
+        for (const d of requiredDates) {
+          if ((perDay.get(d) ?? 0) < 1) {
+            allFree = false;
+            break;
+          }
+        }
+        if (allFree) {
+          canBook = true;
+          break outer;
+        }
+      }
+    }
+    if (!canBook) unavailableDates.push(startDate);
+  }
 
   return { unavailableDates };
 }
