@@ -221,18 +221,6 @@ export default function HomePage() {
             OUR MEMBERS CALL US <span className="italic font-light">HOME.</span>
           </motion.h1>
 
-          {/* Value-prop subhead — tells new visitors what the product is
-              within 2 seconds instead of relying on the brand headline. */}
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.4, delay: 0.1, ease: "easeOut" }}
-            className="mx-auto mt-6 max-w-xl text-base font-medium leading-relaxed text-white sm:text-lg"
-          >
-            Furnished coliving in Hamburg, Berlin &amp; Vallendar.<br className="hidden sm:inline" />
-            From 5&nbsp;nights to open-end.
-          </motion.p>
-
           {/* SearchFields + submit stay inside a narrow column so fields
               don't sprawl across the viewport on desktop. */}
           <motion.div
