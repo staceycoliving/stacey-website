@@ -333,9 +333,13 @@ export default function Navbar({
           </div>
         </div>
 
-        {/* Sticky CTA at bottom of drawer — flex-shrink-0 so it stays
-            pinned to the bottom without absolute positioning. */}
-        <div className="flex-shrink-0 border-t border-lightgray bg-white p-4">
+        {/* Sticky CTA at bottom of drawer. translateZ(0) forces its own
+            compositing layer so it doesn't re-layout during the parent's
+            translate-x slide animation (iOS Safari / older Chrome quirk). */}
+        <div
+          className="flex-shrink-0 border-t border-lightgray bg-white p-4"
+          style={{ transform: "translateZ(0)" }}
+        >
           <Link
             href="/move-in"
             onClick={() => setMobileOpen(false)}
