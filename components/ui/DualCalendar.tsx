@@ -173,7 +173,7 @@ export default function DualCalendar({
     // Start with the full set of slots free on the check-in day.
     const startSlots = availableSlotsPerDate[checkIn];
     if (!startSlots || startSlots.length === 0) return validSet;
-    let currentSlots = new Set(startSlots);
+    const currentSlots = new Set(startSlots);
     // E is the check-out date; the range covered is [checkIn..E-1],
     // so E=checkIn+1 means a 1-night stay (checkIn is the one covered).
     // We require E-checkIn ≥ minNights nights booked.
@@ -203,7 +203,7 @@ export default function DualCalendar({
     const validSet = new Set<string>();
     const dates = Object.keys(availableSlotsPerDate).sort();
     for (const D of dates) {
-      let slots = new Set(availableSlotsPerDate[D] ?? []);
+      const slots = new Set(availableSlotsPerDate[D] ?? []);
       if (slots.size === 0) continue;
       let ok = true;
       for (let n = 1; n < minNights; n++) {
