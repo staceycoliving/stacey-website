@@ -126,6 +126,7 @@ function MoveInFlow() {
 
   // ─── Results + booking state ───
   const [showResults, setShowResults] = useState(false);
+  // (defined later; used below for the URL-mirror effect)
   const [filterCalendarOpen, setFilterCalendarOpen] = useState(false);
   const [expandedRoomId, setExpandedRoomId] = useState<string | null>(null);
   const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
@@ -152,6 +153,32 @@ function MoveInFlow() {
   const [signatureRequestId, setSignatureRequestId] = useState<string | null>(null);
   const [bookingId, setBookingId] = useState<string | null>(null);
   const [leaseDevMode, setLeaseDevMode] = useState(false);
+
+  // Mirror filter state back into the URL as the user edits the sticky
+  // filter bar. Shareable links, refresh-safe, plays well with back nav
+  // and bfcache. Uses history.replaceState so there's no Next.js
+  // re-render.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams();
+    if (stayType) params.set("stayType", stayType);
+    if (persons !== 1) params.set("persons", String(persons));
+    if (stayType === "SHORT") {
+      if (checkIn) params.set("checkIn", checkIn);
+      if (checkOut) params.set("checkOut", checkOut);
+    }
+    if (stayType === "LONG") {
+      if (city) params.set("city", city);
+      if (moveInDate) params.set("moveIn", moveInDate);
+    }
+    const qs = params.toString();
+    const newUrl = qs
+      ? `${window.location.pathname}?${qs}`
+      : window.location.pathname;
+    if (window.location.pathname + window.location.search !== newUrl) {
+      window.history.replaceState(null, "", newUrl);
+    }
+  }, [stayType, persons, city, checkIn, checkOut, moveInDate]);
 
   // Refs
   const resultsRef = useRef<HTMLDivElement>(null);

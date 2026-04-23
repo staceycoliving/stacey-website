@@ -40,6 +40,48 @@ export default function HomePage() {
   const [loadingDates, setLoadingDates] = useState(false);
   const [carouselIndex, setCarouselIndex] = useState(0);
 
+  // Hydrate filter state from URL on mount — supports deep-links, refresh,
+  // and browser-back from /move-in back to /.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const p = new URL(window.location.href).searchParams;
+    const urlStayType = p.get("stayType");
+    if (urlStayType === "SHORT" || urlStayType === "LONG") setStayType(urlStayType);
+    const urlPersons = p.get("persons");
+    if (urlPersons === "1" || urlPersons === "2") setPersons(Number(urlPersons) as 1 | 2);
+    const urlCheckIn = p.get("checkIn");
+    const urlCheckOut = p.get("checkOut");
+    const urlCity = p.get("city");
+    const urlMoveIn = p.get("moveIn");
+    if (urlCheckIn) setCheckIn(urlCheckIn);
+    if (urlCheckOut) setCheckOut(urlCheckOut);
+    if (urlCity) setCity(urlCity);
+    if (urlMoveIn) setMoveInDate(urlMoveIn);
+  }, []);
+
+  // Mirror filter state back into the URL as the user fills fields. Uses
+  // history.replaceState directly so there's no Next.js re-render and no
+  // flash — just a quiet URL rewrite. Shareable + refresh-safe.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams();
+    if (stayType) params.set("stayType", stayType);
+    if (persons !== 1) params.set("persons", String(persons));
+    if (stayType === "SHORT") {
+      if (checkIn) params.set("checkIn", checkIn);
+      if (checkOut) params.set("checkOut", checkOut);
+    }
+    if (stayType === "LONG") {
+      if (city) params.set("city", city);
+      if (moveInDate) params.set("moveIn", moveInDate);
+    }
+    const qs = params.toString();
+    const newUrl = qs ? `${window.location.pathname}?${qs}` : window.location.pathname;
+    if (window.location.pathname + window.location.search !== newUrl) {
+      window.history.replaceState(null, "", newUrl);
+    }
+  }, [stayType, persons, city, checkIn, checkOut, moveInDate]);
+
   // Fetch LONG-stay move-in date options when city+persons change. Needed
   // so SearchFields can render the move-in-date dropdown with real options.
   useEffect(() => {
