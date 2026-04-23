@@ -45,7 +45,7 @@ export default function VideoSection() {
             </div>
 
             {/* Text right */}
-            <div>
+            <div className="text-center sm:text-left">
               <h2 className="text-3xl font-extrabold tracking-tight sm:text-4xl">
                 More than a place<br />to <span className="italic font-light">sleep.</span>
               </h2>

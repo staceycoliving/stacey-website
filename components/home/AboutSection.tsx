@@ -21,7 +21,7 @@ export default function AboutSection() {
             </div>
 
             {/* Text right */}
-            <div>
+            <div className="text-center sm:text-left">
               <h2 className="text-3xl font-extrabold tracking-tight sm:text-4xl">
                 The story behind <span className="italic font-light">STACEY.</span>
               </h2>
@@ -37,7 +37,7 @@ export default function AboutSection() {
               </p>
               <Link
                 href="/why-stacey"
-                className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-black transition-all duration-200 hover:opacity-60"
+                className="mx-auto mt-6 inline-flex items-center gap-2 text-sm font-semibold text-black transition-all duration-200 hover:opacity-60 sm:mx-0"
               >
                 Learn more about us <ArrowRight size={14} />
               </Link>
