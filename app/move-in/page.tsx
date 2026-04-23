@@ -809,8 +809,8 @@ function MoveInFlow() {
           </section>
         ) : (
           /* ── STICKY FILTER BAR (after first search, hidden once room is booked) ── */
-          <div className={clsx("sticky top-0 z-30 border-b border-[#E8E6E0] bg-white/90 pt-20 pb-4 backdrop-blur-lg sm:pt-24", (roomCollapsed || showLease) && "hidden")}>
-            <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+          <div className={clsx("sticky top-14 z-30 border-b border-lightgray bg-white/95 shadow-sm backdrop-blur-sm", (roomCollapsed || showLease) && "hidden")}>
+            <div className="mx-auto max-w-6xl px-4 py-3 sm:px-6 sm:py-4 lg:px-8">
               <SearchFields
                 stayType={stayType} onStayType={handleStayTypeChangeLive}
                 persons={persons} onPersons={handlePersonsChangeLive}

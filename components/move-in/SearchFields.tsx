@@ -42,99 +42,109 @@ export default function SearchFields({
     new Date(d + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
 
   if (isCompact) {
-    // ─── Compact: horizontal row of fields ───
+    // ─── Compact: iOS-style segmented pill groups ───
+    // Each filter is a segmented control (group of pills sharing a rounded
+    // track). Selected option gets a white pill with subtle shadow; inactive
+    // options read as gray text. One-row layout on desktop, horizontal
+    // scroll on mobile so height stays constant.
+    const segmentTrack =
+      "flex shrink-0 gap-1 rounded-[5px] bg-[#F5F5F5] p-1";
+    const segmentBtn = (active: boolean) =>
+      clsx(
+        "rounded-[4px] px-3 py-1.5 text-xs font-semibold transition-all duration-150",
+        active
+          ? "bg-white text-black shadow-sm"
+          : "text-gray hover:text-black",
+      );
+
     return (
-      <div className="flex flex-wrap items-end gap-4">
+      <div className="-mx-1 flex items-center gap-2 overflow-x-auto px-1 pb-1 sm:gap-3 sm:overflow-x-visible sm:pb-0">
         {/* Stay type */}
-        <div>
-          <p className="mb-1.5 text-[10px] font-medium uppercase tracking-wide text-gray">Stay</p>
-          <div className="flex gap-1.5">
-            {(["SHORT", "LONG"] as StayType[]).map((t) => (
-              <button
-                key={t}
-                onClick={() => onStayType(t)}
-                className={clsx(
-                  "rounded-[5px] px-3 py-1.5 text-xs font-medium transition-all duration-200",
-                  stayType === t ? "bg-black text-white" : "bg-[#F5F5F5] hover:bg-[#E8E6E0]"
-                )}
-              >
-                {t === "SHORT" ? "Short" : "Long"}
-              </button>
-            ))}
-          </div>
+        <div role="radiogroup" aria-label="Stay type" className={segmentTrack}>
+          {(["SHORT", "LONG"] as StayType[]).map((t) => (
+            <button
+              key={t}
+              type="button"
+              role="radio"
+              aria-checked={stayType === t}
+              onClick={() => onStayType(t)}
+              className={segmentBtn(stayType === t)}
+            >
+              {t === "SHORT" ? "Short" : "Long"}
+            </button>
+          ))}
         </div>
 
         {/* Persons */}
-        <div>
-          <p className="mb-1.5 text-[10px] font-medium uppercase tracking-wide text-gray">Persons</p>
-          <div className="flex gap-1.5">
-            {([1, 2] as const).map((p) => (
-              <button
-                key={p}
-                onClick={() => onPersons(p)}
-                className={clsx(
-                  "rounded-[5px] px-3 py-1.5 text-xs font-medium transition-all duration-200",
-                  persons === p ? "bg-black text-white" : "bg-[#F5F5F5] hover:bg-[#E8E6E0]"
-                )}
-              >
-                {p}
-              </button>
-            ))}
-          </div>
+        <div role="radiogroup" aria-label="Persons" className={segmentTrack}>
+          {([1, 2] as const).map((p) => (
+            <button
+              key={p}
+              type="button"
+              role="radio"
+              aria-checked={persons === p}
+              onClick={() => onPersons(p)}
+              className={segmentBtn(persons === p)}
+            >
+              {p} {p === 1 ? "person" : "persons"}
+            </button>
+          ))}
         </div>
 
         {/* City (LONG only) */}
         {stayType === "LONG" && (
-          <div>
-            <p className="mb-1.5 text-[10px] font-medium uppercase tracking-wide text-gray">City</p>
-            <div className="flex gap-1.5">
-              {[
-                { value: "hamburg", label: "Hamburg" },
-                { value: "berlin", label: "Berlin" },
-                { value: "vallendar", label: "Vallendar" },
-              ].map((c) => (
-                <button
-                  key={c.value}
-                  onClick={() => onCity(c.value)}
-                  className={clsx(
-                    "rounded-[5px] px-3 py-1.5 text-xs font-medium transition-all duration-200",
-                    city === c.value ? "bg-black text-white" : "bg-[#F5F5F5] hover:bg-[#E8E6E0]"
-                  )}
-                >
-                  {c.label}
-                </button>
-              ))}
-            </div>
+          <div role="radiogroup" aria-label="City" className={segmentTrack}>
+            {[
+              { value: "hamburg", label: "Hamburg" },
+              { value: "berlin", label: "Berlin" },
+              { value: "vallendar", label: "Vallendar" },
+            ].map((c) => (
+              <button
+                key={c.value}
+                type="button"
+                role="radio"
+                aria-checked={city === c.value}
+                onClick={() => onCity(c.value)}
+                className={segmentBtn(city === c.value)}
+              >
+                {c.label}
+              </button>
+            ))}
           </div>
         )}
 
-        {/* Date */}
-        <div className="relative">
-          <p className="mb-1.5 text-[10px] font-medium uppercase tracking-wide text-gray">
-            {stayType === "SHORT" ? "Dates" : "Move-in"}
-          </p>
+        {/* Date — standalone pill-button */}
+        <div className="relative shrink-0">
           {stayType === "SHORT" ? (
             <>
               <button
+                type="button"
                 onClick={() => setCalendarOpen(!calendarOpen)}
-                className="rounded-[5px] bg-[#F5F5F5] px-3 py-1.5 text-xs font-medium transition-all duration-200 hover:bg-[#E8E6E0]"
+                className={clsx(
+                  "inline-flex items-center gap-2 rounded-[5px] px-3 py-2 text-xs font-semibold transition-colors",
+                  checkIn && checkOut
+                    ? "bg-black text-white"
+                    : "bg-[#F5F5F5] text-black hover:bg-[#E8E6E0]",
+                )}
               >
                 {checkIn && checkOut
                   ? `${formatDateShort(checkIn)} → ${formatDateShort(checkOut)}`
-                  : "Select dates"}
+                  : "Pick dates"}
               </button>
               {calendarOpen && (
                 <>
                   <div className="fixed inset-0 z-20" onClick={() => setCalendarOpen(false)} />
-                  <div className="absolute left-0 top-full z-30 mt-2 w-[280px] rounded-[5px] bg-white p-4 shadow-xl ring-1 ring-[#E8E6E0] min-[420px]:w-[340px]">
+                  <div className="absolute right-0 top-full z-30 mt-2 w-[280px] rounded-[5px] bg-white p-4 shadow-xl ring-1 ring-lightgray min-[420px]:w-[340px]">
                     <DualCalendar checkIn={checkIn} checkOut={checkOut} onSelect={onCalendarSelect} />
                     {checkIn && checkOut && (
-                      <div className="mt-3 flex items-center justify-between border-t border-[#E8E6E0] pt-3">
+                      <div className="mt-3 flex items-center justify-between border-t border-lightgray pt-3">
                         <p className="text-sm font-semibold">{nightCount} nights</p>
                         {tooShort ? (
                           <p className="text-xs font-medium text-pink">Min 5 nights</p>
                         ) : (
-                          <button onClick={() => setCalendarOpen(false)} className="text-xs font-semibold hover:opacity-60">Done</button>
+                          <button onClick={() => setCalendarOpen(false)} className="text-xs font-semibold hover:opacity-60">
+                            Done
+                          </button>
                         )}
                       </div>
                     )}
@@ -147,11 +157,20 @@ export default function SearchFields({
               value={moveInDate || ""}
               onChange={(e) => onMoveInDate(e.target.value || null)}
               disabled={loadingDates}
-              className="rounded-[5px] border border-[#E8E6E0] bg-white px-3 py-1.5 text-xs font-medium outline-none transition-colors focus:border-black disabled:opacity-50"
+              className={clsx(
+                "appearance-none rounded-[5px] px-3 py-2 text-xs font-semibold outline-none transition-colors disabled:opacity-50",
+                moveInDate
+                  ? "bg-black text-white"
+                  : "bg-[#F5F5F5] text-black hover:bg-[#E8E6E0]",
+              )}
             >
-              <option value="">{loadingDates ? "Loading..." : "Select"}</option>
+              <option value="" className="bg-white text-black">
+                {loadingDates ? "Loading…" : "Pick move-in"}
+              </option>
               {moveInOptions.map((d) => (
-                <option key={d.value} value={d.value}>{d.label}</option>
+                <option key={d.value} value={d.value} className="bg-white text-black">
+                  {d.label}
+                </option>
               ))}
             </select>
           )}
