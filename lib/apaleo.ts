@@ -142,6 +142,126 @@ const RATE_PLAN_CODES: Record<string, Record<string, string>> = {
   },
 };
 
+// ─── Rate-plan booking restrictions (cutoff / minAdvance) ────
+// Each rate plan in apaleo can specify how close to arrival a booking is
+// still allowed via `restrictions.minAdvance` (hours/days/months). The
+// property admin changes this in apaleo — we pull it live so the calendar
+// stays in sync with whatever Matteo configures there.
+//
+// Cached for 10 min because restrictions change rarely. On cache miss the
+// caller just gets {} and behaves as if there's no cutoff (fail-open).
+
+type MinAdvance = { hours: number; days: number; months: number };
+type RatePlanRestrictions = Record<string, { minAdvance?: MinAdvance }>;
+
+const restrictionsCache = new Map<
+  string,
+  { value: RatePlanRestrictions; expiresAt: number }
+>();
+
+async function getRatePlanRestrictions(
+  propertyId: string,
+): Promise<RatePlanRestrictions> {
+  const cached = restrictionsCache.get(propertyId);
+  if (cached && Date.now() < cached.expiresAt) return cached.value;
+  try {
+    const data = await apiFetch(
+      `/rateplan/v1/rate-plans?${new URLSearchParams({ propertyId, pageSize: "100" })}`,
+    );
+    const value: RatePlanRestrictions = {};
+    for (const p of (data.ratePlans ?? []) as Array<{
+      code?: string;
+      restrictions?: { minAdvance?: MinAdvance };
+    }>) {
+      if (!p.code) continue;
+      value[p.code] = { minAdvance: p.restrictions?.minAdvance };
+    }
+    restrictionsCache.set(propertyId, {
+      value,
+      expiresAt: Date.now() + 10 * 60_000,
+    });
+    return value;
+  } catch {
+    return {};
+  }
+}
+
+// Compute the earliest check-in date-time that still satisfies a rate
+// plan's minAdvance restriction, given the current time. Returns a Date
+// in the local server TZ. If minAdvance is missing/zero, returns `now`.
+function earliestBookableFromNow(
+  now: Date,
+  minAdvance: MinAdvance | undefined,
+): Date {
+  if (!minAdvance) return now;
+  const t = new Date(now);
+  if (minAdvance.months) t.setMonth(t.getMonth() + minAdvance.months);
+  if (minAdvance.days) t.setDate(t.getDate() + minAdvance.days);
+  if (minAdvance.hours) t.setHours(t.getHours() + minAdvance.hours);
+  return t;
+}
+
+// ─── Per-date rate restrictions (minLOS / maxLOS / closed-on-X) ─────
+// Apaleo stores minLengthOfStay, maxLengthOfStay and closed-on-arrival /
+// closed-on-departure per timeslice (day) per rate plan, exposed via
+// /rateplan/v1/rate-plans/{id}/rates. We fetch one representative rate
+// plan per property (all of ours currently share the same values) and
+// use it portfolio-wide. If the property admin later sets different
+// values per rate plan, we'd need to fetch each code — trivial extension.
+
+type DateRestrictions = {
+  minLengthOfStay?: number;
+  maxLengthOfStay?: number;
+  closed?: boolean;
+  closedOnArrival?: boolean;
+  closedOnDeparture?: boolean;
+};
+
+const rateRestrictionsCache = new Map<
+  string, // key: `${ratePlanId}:${from}:${to}`
+  { value: Record<string, DateRestrictions>; expiresAt: number }
+>();
+
+async function getRatePlanDateRestrictions(
+  ratePlanId: string,
+  from: string,
+  to: string,
+): Promise<Record<string, DateRestrictions>> {
+  const key = `${ratePlanId}:${from}:${to}`;
+  const cached = rateRestrictionsCache.get(key);
+  if (cached && Date.now() < cached.expiresAt) return cached.value;
+  try {
+    const data = await apiFetch(
+      `/rateplan/v1/rate-plans/${ratePlanId}/rates?${new URLSearchParams({ from, to })}`,
+    );
+    const value: Record<string, DateRestrictions> = {};
+    for (const r of (data.rates ?? []) as Array<{
+      from?: string;
+      restrictions?: DateRestrictions;
+    }>) {
+      const date = (r.from ?? "").slice(0, 10);
+      if (date && r.restrictions) value[date] = r.restrictions;
+    }
+    rateRestrictionsCache.set(key, { value, expiresAt: Date.now() + 10 * 60_000 });
+    return value;
+  } catch {
+    return {};
+  }
+}
+
+// Pick a representative rate plan per property to query for per-date
+// restrictions. All our rate plans currently share the same min/max,
+// so one per property is enough. Builds `${propertyId}-${code}-${unitCode}`
+// via the same convention apaleo uses for rate-plan IDs.
+function representativeRatePlanId(propertyId: string): string | null {
+  const codes = RATE_PLAN_CODES[propertyId] || {};
+  for (const [category, code] of Object.entries(codes)) {
+    const unitCode = (propertyId === "DOWNTOWN" ? CATEGORY_TO_APALEO_DOWNTOWN : CATEGORY_TO_APALEO)[category];
+    if (unitCode) return `${propertyId}-${code}-${unitCode}`;
+  }
+  return null;
+}
+
 // ─── Public API ─────────────────────────────────────────────
 
 // Reverse: property ID → slug
@@ -231,10 +351,19 @@ export async function getShortStayAvailability(
     priceMap.set(category, extractPricing(offer, nights));
   }
 
-  // A room must be available for ALL nights — take the minimum sellable count across all timeslices
-  const unitGroupNames = timeSlices[0].unitGroups.map(
-    (g: { unitGroup: { name: string } }) => g.unitGroup.name
+  // A room must be available for ALL nights — take the minimum sellable
+  // count across the stay's nights. apaleo returns a timeSlice for every
+  // day in [from, to] inclusive, so the LAST slice (from=checkOut) is the
+  // departure day — the guest already left before that night starts, so
+  // its inventory is irrelevant to whether a 24→29 stay is bookable. We
+  // slice it off to match the true stay window (otherwise a unit that's
+  // booked out on the checkout night wrongly kills availability).
+  const stayNightSlices = timeSlices.filter(
+    (ts: { from?: string }) => (ts.from ?? "").slice(0, 10) < checkOut,
   );
+  const unitGroupNames = stayNightSlices[0]?.unitGroups?.map(
+    (g: { unitGroup: { name: string } }) => g.unitGroup.name,
+  ) ?? [];
 
   const categories = unitGroupNames
     .map((name: string) => {
@@ -245,7 +374,7 @@ export async function getShortStayAvailability(
       let minSellable = Infinity;
       let physicalCount = 0;
 
-      for (const ts of timeSlices) {
+      for (const ts of stayNightSlices) {
         const group = ts.unitGroups?.find(
           (g: { unitGroup: { name: string } }) => g.unitGroup.name === name
         );
@@ -279,115 +408,147 @@ export async function getShortStayAvailability(
 }
 
 /**
- * Per-day availability across ALL SHORT properties for a wide date range.
- * Used to grey out unavailable dates in the frontend calendar so users
- * don't pick dates that are fully booked.
+ * Per-day, per-(property, category) availability across the SHORT
+ * portfolio. Used by the Airbnb-style calendar — the frontend needs
+ * enough raw data to compute both
+ *   (a) "can this day start a 5-night stay?" (pre-check-in grey-out)
+ *   (b) "is this day a valid check-out given the selected check-in?"
+ *       (dynamic post-check-in grey-out)
  *
- * A date D is "available" as a CHECK-IN iff there exists at least one
- * (property, category) combination where sellableCount ≥ 1 for EVERY
- * night in [D, D+1, ..., D+MIN_NIGHTS-1]. Otherwise D is greyed out.
+ * Format: { [date: 'YYYY-MM-DD']: [ 'prop:category', ... ] }
+ * where each entry is a (property_slug, category_key) pair encoded as
+ * `"slug:CATEGORY"`. An empty array means "date is in-range but every
+ *  slot is fully booked". A missing date means it wasn't in the query
+ *  range at all.
  *
- * Why per-day isn't enough: apaleo's sellableCount is per-night. A room
- * might be free on Mon but booked Tue–Thu — no valid 5-night stay
- * starting Mon. If we naively show sellableCount>0, users pick Mon →
- * submit → get "no rooms". With the min-nights rolling check we catch
- * this ahead of time.
- *
- * We request MIN_NIGHTS extra days beyond `to` so the check works at
- * the very end of the visible range.
+ * The frontend checks whether the INTERSECTION of a range's daily sets
+ * is non-empty — that is, whether at least one specific
+ * (property, category) pair stays free across every night. Booking the
+ * same category in different properties isn't a valid stay; booking
+ * different categories across a range isn't a valid stay either.
  */
-const SHORT_MIN_NIGHTS = 5;
-
-function addDaysStr(dateStr: string, days: number): string {
-  const d = new Date(dateStr + "T12:00:00");
-  d.setDate(d.getDate() + days);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-
 export async function getShortStayCalendarAvailability(
   persons: number,
   from: string,
   to: string,
-): Promise<{ unavailableDates: string[] }> {
-  const queryTo = addDaysStr(to, SHORT_MIN_NIGHTS);
-  const slugs = Object.keys(PROPERTY_MAP);
+  /** Optional: restrict to a single property (for per-location calendars).
+   *  Portfolio-wide when omitted. */
+  slugFilter?: string,
+): Promise<{
+  availableSlotsPerDate: Record<string, string[]>;
+  minNights: number;
+  maxNights: number;
+  /** Per-date stay restrictions from apaleo. A date with `closedOnArrival`
+   *  can't be used as check-in; `closedOnDeparture` blocks check-out. */
+  dateRestrictions: Record<string, DateRestrictions>;
+}> {
+  const slugs = slugFilter && PROPERTY_MAP[slugFilter]
+    ? [slugFilter]
+    : Object.keys(PROPERTY_MAP);
+  const now = new Date();
   const results = await Promise.all(
     slugs.map(async (slug) => {
       const propertyId = PROPERTY_MAP[slug];
+      const repRatePlanId = representativeRatePlanId(propertyId);
       try {
-        const data = await apiFetch(
-          `/availability/v1/unit-groups?${new URLSearchParams({
-            propertyId,
-            from,
-            to: queryTo,
-            adults: String(persons),
-          })}`,
-        );
-        return (data.timeSlices ?? []) as Array<{
+        const [availData, restrictions, dateRestr] = await Promise.all([
+          apiFetch(
+            `/availability/v1/unit-groups?${new URLSearchParams({
+              propertyId,
+              from,
+              to,
+              adults: String(persons),
+            })}`,
+          ),
+          getRatePlanRestrictions(propertyId),
+          repRatePlanId
+            ? getRatePlanDateRestrictions(repRatePlanId, from, to)
+            : Promise.resolve({} as Record<string, DateRestrictions>),
+        ]);
+        const slices = (availData.timeSlices ?? []) as Array<{
           from?: string;
           unitGroups?: Array<{ unitGroup?: { name?: string }; sellableCount?: number }>;
         }>;
+        return { slug, slices, restrictions, dateRestr };
       } catch {
-        return [];
+        return {
+          slug,
+          slices: [] as Array<Record<string, unknown>>,
+          restrictions: {} as RatePlanRestrictions,
+          dateRestr: {} as Record<string, DateRestrictions>,
+        };
       }
     }),
   );
 
-  // Build a map: category → date → sellableCount, pooled across properties.
-  // A check-in is valid if ANY category in ANY property can cover the
-  // whole min-nights window; since categories are the bookable unit,
-  // we track per (property, category).
-  type PerDay = Map<string, number>; // date → sellableCount
-  const propertyCategoryMaps: PerDay[][] = []; // [propertyIdx][categoryIdx] → PerDay
-  const allDates = new Set<string>();
+  // Portfolio-wide worst-case min/max across all properties. If any
+  // property's rate plan requires more nights, that becomes the floor.
+  // Defaults fall through to conservative values if apaleo is unreachable.
+  let minNights = 1;
+  let maxNights = 365;
+  const dateRestrictions: Record<string, DateRestrictions> = {};
+  for (const { dateRestr } of results) {
+    for (const [date, r] of Object.entries(dateRestr)) {
+      // Merge conservatively: max of mins, min of maxes, OR of closed flags.
+      const prev = dateRestrictions[date] ?? {};
+      dateRestrictions[date] = {
+        minLengthOfStay: Math.max(prev.minLengthOfStay ?? 1, r.minLengthOfStay ?? 1),
+        maxLengthOfStay: Math.min(
+          prev.maxLengthOfStay ?? Number.POSITIVE_INFINITY,
+          r.maxLengthOfStay ?? Number.POSITIVE_INFINITY,
+        ),
+        closed: (prev.closed ?? false) || (r.closed ?? false),
+        closedOnArrival: (prev.closedOnArrival ?? false) || (r.closedOnArrival ?? false),
+        closedOnDeparture: (prev.closedOnDeparture ?? false) || (r.closedOnDeparture ?? false),
+      };
+      if (r.minLengthOfStay) minNights = Math.max(minNights, r.minLengthOfStay);
+      if (r.maxLengthOfStay) maxNights = Math.min(maxNights, r.maxLengthOfStay);
+    }
+  }
 
-  for (const slices of results) {
-    const byCategory = new Map<string, PerDay>();
-    for (const slice of slices) {
+  const availableSlotsPerDate: Record<string, string[]> = {};
+  for (const { slug, slices, restrictions } of results) {
+    const propertyId = PROPERTY_MAP[slug];
+    const ratePlanCodes = RATE_PLAN_CODES[propertyId] || {};
+    // Per-category earliest check-in date-time allowed by the rate plan's
+    // minAdvance. Computed once per property, then compared against each
+    // candidate arrival day's 16:00 check-in. A slot is dropped if its
+    // arrival day's check-in is before the cutoff — apaleo would reject
+    // the booking anyway, so the calendar shouldn't pretend it's bookable.
+    const cutoffByCategory: Record<string, Date> = {};
+    for (const [category, code] of Object.entries(ratePlanCodes)) {
+      cutoffByCategory[category] = earliestBookableFromNow(
+        now,
+        restrictions[code]?.minAdvance,
+      );
+    }
+
+    for (const slice of slices as Array<{
+      from?: string;
+      unitGroups?: Array<{ unitGroup?: { name?: string }; sellableCount?: number }>;
+    }>) {
       const date = (slice.from ?? "").slice(0, 10);
       if (!date) continue;
-      allDates.add(date);
+      if (!availableSlotsPerDate[date]) availableSlotsPerDate[date] = [];
+      // If this date is fully closed (e.g., bulk "closed" restriction),
+      // skip adding any slots — nobody can arrive or stay here.
+      if (dateRestrictions[date]?.closed) continue;
       for (const g of slice.unitGroups ?? []) {
         const category = APALEO_NAME_TO_CATEGORY[g.unitGroup?.name ?? ""];
         if (!category) continue;
         if (persons >= 2 && !COUPLE_CATEGORIES.has(category)) continue;
-        if (!byCategory.has(category)) byCategory.set(category, new Map());
-        byCategory.get(category)!.set(date, g.sellableCount ?? 0);
+        if ((g.sellableCount ?? 0) < 1) continue;
+        const cutoff = cutoffByCategory[category];
+        if (cutoff) {
+          const checkInDt = new Date(`${date}T16:00:00`);
+          if (checkInDt < cutoff) continue;
+        }
+        availableSlotsPerDate[date].push(`${slug}:${category}`);
       }
     }
-    propertyCategoryMaps.push([...byCategory.values()]);
   }
 
-  // For each visible date, is there any category where sellableCount ≥ 1
-  // for all MIN_NIGHTS consecutive days starting here?
-  const visibleDates = [...allDates].sort().filter((d) => d >= from && d <= to);
-  const unavailableDates: string[] = [];
-
-  for (const startDate of visibleDates) {
-    const requiredDates: string[] = [];
-    for (let i = 0; i < SHORT_MIN_NIGHTS; i++) {
-      requiredDates.push(addDaysStr(startDate, i));
-    }
-    let canBook = false;
-    outer: for (const categoryMaps of propertyCategoryMaps) {
-      for (const perDay of categoryMaps) {
-        let allFree = true;
-        for (const d of requiredDates) {
-          if ((perDay.get(d) ?? 0) < 1) {
-            allFree = false;
-            break;
-          }
-        }
-        if (allFree) {
-          canBook = true;
-          break outer;
-        }
-      }
-    }
-    if (!canBook) unavailableDates.push(startDate);
-  }
-
-  return { unavailableDates };
+  return { availableSlotsPerDate, minNights, maxNights, dateRestrictions };
 }
 
 /**

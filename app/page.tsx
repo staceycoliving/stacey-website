@@ -239,6 +239,7 @@ export default function HomePage() {
               persons={persons} onPersons={setPersons}
               city={city} onCity={setCity}
               checkIn={checkIn} checkOut={checkOut} onCalendarSelect={handleCalendarSelect}
+              onCalendarClear={() => { setCheckIn(null); setCheckOut(null); }}
               moveInDate={moveInDate} onMoveInDate={setMoveInDate}
               moveInOptions={moveInOptions} loadingDates={loadingDates}
               nightCount={nightCount} tooShort={tooShort}

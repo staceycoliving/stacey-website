@@ -118,10 +118,17 @@ function MoveInFlow() {
     const urlCheckOut = p.get("checkOut");
     const urlCity = p.get("city");
     const urlMoveIn = p.get("moveIn");
+    const urlRoom = p.get("room");
     if (urlCheckIn) setCheckIn(urlCheckIn);
     if (urlCheckOut) setCheckOut(urlCheckOut);
     if (urlCity) setCity(urlCity);
     if (urlMoveIn) setMoveInDate(urlMoveIn);
+    // When arriving from the location page's "Book" button, auto-open
+    // the clicked room so the user lands directly on the booking form.
+    if (urlRoom) {
+      setSelectedRoomId(urlRoom);
+      setExpandedRoomId(urlRoom);
+    }
     const complete =
       (urlStayType === "SHORT" && urlCheckIn && urlCheckOut) ||
       (urlStayType === "LONG" && urlCity && urlMoveIn);
@@ -303,6 +310,15 @@ function MoveInFlow() {
         setCheckOut(null);
       }
     }
+  };
+
+  const handleCalendarClear = () => {
+    setCheckIn(null);
+    setCheckOut(null);
+    setShowResults(false);
+    setSelectedRoomId(null);
+    setExpandedRoomId(null);
+    setRoomCollapsed(false);
   };
 
   const nightCount =
@@ -788,6 +804,7 @@ function MoveInFlow() {
                 persons={persons} onPersons={handlePersonsChange}
                 city={city} onCity={handleCityChange}
                 checkIn={checkIn} checkOut={checkOut} onCalendarSelect={handleCalendarSelect}
+                onCalendarClear={handleCalendarClear}
                 moveInDate={moveInDate} onMoveInDate={(d) => { setMoveInDate(d); setShowResults(false); setSelectedRoomId(null); setRoomCollapsed(false); }}
                 moveInOptions={moveInOptions} loadingDates={loadingAvailability}
                 nightCount={nightCount} tooShort={tooShort}
@@ -819,6 +836,7 @@ function MoveInFlow() {
                 persons={persons} onPersons={handlePersonsChangeLive}
                 city={city} onCity={handleCityChangeLive}
                 checkIn={checkIn} checkOut={checkOut} onCalendarSelect={handleCalendarSelect}
+                onCalendarClear={handleCalendarClear}
                 moveInDate={moveInDate} onMoveInDate={(d) => { setMoveInDate(d); setSelectedRoomId(null); setExpandedRoomId(null); setRoomCollapsed(false); }}
                 moveInOptions={moveInOptions} loadingDates={loadingAvailability}
                 nightCount={nightCount} tooShort={tooShort}

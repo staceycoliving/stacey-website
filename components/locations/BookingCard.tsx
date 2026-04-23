@@ -18,12 +18,16 @@ export default function BookingCard({
   calendarOpen,
   setCalendarOpen,
   handleCalendarSelect,
+  handleCalendarClear,
   tooShort,
   availableDates,
   availableRoomCount,
   loadingAvail,
   lowestNightlyPrice,
   lowestMonthlyPrice,
+  availableSlotsPerDate,
+  apaleoMinNights,
+  apaleoMaxNights,
   variant,
 }: {
   location: Location;
@@ -38,12 +42,16 @@ export default function BookingCard({
   calendarOpen: boolean;
   setCalendarOpen: (open: boolean) => void;
   handleCalendarSelect: (date: string) => void;
+  handleCalendarClear?: () => void;
   tooShort: boolean;
   availableDates: { value: string; label: string }[];
   availableRoomCount: number;
   loadingAvail: boolean;
   lowestNightlyPrice: number | null;
   lowestMonthlyPrice: number | null;
+  availableSlotsPerDate?: Record<string, string[]>;
+  apaleoMinNights?: number;
+  apaleoMaxNights?: number;
   variant: "desktop" | "mobile";
 }) {
   return (
@@ -115,7 +123,7 @@ export default function BookingCard({
               {!checkIn ? "Select check-in date" : !checkOut ? "Select check-out date" : "Your dates"}
             </label>
             <div className="rounded-[5px] bg-white p-3">
-              <DualCalendar checkIn={checkIn} checkOut={checkOut} onSelect={handleCalendarSelect} />
+              <DualCalendar checkIn={checkIn} checkOut={checkOut} onSelect={handleCalendarSelect} onClear={handleCalendarClear} availableSlotsPerDate={availableSlotsPerDate} minNights={apaleoMinNights} maxNights={apaleoMaxNights} />
             </div>
             {tooShort && <p className="mt-2 text-sm text-[#FF6B6B]">Minimum stay is 5 nights.</p>}
             {nights >= 5 && (

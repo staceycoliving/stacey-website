@@ -23,14 +23,27 @@ function addDays(dateStr: string, days: number): string {
 export async function GET(req: NextRequest) {
   const personsRaw = req.nextUrl.searchParams.get("persons");
   const persons = personsRaw === "2" ? 2 : 1;
+  // Optional per-location scope: `?slug=alster` → only that property's
+  // inventory / restrictions. Omitted = portfolio-wide (homepage/move-in).
+  const slug = req.nextUrl.searchParams.get("slug") || undefined;
   const from = todayLocal();
   const to = addDays(from, 180);
 
   try {
-    const { unavailableDates } = await getShortStayCalendarAvailability(persons, from, to);
+    const { availableSlotsPerDate, minNights, maxNights, dateRestrictions } =
+      await getShortStayCalendarAvailability(persons, from, to, slug);
     return NextResponse.json({
       ok: true,
-      data: { unavailableDates, from, to, persons },
+      data: {
+        availableSlotsPerDate,
+        minNights,
+        maxNights,
+        dateRestrictions,
+        from,
+        to,
+        persons,
+        slug: slug ?? null,
+      },
     });
   } catch (err) {
     console.error("short-availability-calendar error:", err);

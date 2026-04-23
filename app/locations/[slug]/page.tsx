@@ -74,6 +74,11 @@ function LocationDetail({ location }: { location: Location }) {
       setRoomDates({});
     }
   };
+  const handleCalendarClear = () => {
+    setCheckIn("");
+    setCheckOut("");
+    setRoomDates({});
+  };
 
   // Map
   const neighborhoodMapRef = useRef<HTMLDivElement>(null);
@@ -140,6 +145,29 @@ function LocationDetail({ location }: { location: Location }) {
   const [availability, setAvailability] = useState<Record<string, CatAvail>>({});
   const [loadingAvail, setLoadingAvail] = useState(false);
 
+  // Per-location calendar availability + min/max-stay from apaleo, used
+  // to grey out non-bookable dates in the DualCalendar (Airbnb-style).
+  const [availableSlotsPerDate, setAvailableSlotsPerDate] = useState<
+    Record<string, string[]> | undefined
+  >(undefined);
+  const [apaleoMinNights, setApaleoMinNights] = useState<number | undefined>(undefined);
+  const [apaleoMaxNights, setApaleoMaxNights] = useState<number | undefined>(undefined);
+  useEffect(() => {
+    if (!isShort) return;
+    let cancelled = false;
+    fetch(`/api/short-availability-calendar?persons=${persons}&slug=${location.slug}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((res) => {
+        if (!cancelled && res?.ok) {
+          setAvailableSlotsPerDate(res.data.availableSlotsPerDate ?? {});
+          if (typeof res.data.minNights === "number") setApaleoMinNights(res.data.minNights);
+          if (typeof res.data.maxNights === "number") setApaleoMaxNights(res.data.maxNights);
+        }
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [location.slug, isShort, persons]);
+
   // Base nightly prices from apaleo (fetched once, before date selection)
   const [basePrices, setBasePrices] = useState<Record<string, number>>({});
   useEffect(() => {
@@ -160,6 +188,16 @@ function LocationDetail({ location }: { location: Location }) {
   // failure) so the display can distinguish "not loaded yet" from "loaded, no data".
   const [availFetched, setAvailFetched] = useState(false);
   useEffect(() => {
+    // SHORT stays need checkIn+checkOut for a meaningful availability query
+    // (apaleo requires them to return dynamic pricing). Without them, skip
+    // the fetch — keep `availFetched` false so room cards display the
+    // "from …/night" base price instead of falsely reporting "Sold out".
+    if (isShort && (!checkIn || !checkOut)) {
+      setAvailability({});
+      setAvailFetched(false);
+      setLoadingAvail(false);
+      return;
+    }
     const params = new URLSearchParams({ location: location.slug, persons: String(persons) });
     if (isShort && checkIn && checkOut) {
       params.set("checkIn", checkIn);
@@ -187,7 +225,7 @@ function LocationDetail({ location }: { location: Location }) {
         setLoadingAvail(false);
         setAvailFetched(true);
       });
-  }, [location.slug, persons, isShort ? `${checkIn}-${checkOut}` : ""]);
+  }, [location.slug, persons, isShort, isShort ? `${checkIn}-${checkOut}` : ""]);
 
   // Format helper: turn a list of YYYY-MM-DD strings into dropdown options
   const toDropdown = (dates: string[]): { value: string; label: string }[] =>
@@ -267,12 +305,16 @@ function LocationDetail({ location }: { location: Location }) {
     calendarOpen,
     setCalendarOpen,
     handleCalendarSelect,
+    handleCalendarClear,
     tooShort,
     availableDates,
     availableRoomCount: availableRooms.length,
     loadingAvail,
     lowestNightlyPrice,
     lowestMonthlyPrice,
+    availableSlotsPerDate,
+    apaleoMinNights,
+    apaleoMaxNights,
   } as const;
 
   return (
@@ -471,9 +513,14 @@ function LocationDetail({ location }: { location: Location }) {
                                     // are always 1-person prices from /api/prices.
                                     const livePrice = cat ? availability[cat]?.pricePerNight : null;
                                     const basePrice = cat ? basePrices[cat] : null;
-                                    const displayPrice = availFetched ? livePrice : basePrice;
-                                    if (displayPrice != null) return <>&euro;{displayPrice}/night</>;
-                                    return <>{availFetched ? "Sold out" : "Select dates"}</>;
+                                    if (availFetched) {
+                                      if (livePrice != null) return <>&euro;{livePrice}/night</>;
+                                      return <>Sold out</>;
+                                    }
+                                    // No dates selected yet — show the cheapest known nightly rate
+                                    // as "from €X" so guests know prices are dynamic.
+                                    if (basePrice != null) return <>from &euro;{basePrice}/night</>;
+                                    return <>Select dates</>;
                                   })()
                                 : (() => {
                                     const cat = ROOM_NAME_TO_CATEGORY[room.name];
@@ -503,7 +550,7 @@ function LocationDetail({ location }: { location: Location }) {
                                   {" · "}{nights} nights
                                 </p>
                                 <Link
-                                  href={`/move-in?room=${room.id}&checkin=${checkIn}&checkout=${checkOut}&persons=${persons}`}
+                                  href={`/move-in?stayType=SHORT&checkIn=${checkIn}&checkOut=${checkOut}&persons=${persons}&room=${room.id}`}
                                   className="flex items-center justify-center gap-2 rounded-[5px] bg-black px-6 py-3 text-sm font-semibold text-white transition-all duration-200 hover:opacity-80"
                                 >
                                   Book · {nights} nights <ArrowRight size={14} />
@@ -561,7 +608,7 @@ function LocationDetail({ location }: { location: Location }) {
                             })()}
                             {roomDate ? (
                               <Link
-                                href={`/move-in?room=${room.id}&date=${roomDate}&persons=${roomPersons[room.id] || 1}`}
+                                href={`/move-in?stayType=LONG&city=${location.city}&moveIn=${roomDate}&persons=${roomPersons[room.id] || 1}&room=${room.id}`}
                                 className="mt-3 flex items-center justify-center gap-2 rounded-[5px] bg-black px-6 py-3 text-sm font-semibold text-white transition-all duration-200 hover:opacity-80"
                               >
                                 Book this room · {(roomPersons[room.id] || 1) === 2 ? "2 persons" : "1 person"} <ArrowRight size={14} />
@@ -944,7 +991,7 @@ function LocationDetail({ location }: { location: Location }) {
               {!checkIn ? "Select check-in date" : !checkOut ? "Now select check-out date" : "Your dates"}
             </p>
 
-            <DualCalendar checkIn={checkIn} checkOut={checkOut} onSelect={handleCalendarSelect} />
+            <DualCalendar checkIn={checkIn} checkOut={checkOut} onSelect={handleCalendarSelect} onClear={handleCalendarClear} availableSlotsPerDate={availableSlotsPerDate} minNights={apaleoMinNights} maxNights={apaleoMaxNights} />
 
             {tooShort && (
               <p className="mt-3 text-xs font-medium text-[#E25C5C]">

@@ -72,14 +72,28 @@ export function usePaymentConfirmation(
 
   useEffect(() => {
     const paramRoom = searchParams.get("room");
-    const paramDate = searchParams.get("date");
-    const paramCheckIn = searchParams.get("checkin");
-    const paramCheckOut = searchParams.get("checkout");
+    const paramDate = searchParams.get("date") || searchParams.get("moveIn");
+    // Accept both camelCase (new) and lowercase (legacy) for check-in/out
+    // so older deep-links keep working during the transition.
+    const paramCheckIn = searchParams.get("checkIn") || searchParams.get("checkin");
+    const paramCheckOut = searchParams.get("checkOut") || searchParams.get("checkout");
     const paramPersons = searchParams.get("persons");
     const paymentStatus = searchParams.get("payment");
 
+    // Treat any filter param as "not a fresh visit" so the reset below
+    // doesn't clobber state the page's URL-hydrate effect just loaded
+    // (e.g., homepage → /move-in?stayType=SHORT&checkIn=…).
+    const hasFilterParams =
+      paramRoom ||
+      paramCheckIn ||
+      paramCheckOut ||
+      paramDate ||
+      paramPersons ||
+      searchParams.get("stayType") ||
+      searchParams.get("city");
+
     // No URL params → fresh visit, reset everything (only on initial mount)
-    if (!paramRoom && !paymentStatus && !paymentProcessedRef.current && !initialResetDoneRef.current) {
+    if (!hasFilterParams && !paymentStatus && !paymentProcessedRef.current && !initialResetDoneRef.current) {
       initialResetDoneRef.current = true;
       setters.setStayType(null);
       setters.setPersons(1);

@@ -12,7 +12,7 @@ export default function SearchFields({
   stayType, onStayType,
   persons, onPersons,
   city, onCity,
-  checkIn, checkOut, onCalendarSelect,
+  checkIn, checkOut, onCalendarSelect, onCalendarClear,
   moveInDate, onMoveInDate,
   moveInOptions, loadingDates,
   nightCount, tooShort,
@@ -25,6 +25,7 @@ export default function SearchFields({
   persons: 1 | 2; onPersons: (p: 1 | 2) => void;
   city: string; onCity: (c: string) => void;
   checkIn: string | null; checkOut: string | null; onCalendarSelect: (d: string) => void;
+  onCalendarClear?: () => void;
   moveInDate: string | null; onMoveInDate: (d: string | null) => void;
   moveInOptions: { value: string; label: string }[]; loadingDates: boolean;
   nightCount: number; tooShort: boolean;
@@ -38,10 +39,19 @@ export default function SearchFields({
   const calendarOpen = calendarOpenExternal ?? calendarOpenInternal;
   const setCalendarOpen = setCalendarOpenExternal ?? setCalendarOpenInternal;
 
-  // Fetch fully-booked dates across all SHORT properties so the calendar
-  // can grey them out (Airbnb-style). Re-fetches when `persons` changes
-  // because availability differs for couples.
-  const [unavailableDates, setUnavailableDates] = useState<string[]>([]);
+  // Fetch per-date slot availability across all SHORT properties so the
+  // calendar can do Airbnb-style dynamic greying — check-in valid iff a
+  // 5-night run is possible from that date; after pick, check-out valid
+  // iff every night in the candidate range has a consistent free slot.
+  // Re-fetches when `persons` changes because availability differs for
+  // couples (fewer categories qualify).
+  const [availableSlotsPerDate, setAvailableSlotsPerDate] = useState<
+    Record<string, string[]> | undefined
+  >(undefined);
+  // min/max stay come live from apaleo — changing them in apaleo reflects
+  // here within the 30-min edge cache window.
+  const [apaleoMinNights, setApaleoMinNights] = useState<number | undefined>(undefined);
+  const [apaleoMaxNights, setApaleoMaxNights] = useState<number | undefined>(undefined);
   useEffect(() => {
     if (stayType !== "SHORT") return;
     let cancelled = false;
@@ -49,7 +59,9 @@ export default function SearchFields({
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (!cancelled && data?.ok) {
-          setUnavailableDates(data.data.unavailableDates ?? []);
+          setAvailableSlotsPerDate(data.data.availableSlotsPerDate ?? {});
+          if (typeof data.data.minNights === "number") setApaleoMinNights(data.data.minNights);
+          if (typeof data.data.maxNights === "number") setApaleoMaxNights(data.data.maxNights);
         }
       })
       .catch(() => {
@@ -157,7 +169,7 @@ export default function SearchFields({
                 <>
                   <div className="fixed inset-0 z-20" onClick={() => setCalendarOpen(false)} />
                   <div className="absolute right-0 top-full z-30 mt-2 w-[280px] rounded-[5px] bg-white p-4 shadow-xl ring-1 ring-lightgray min-[420px]:w-[340px]">
-                    <DualCalendar checkIn={checkIn} checkOut={checkOut} onSelect={onCalendarSelect} unavailableDates={unavailableDates} />
+                    <DualCalendar checkIn={checkIn} checkOut={checkOut} onSelect={onCalendarSelect} onClear={onCalendarClear} availableSlotsPerDate={availableSlotsPerDate} minNights={apaleoMinNights} maxNights={apaleoMaxNights} />
                     {checkIn && checkOut && (
                       <div className="mt-3 flex items-center justify-between border-t border-lightgray pt-3">
                         <p className="text-sm font-semibold">{nightCount} nights</p>
@@ -359,10 +371,12 @@ export default function SearchFields({
 
                   {/* Desktop: inline white card, no modal */}
                   <div className="hidden rounded-[5px] bg-white p-5 text-left shadow-lg sm:block">
-                    <DualCalendar checkIn={checkIn} checkOut={checkOut} onSelect={onCalendarSelect} unavailableDates={unavailableDates} />
-                    {unavailableDates.length > 0 && (
+                    <DualCalendar checkIn={checkIn} checkOut={checkOut} onSelect={onCalendarSelect} onClear={onCalendarClear} availableSlotsPerDate={availableSlotsPerDate} minNights={apaleoMinNights} maxNights={apaleoMaxNights} />
+                    {availableSlotsPerDate && (
                       <p className="mt-3 text-[11px] text-gray">
-                        Greyed-out dates are fully booked.
+                        {checkIn && !checkOut
+                          ? "Only check-out dates that keep your room available are selectable."
+                          : "Greyed-out dates can't start a 5-night stay."}
                       </p>
                     )}
                     {checkIn && checkOut && (
@@ -396,7 +410,7 @@ export default function SearchFields({
                             Close
                           </button>
                         </div>
-                        <DualCalendar checkIn={checkIn} checkOut={checkOut} onSelect={onCalendarSelect} unavailableDates={unavailableDates} />
+                        <DualCalendar checkIn={checkIn} checkOut={checkOut} onSelect={onCalendarSelect} onClear={onCalendarClear} availableSlotsPerDate={availableSlotsPerDate} minNights={apaleoMinNights} maxNights={apaleoMaxNights} />
                         {checkIn && checkOut && (
                           <div className="mt-4 flex items-center justify-between border-t border-[#E8E6E0] pt-4">
                             <p className="text-base font-bold">{nightCount} nights</p>
