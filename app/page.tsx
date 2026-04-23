@@ -147,8 +147,13 @@ export default function HomePage() {
     <>
       <Navbar transparent />
 
-      {/* ── HERO — brand headline + progressive SearchFields ──────── */}
-      <section className="relative flex min-h-[700px] items-center justify-center overflow-hidden pb-36 pt-28 sm:pt-32">
+      {/* ── HERO — brand headline + progressive SearchFields.
+           min-h-[88vh] so ~12% of the next section peeks on first load
+           (mobile-first: user immediately senses there's more below
+           without scrolling). The 640px floor prevents squashing on
+           very short laptops. Growing content (expanded SearchFields)
+           pushes the hero taller naturally — no fixed height clash. */}
+      <section className="relative flex min-h-[max(88vh,640px)] items-center justify-center overflow-hidden pb-36 pt-28 sm:pt-32">
         <Image
           src="/images/website-hero.webp"
           alt="STACEY Coliving"
@@ -227,8 +232,8 @@ export default function HomePage() {
         <div className="absolute bottom-0 left-0 right-0 z-10 h-24 bg-gradient-to-t from-white to-transparent" />
       </section>
 
-      {/* ── LOCATIONS ─────────────────────────── */}
-      <section className="bg-white py-12 sm:py-16 md:py-20">
+      {/* ── LOCATIONS — low mobile pt so card tops peek under hero ── */}
+      <section className="bg-white pb-12 pt-6 sm:py-16 md:py-20">
         <FadeIn>
         <div className="mx-auto max-w-screen-2xl px-4 sm:px-6 lg:px-8">
 

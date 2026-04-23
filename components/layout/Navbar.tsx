@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { ChevronDown } from "lucide-react";
 import { clsx } from "clsx";
 import { locations } from "@/lib/data";
@@ -22,6 +23,7 @@ export default function Navbar({
   locationName?: string;
   stayType?: "SHORT" | "LONG";
 }) {
+  const pathname = usePathname();
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   // True while the mobile drawer is open OR animating out. The nav bar
@@ -105,9 +107,16 @@ export default function Navbar({
             scrolled ? "h-16 md:h-18" : "h-14 md:h-16"
           )}
         >
-          {/* Logo */}
+          {/* Logo — on home page: scroll to top; elsewhere: navigate home */}
           <Link
             href="/"
+            onClick={(e) => {
+              if (pathname === "/") {
+                e.preventDefault();
+                setMobileOpen(false);
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }
+            }}
             className={clsx(
               "relative transition-all duration-200 hover:opacity-80",
               scrolled ? "h-12 w-36 sm:h-14 sm:w-44" : "h-10 w-32 sm:h-12 sm:w-36"
