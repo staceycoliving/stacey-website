@@ -5,7 +5,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { clsx } from "clsx";
 import { ChevronDown, ArrowRight } from "lucide-react";
 import type { StayType } from "@/lib/data";
 import Navbar from "@/components/layout/Navbar";
@@ -178,27 +177,6 @@ export default function HomePage() {
     (stayType === "SHORT" && checkIn && checkOut && !tooShort) ||
     (stayType === "LONG" && city && moveInDate);
 
-  // No pre-submit room-count preview here — the real availability fetch
-  // lives on /move-in, and duplicating it on the homepage risks showing
-  // inflated numbers (the static data.ts count doesn't know which dates
-  // are actually bookable). User gets the real count on the results page.
-  const submitLabel = canSubmit ? "See available rooms" : "Find my room";
-
-  // Hint showing what's still needed when the button is disabled.
-  const missingHint = (() => {
-    if (canSubmit || !stayType) return null;
-    if (stayType === "SHORT") {
-      if (!checkIn) return "Pick your check-in date to continue.";
-      if (!checkOut) return "Now pick check-out.";
-      if (tooShort) return "Minimum stay is 5 nights.";
-    }
-    if (stayType === "LONG") {
-      if (!city) return "Pick a city to continue.";
-      if (!moveInDate) return "Pick a move-in date to continue.";
-    }
-    return null;
-  })();
-
   const handleSubmit = () => {
     if (!canSubmit || !stayType) return;
     const params = new URLSearchParams({
@@ -265,34 +243,8 @@ export default function HomePage() {
               moveInOptions={moveInOptions} loadingDates={loadingDates}
               nightCount={nightCount} tooShort={tooShort}
               variant="full"
+              onSubmit={handleSubmit}
             />
-
-            {/* Submit button — always rendered. Disabled state shows a hint
-                of what's still needed so users understand scope upfront. */}
-            {stayType && (
-              <motion.div
-                initial={{ opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.25, ease: "easeOut" }}
-                className="mt-10"
-              >
-                <button
-                  onClick={handleSubmit}
-                  disabled={!canSubmit}
-                  className={clsx(
-                    "inline-flex w-full items-center justify-center gap-2 rounded-[5px] px-10 py-4 text-base font-bold transition-all duration-200 sm:text-lg",
-                    canSubmit
-                      ? "bg-white text-black shadow-lg hover:opacity-80"
-                      : "cursor-not-allowed border-2 border-white/40 bg-white/10 text-white/60 backdrop-blur-sm",
-                  )}
-                >
-                  {submitLabel} {canSubmit && <ArrowRight size={16} />}
-                </button>
-                {!canSubmit && missingHint && (
-                  <p className="mt-3 text-xs text-white/60">{missingHint}</p>
-                )}
-              </motion.div>
-            )}
           </motion.div>
         </div>
 

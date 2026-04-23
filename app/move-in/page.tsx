@@ -787,22 +787,8 @@ function MoveInFlow() {
                 moveInOptions={moveInOptions} loadingDates={loadingAvailability}
                 nightCount={nightCount} tooShort={tooShort}
                 variant="full"
+                onSubmit={handleSearch}
               />
-
-              {/* Search CTA */}
-              <AnimatePresence>
-                {((stayType === "SHORT" && checkIn && checkOut && !tooShort) ||
-                  (stayType === "LONG" && city && moveInDate)) && (
-                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} className="mt-10">
-                    <button
-                      onClick={handleSearch}
-                      className="inline-flex w-full items-center justify-center gap-2 rounded-[5px] bg-white px-10 py-4 text-base font-bold text-black transition-all duration-200 hover:opacity-80 sm:text-lg"
-                    >
-                      Show available rooms <ArrowRight size={16} />
-                    </button>
-                  </motion.div>
-                )}
-              </AnimatePresence>
 
               {/* Trust: Press logos */}
               {!stayType && (

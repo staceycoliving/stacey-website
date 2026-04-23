@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { clsx } from "clsx";
+import { ArrowRight } from "lucide-react";
 import DualCalendar from "@/components/ui/DualCalendar";
 import type { StayType } from "@/lib/data";
 
@@ -18,6 +19,7 @@ export default function SearchFields({
   variant,
   calendarOpenExternal,
   setCalendarOpenExternal,
+  onSubmit,
 }: {
   stayType: StayType | null; onStayType: (t: StayType) => void;
   persons: 1 | 2; onPersons: (p: 1 | 2) => void;
@@ -29,6 +31,7 @@ export default function SearchFields({
   variant: "full" | "compact";
   calendarOpenExternal?: boolean;
   setCalendarOpenExternal?: (open: boolean) => void;
+  onSubmit?: () => void;
 }) {
   const isCompact = variant === "compact";
   const [calendarOpenInternal, setCalendarOpenInternal] = useState(false);
@@ -424,6 +427,57 @@ export default function SearchFields({
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Submit CTA — shared between homepage hero and /move-in intro so
+          behaviour is identical on both surfaces. Always visible once a
+          stay-type is picked; disabled state shows a hint of what's still
+          needed. Action-oriented label adapts to readiness. */}
+      {onSubmit && stayType && (
+        <motion.div
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.25, ease: "easeOut" }}
+          className="mt-10"
+        >
+          {(() => {
+            const ready =
+              (stayType === "SHORT" && !!checkIn && !!checkOut && !tooShort) ||
+              (stayType === "LONG" && !!city && !!moveInDate);
+            const missingHint = (() => {
+              if (ready) return null;
+              if (stayType === "SHORT") {
+                if (!checkIn) return "Pick your check-in date to continue.";
+                if (!checkOut) return "Now pick check-out.";
+                if (tooShort) return "Minimum stay is 5 nights.";
+              }
+              if (stayType === "LONG") {
+                if (!city) return "Pick a city to continue.";
+                if (!moveInDate) return "Pick a move-in date to continue.";
+              }
+              return null;
+            })();
+            return (
+              <>
+                <button
+                  onClick={onSubmit}
+                  disabled={!ready}
+                  className={clsx(
+                    "inline-flex w-full items-center justify-center gap-2 rounded-[5px] px-10 py-4 text-base font-bold transition-all duration-200 sm:text-lg",
+                    ready
+                      ? "bg-white text-black shadow-lg hover:opacity-80"
+                      : "cursor-not-allowed border-2 border-white/40 bg-white/10 text-white/60 backdrop-blur-sm",
+                  )}
+                >
+                  {ready ? "See available rooms" : "Find my room"} {ready && <ArrowRight size={16} />}
+                </button>
+                {!ready && missingHint && (
+                  <p className="mt-3 text-xs text-white/60">{missingHint}</p>
+                )}
+              </>
+            );
+          })()}
+        </motion.div>
+      )}
     </>
   );
 }
