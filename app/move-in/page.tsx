@@ -448,6 +448,9 @@ function MoveInFlow() {
   // ─── Submit / Next ───
   const handleSubmit = async () => {
     if (!isAboutComplete) return;
+    // Non-refundable acknowledgment is required on both flows — button is
+    // also disabled without it, this is a defensive second gate.
+    if (!termsAccepted) return;
 
     // LONG stay → create booking in DB, then generate lease
     if (stayType === "LONG" && selectedLocation && selectedRoom) {
@@ -533,8 +536,10 @@ function MoveInFlow() {
       return;
     }
 
-    // SHORT stay → redirect to Stripe Checkout
-    if (stayType === "SHORT" && !termsAccepted) return;
+    // Both stay types require the non-refundable acknowledgment before
+    // we can kick off payment (button disable is the primary gate, this
+    // is a defensive belt-and-braces check).
+    if (!termsAccepted) return;
     if (!selectedLocation || !selectedRoom) return;
     setSubmitting(true);
     try {
@@ -1237,35 +1242,73 @@ function MoveInFlow() {
                                   <p>€{rent * 2} <span className="text-xs">(2× rent)</span></p>
                                 </div>
                                 <div className="mt-3 flex items-center justify-between border-t border-white/10 pt-3">
-                                  <p className="text-sm text-white/80 font-semibold">Due now (booking fee)</p>
+                                  <div>
+                                    <p className="text-sm text-white/80 font-semibold">Due now · Booking fee</p>
+                                    <span className="mt-1 inline-block rounded-[3px] bg-pink/20 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-pink">
+                                      Non-refundable
+                                    </span>
+                                  </div>
                                   <p className="text-base font-bold text-pink">€195</p>
                                 </div>
+                                {/* Explicit non-refundable terms — users need to see this
+                                    before hitting the payment button so there are no
+                                    surprises if the deposit isn't paid in time or they
+                                    move in and expect a credit. */}
+                                <p className="mt-3 text-[11px] leading-relaxed text-white/50">
+                                  The €195 booking fee is charged today to secure your
+                                  room and is <strong className="text-white/80">non-refundable</strong> — including
+                                  if the €{rent * 2} deposit isn&apos;t paid within 48h and the
+                                  reservation expires, or once you&apos;ve moved in.
+                                  It is not credited against your rent.
+                                </p>
                                 <p className="mt-2 text-[11px] text-white/40">
-                                  Only the €195 booking fee is charged today. The €{rent * 2} deposit is due within 48h after booking, via a separate payment link sent to your email.
+                                  Deposit (€{rent * 2}) comes next — separate payment link within 48h.
                                 </p>
                               </>
                             );
                           })()}
                         </div>
 
-                        {/* Terms — SHORT only */}
-                        {stayType === "SHORT" && (
-                          <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-[5px] border border-white/10 p-4 transition-colors hover:border-white/20">
-                            <input type="checkbox" checked={termsAccepted} onChange={(e) => setTermsAccepted(e.target.checked)} className="mt-0.5 h-4 w-4 rounded-[3px] accent-pink" />
-                            <span className="text-sm text-white/60 leading-relaxed">
-                              I agree to the <span className="font-medium text-white underline">Terms & Conditions</span> and{" "}
-                              <span className="font-medium text-white underline">Privacy Policy</span>.
-                            </span>
-                          </label>
-                        )}
+                        {/* Required acknowledgment — different checkbox copy
+                            per stay type:
+                            • SHORT: T&C + Privacy Policy (consumer booking,
+                              no individual contract beyond the booking).
+                            • LONG: Non-refundable booking fee (the lease
+                              itself covers T&C / privacy, so no need to
+                              duplicate — but the €195 fee is outside the
+                              lease and needs its own explicit ack). */}
+                        <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-[5px] border border-white/10 p-4 transition-colors hover:border-white/20">
+                          <input
+                            type="checkbox"
+                            checked={termsAccepted}
+                            onChange={(e) => setTermsAccepted(e.target.checked)}
+                            className="mt-0.5 h-4 w-4 shrink-0 rounded-[3px] accent-pink"
+                          />
+                          <span className="text-sm leading-relaxed text-white/60">
+                            {stayType === "LONG" ? (
+                              <>
+                                I understand that the €195 booking fee is{" "}
+                                <strong className="text-white">non-refundable</strong>,
+                                including if the deposit isn&apos;t paid within 48h or
+                                once I&apos;ve moved in.
+                              </>
+                            ) : (
+                              <>
+                                I agree to the{" "}
+                                <span className="font-medium text-white underline">Terms &amp; Conditions</span> and{" "}
+                                <span className="font-medium text-white underline">Privacy Policy</span>.
+                              </>
+                            )}
+                          </span>
+                        </label>
 
                         {/* CTA */}
                         <button
                           onClick={handleSubmit}
-                          disabled={!isAboutComplete || (stayType === "SHORT" && !termsAccepted) || submitting}
+                          disabled={!isAboutComplete || !termsAccepted || submitting}
                           className={clsx(
                             "mt-4 flex w-full items-center justify-center gap-2 rounded-[5px] py-3.5 text-base font-bold transition-all duration-200",
-                            isAboutComplete && (stayType === "LONG" || termsAccepted) && !submitting
+                            isAboutComplete && termsAccepted && !submitting
                               ? "bg-pink text-black hover:opacity-80"
                               : "cursor-not-allowed bg-white/10 text-white/30"
                           )}
@@ -1344,9 +1387,18 @@ function MoveInFlow() {
                                   <p>€{rent * 2} <span className="text-xs">(2× rent)</span></p>
                                 </div>
                                 <div className="mt-3 flex items-center justify-between border-t border-white/10 pt-3">
-                                  <p className="text-sm text-white/80 font-semibold">Due now (booking fee)</p>
+                                  <div>
+                                    <p className="text-sm font-semibold text-white/80">Booking fee · due after signing</p>
+                                    <span className="mt-1 inline-block rounded-[3px] bg-pink/20 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-pink">
+                                      Non-refundable
+                                    </span>
+                                  </div>
                                   <p className="text-base font-bold text-pink">€195</p>
                                 </div>
+                                <p className="mt-2 text-[11px] text-white/40">
+                                  After you sign, we&apos;ll redirect you to pay the €195 fee.
+                                  The €{rent * 2} deposit comes within 48h via a separate email link.
+                                </p>
                               </>
                             );
                           })()}
