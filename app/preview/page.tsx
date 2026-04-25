@@ -1,69 +1,14 @@
 "use client";
 
-// Dev-only preview — three takes on the "Almost everything included"
-// section. All keep photography front-and-centre (matching stacey.de's
-// existing photo-first vibe) but vary in layout drama. Open
-// /preview/features manually.
+// Dev-only preview — three RADICALLY different takes on the "Almost
+// everything included" section. None of them are a feature-card grid.
+// Open /preview manually.
 
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, ArrowLeftRight, Sofa, Sparkles, Users, Wifi, Wrench } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { ArrowRight, ArrowLeftRight, Sofa, Sparkles, Users, Wifi, Wrench, Coffee } from "lucide-react";
 import { clsx } from "clsx";
-import { useState } from "react";
-
-type Feature = {
-  icon: typeof Sofa;
-  title: string;
-  body: string;
-  image: string;
-  highlight?: boolean;
-};
-
-const FEATURES: Feature[] = [
-  {
-    icon: Sofa,
-    title: "Fully furnished suite",
-    body: "Bed, desk, storage. Every detail thought through.",
-    image: "/images/locations/muehlenkamp/jumbo/001-jumbo-mk.webp",
-  },
-  {
-    icon: Users,
-    title: "Common spaces",
-    body: "Living rooms, kitchens, work zones — all built for hanging out.",
-    image: "/images/locations/muehlenkamp/01-muehlenkamp.webp",
-  },
-  {
-    icon: Wifi,
-    title: "Utilities & fibre WiFi",
-    body: "Power, water, heating, internet. One price.",
-    image: "/images/locations/muehlenkamp/02-muehlenkamp.webp",
-  },
-  {
-    icon: Sparkles,
-    title: "Weekly cleaning",
-    body: "Common areas every week. Your room stays your space.",
-    image: "/images/locations/muehlenkamp/03-muehlenkamp.webp",
-  },
-  {
-    icon: ArrowLeftRight,
-    title: "Move between cities",
-    body: "Change STACEY homes mid-stay. No fees. No break clauses.",
-    image: "/images/locations/eimsbuettel/community/001-community-ei.webp",
-    highlight: true,
-  },
-  {
-    icon: Wrench,
-    title: "On-call maintenance",
-    body: "Something broken? Often fixed the same day.",
-    image: "/images/locations/muehlenkamp/04-muehlenkamp.webp",
-  },
-];
-
-function Eyebrow({ city = "ALL-INCLUSIVE LIVING" }: { city?: string }) {
-  return (
-    <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-pink">{city}</p>
-  );
-}
 
 function VariantLabel({
   n,
@@ -87,150 +32,200 @@ function VariantLabel({
   );
 }
 
-/* ------------------------------------------------------------------ */
-/* VARIANT A — Bento Magazine Grid
-   Asymmetric grid. Hero card (Private Suite) spans 2 cells with a big
-   photo + overlay title. Supporting cards vary in size. The black
-   "STACEY only" card is a no-photo stat tile that interrupts the
-   photography rhythm — feels like a magazine spread.
-/* ------------------------------------------------------------------ */
-function VariantA() {
+/* ================================================================== */
+/* VARIANT D — "A Day at STACEY" Timeline
+   Narrative storytelling. Each feature is a moment in a member's day,
+   anchored to a clock time. Photos are polaroid-style with rotation.
+   Pink vertical timeline runs down the centre.
+   What's different: the section reads like a story, not a feature
+   list. Each "stop" in the day reveals a feature naturally.
+/* ================================================================== */
+
+type DayMoment = {
+  time: string;
+  icon: typeof Sofa;
+  feature: string;
+  quote: string;
+  member: string;
+  image: string;
+  rotate: string;
+  highlight?: boolean;
+};
+
+const DAY: DayMoment[] = [
+  {
+    time: "07:30",
+    icon: Coffee,
+    feature: "Common kitchen",
+    quote: "Coffee in the kitchen. Anna&rsquo;s already plotting tonight&rsquo;s dinner.",
+    member: "Lukas, suite 04",
+    image: "/images/locations/muehlenkamp/community/01-muehlenkamp.webp",
+    rotate: "-rotate-2",
+  },
+  {
+    time: "10:00",
+    icon: Wifi,
+    feature: "Fibre internet, included",
+    quote: "Fibre wifi just works. I haven&rsquo;t thought about a router in two years.",
+    member: "Mira, suite 02",
+    image: "/images/locations/muehlenkamp/community/02-muehlenkamp.webp",
+    rotate: "rotate-1",
+  },
+  {
+    time: "13:00",
+    icon: Sparkles,
+    feature: "Weekly cleaning",
+    quote: "Cleaner&rsquo;s been through. I didn&rsquo;t even notice. Fresh towels in the bath.",
+    member: "Tom, suite 11",
+    image: "/images/locations/muehlenkamp/community/03-muehlenkamp.webp",
+    rotate: "-rotate-1",
+  },
+  {
+    time: "18:30",
+    icon: Users,
+    feature: "Built-in community",
+    quote: "Sunday roast on the rooftop. Eight of us. None of us planned it.",
+    member: "Lisa, suite 07",
+    image: "/images/locations/eimsbuettel/community/001-community-ei.webp",
+    rotate: "rotate-2",
+  },
+  {
+    time: "20:15",
+    icon: Wrench,
+    feature: "On-call maintenance",
+    quote: "Fridge stopped. Maintenance fixed it before sundown. No drama.",
+    member: "Daniel, suite 09",
+    image: "/images/locations/muehlenkamp/community/04-muehlenkamp.webp",
+    rotate: "-rotate-1",
+  },
+  {
+    time: "22:00",
+    icon: ArrowLeftRight,
+    feature: "Move between cities",
+    quote: "Booked next month at STACEY Berlin. No new lease. No new deposit.",
+    member: "Ana, soon-to-be suite 03 (Mitte)",
+    image: "/images/locations/berlin-mitte/community/13-berlin.webp",
+    rotate: "rotate-2",
+    highlight: true,
+  },
+];
+
+function VariantD() {
   return (
-    <section className="bg-[#FAFAFA] px-4 py-20 sm:px-6 sm:py-24 lg:px-8">
-      <div className="mx-auto max-w-7xl">
+    <section className="bg-[#FAFAFA] px-4 py-20 sm:px-6 sm:py-28 lg:px-8">
+      <div className="mx-auto max-w-5xl">
         <div className="mx-auto max-w-2xl text-center">
-          <Eyebrow />
+          <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-pink">
+            A day at STACEY
+          </p>
           <h2 className="mt-2 text-3xl font-black leading-tight tracking-tight sm:text-5xl">
             Almost everything <span className="italic font-light">included</span>.
           </h2>
           <p className="mt-3 text-sm text-gray sm:text-base">
-            One price. No surprises. Move in with a suitcase — we handle the rest.
+            Six moments from a Tuesday. Every one of them is a thing that&rsquo;s
+            already paid for.
           </p>
         </div>
 
-        {/* Bento — 4 columns, custom row spans. Hero spans col-1+2 row 1+2.
-            USP card spans col-3+4 row 2 (wide black band). */}
-        <div className="mt-12 grid grid-cols-1 gap-3 sm:grid-cols-4 sm:grid-rows-[260px_220px_260px]">
-          {/* Hero — Private Suite, big */}
-          <div className="group relative col-span-1 overflow-hidden rounded-[5px] bg-black sm:col-span-2 sm:row-span-2">
-            <Image
-              src={FEATURES[0].image}
-              alt={FEATURES[0].title}
-              fill
-              className="object-cover transition-transform duration-700 group-hover:scale-105"
-              sizes="(min-width: 640px) 50vw, 100vw"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-            <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
-              <span className="inline-flex h-8 w-8 items-center justify-center rounded-[5px] bg-pink text-black">
-                <Sofa size={16} strokeWidth={2.25} />
-              </span>
-              <p className="mt-3 text-xl font-black leading-tight sm:text-2xl">
-                {FEATURES[0].title}
-              </p>
-              <p className="mt-1 max-w-md text-sm text-white/80">{FEATURES[0].body}</p>
-            </div>
-          </div>
+        {/* Timeline — pink centre line on desktop, left-rail on mobile */}
+        <div className="relative mt-16 sm:mt-20">
+          <div className="absolute bottom-0 left-6 top-0 w-px bg-gradient-to-b from-pink/0 via-pink/50 to-pink/0 sm:left-1/2 sm:-translate-x-px" />
 
-          {/* Common spaces */}
-          <div className="group relative h-[220px] overflow-hidden rounded-[5px] bg-black sm:h-auto">
-            <Image
-              src={FEATURES[1].image}
-              alt={FEATURES[1].title}
-              fill
-              className="object-cover transition-transform duration-700 group-hover:scale-105"
-              sizes="(min-width: 640px) 25vw, 100vw"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
-            <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
-              <p className="text-base font-black leading-tight">{FEATURES[1].title}</p>
-              <p className="mt-1 text-xs text-white/75">{FEATURES[1].body}</p>
-            </div>
-          </div>
+          <ol className="space-y-14 sm:space-y-20">
+            {DAY.map((m, i) => {
+              const right = i % 2 === 1;
+              const Icon = m.icon;
+              return (
+                <li
+                  key={m.time}
+                  className={clsx(
+                    "relative grid gap-6 pl-14 sm:gap-8 sm:pl-0 sm:grid-cols-2",
+                  )}
+                >
+                  {/* Pin on the timeline */}
+                  <span
+                    aria-hidden
+                    className={clsx(
+                      "absolute left-6 top-2 -translate-x-1/2 rounded-full ring-4 ring-[#FAFAFA] sm:left-1/2",
+                      m.highlight
+                        ? "h-4 w-4 bg-pink"
+                        : "h-3 w-3 bg-black",
+                    )}
+                  />
+                  {/* Time stamp */}
+                  <div
+                    className={clsx(
+                      "sm:flex sm:items-start",
+                      right ? "sm:order-2 sm:justify-start sm:pl-12" : "sm:order-1 sm:justify-end sm:pr-12 sm:text-right",
+                    )}
+                  >
+                    <div>
+                      <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-gray">
+                        {m.time}
+                      </p>
+                      <p className="mt-1 text-2xl font-black leading-tight tracking-tight sm:text-3xl">
+                        {m.feature}
+                      </p>
+                      <p
+                        className={clsx(
+                          "mt-3 max-w-sm text-base italic font-light leading-relaxed text-black sm:text-lg",
+                          right ? "" : "sm:ml-auto",
+                        )}
+                        dangerouslySetInnerHTML={{ __html: `&ldquo;${m.quote}&rdquo;` }}
+                      />
+                      <p className="mt-2 text-xs font-medium uppercase tracking-[0.15em] text-gray">
+                        — {m.member}
+                      </p>
+                      <span
+                        className={clsx(
+                          "mt-3 inline-flex items-center gap-1.5 rounded-[5px] px-2 py-1 text-[10px] font-black uppercase tracking-[0.12em]",
+                          m.highlight ? "bg-pink text-black" : "bg-black text-white",
+                        )}
+                      >
+                        <Icon size={11} strokeWidth={2.5} />
+                        {m.highlight ? "Stacey only" : "Included"}
+                      </span>
+                    </div>
+                  </div>
 
-          {/* Utilities */}
-          <div className="group relative h-[220px] overflow-hidden rounded-[5px] bg-black sm:h-auto">
-            <Image
-              src={FEATURES[2].image}
-              alt={FEATURES[2].title}
-              fill
-              className="object-cover transition-transform duration-700 group-hover:scale-105"
-              sizes="(min-width: 640px) 25vw, 100vw"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
-            <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
-              <p className="text-base font-black leading-tight">{FEATURES[2].title}</p>
-              <p className="mt-1 text-xs text-white/75">{FEATURES[2].body}</p>
-            </div>
-          </div>
-
-          {/* USP — wide black card spans 2 cols, no photo */}
-          <div className="group relative col-span-1 flex h-[220px] flex-col justify-between overflow-hidden rounded-[5px] bg-black p-5 text-white transition-all hover:bg-[#0F0F0F] sm:col-span-2 sm:h-auto">
-            <div className="flex items-start justify-between">
-              <span className="inline-flex h-9 w-9 items-center justify-center rounded-[5px] bg-pink text-black">
-                <ArrowLeftRight size={16} strokeWidth={2.25} />
-              </span>
-              <span className="rounded-[3px] bg-pink px-1.5 py-0.5 text-[8px] font-black uppercase tracking-[0.15em] text-black">
-                Stacey only
-              </span>
-            </div>
-            <div>
-              <p className="text-2xl font-black leading-tight sm:text-3xl">
-                Move between cities,{" "}
-                <span className="italic font-light text-pink">mid-stay</span>.
-              </p>
-              <p className="mt-2 max-w-md text-sm text-white/70">
-                Hamburg in spring, Berlin in summer, Vallendar in autumn. No fees,
-                no break clauses. No other coliving lets you do this.
-              </p>
-            </div>
-          </div>
-
-          {/* Weekly cleaning — small */}
-          <div className="group relative h-[220px] overflow-hidden rounded-[5px] bg-black sm:h-auto">
-            <Image
-              src={FEATURES[3].image}
-              alt={FEATURES[3].title}
-              fill
-              className="object-cover transition-transform duration-700 group-hover:scale-105"
-              sizes="(min-width: 640px) 25vw, 100vw"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
-            <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
-              <p className="text-base font-black leading-tight">{FEATURES[3].title}</p>
-              <p className="mt-1 text-xs text-white/75">{FEATURES[3].body}</p>
-            </div>
-          </div>
-
-          {/* Maintenance — small */}
-          <div className="group relative h-[220px] overflow-hidden rounded-[5px] bg-black sm:h-auto">
-            <Image
-              src={FEATURES[5].image}
-              alt={FEATURES[5].title}
-              fill
-              className="object-cover transition-transform duration-700 group-hover:scale-105"
-              sizes="(min-width: 640px) 25vw, 100vw"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
-            <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
-              <p className="text-base font-black leading-tight">{FEATURES[5].title}</p>
-              <p className="mt-1 text-xs text-white/75">{FEATURES[5].body}</p>
-            </div>
-          </div>
+                  {/* Polaroid */}
+                  <div className={clsx(right ? "sm:order-1 sm:justify-self-end" : "sm:order-2 sm:justify-self-start")}>
+                    <div
+                      className={clsx(
+                        "relative w-full max-w-[340px] bg-white p-3 shadow-[0_8px_30px_rgba(0,0,0,0.12)] transition-transform duration-300 hover:rotate-0",
+                        m.rotate,
+                      )}
+                    >
+                      <div className="relative aspect-[4/3] overflow-hidden bg-black">
+                        <Image
+                          src={m.image}
+                          alt={m.feature}
+                          fill
+                          className="object-cover"
+                          sizes="(min-width: 640px) 340px, 100vw"
+                        />
+                      </div>
+                      <p className="mt-3 text-center font-mono text-[10px] uppercase tracking-[0.25em] text-gray">
+                        {m.time} · {m.feature}
+                      </p>
+                    </div>
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
         </div>
 
-        <p className="mx-auto mt-10 max-w-2xl text-center text-sm text-gray sm:text-base">
+        <p className="mx-auto mt-20 max-w-2xl text-center text-sm text-gray sm:text-base">
           You bring{" "}
           <span className="font-semibold text-black">your clothes</span>,{" "}
           <span className="font-semibold text-black">a toothbrush</span>, and{" "}
-          <span className="font-semibold text-black">yourself</span>. We&rsquo;ve
-          got the rest.
+          <span className="font-semibold text-black">yourself</span>.
         </p>
-
         <div className="mt-8 flex justify-center">
           <Link
             href="/move-in"
-            className="group inline-flex items-center gap-2 rounded-[5px] bg-black px-6 py-3 text-sm font-semibold text-white transition-all hover:opacity-80"
+            className="group inline-flex items-center gap-2 rounded-[5px] bg-black px-6 py-3 text-sm font-semibold text-white hover:opacity-80"
           >
             Find your room
             <ArrowRight size={14} className="transition-transform group-hover:translate-x-0.5" />
@@ -241,104 +236,239 @@ function VariantA() {
   );
 }
 
-/* ------------------------------------------------------------------ */
-/* VARIANT B — Full-Photo Hover-Reveal
-   Square photo cards. Photo fills the card. Title visible at rest in
-   the gradient; body text slides up on hover. Dramatic, cinematic, but
-   tap-friendly on mobile (we expand the active card permanently).
-/* ------------------------------------------------------------------ */
-function VariantB() {
-  const [active, setActive] = useState<number | null>(null);
+/* ================================================================== */
+/* VARIANT E — Annotated Hero Photo (NYT-Explainer Style)
+   ONE big hero photo of a STACEY common space. Numbered pink pins
+   placed at meaningful spots (sofa = "common spaces", router = "wifi
+   included"…). Hover/click a pin → label card pops out with feature
+   detail. Below the photo: a numbered list mirrors the pins.
+   What's different: the apartment IS the section. Photo carries 90%
+   of the visual weight; the features are revealed as you read it.
+/* ================================================================== */
 
+type Pin = {
+  n: string;
+  top: string;
+  left: string;
+  icon: typeof Sofa;
+  title: string;
+  body: string;
+  highlight?: boolean;
+};
+
+const PINS: Pin[] = [
+  {
+    n: "01",
+    top: "26%",
+    left: "18%",
+    icon: Sofa,
+    title: "Furnished suite",
+    body: "Bed, desk, storage. Every detail thought through.",
+  },
+  {
+    n: "02",
+    top: "44%",
+    left: "62%",
+    icon: Users,
+    title: "Common spaces",
+    body: "Living rooms, kitchens, work zones built for hanging out.",
+  },
+  {
+    n: "03",
+    top: "18%",
+    left: "78%",
+    icon: Wifi,
+    title: "Fibre WiFi & utilities",
+    body: "Power, water, heating, internet. One price.",
+  },
+  {
+    n: "04",
+    top: "70%",
+    left: "32%",
+    icon: Sparkles,
+    title: "Weekly cleaning",
+    body: "Common areas every week. Your room stays your space.",
+  },
+  {
+    n: "05",
+    top: "62%",
+    left: "82%",
+    icon: Wrench,
+    title: "On-call maintenance",
+    body: "Something broken? Often fixed the same day.",
+  },
+  {
+    n: "06",
+    top: "82%",
+    left: "55%",
+    icon: ArrowLeftRight,
+    title: "Move between cities",
+    body: "Change STACEY homes mid-stay. No fees. No break clauses.",
+    highlight: true,
+  },
+];
+
+function VariantE() {
+  const [active, setActive] = useState<string>("01");
   return (
     <section className="bg-white px-4 py-20 sm:px-6 sm:py-24 lg:px-8">
       <div className="mx-auto max-w-7xl">
         <div className="mx-auto max-w-2xl text-center">
-          <Eyebrow />
+          <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-pink">
+            Read the apartment
+          </p>
           <h2 className="mt-2 text-3xl font-black leading-tight tracking-tight sm:text-5xl">
             Almost everything <span className="italic font-light">included</span>.
           </h2>
           <p className="mt-3 text-sm text-gray sm:text-base">
-            One price. No surprises. Move in with a suitcase — we handle the rest.
+            Six things, one room. Tap a pin.
           </p>
         </div>
 
-        <div className="mt-12 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {FEATURES.map((f, i) => {
-            const isActive = active === i;
-            const Icon = f.icon;
-            return (
-              <button
-                key={f.title}
-                onClick={() => setActive(isActive ? null : i)}
-                onMouseEnter={() => setActive(i)}
-                onMouseLeave={() => setActive(null)}
-                className="group relative aspect-[4/3] overflow-hidden rounded-[5px] bg-black text-left"
-              >
-                <Image
-                  src={f.image}
-                  alt={f.title}
-                  fill
-                  className={clsx(
-                    "object-cover transition-transform duration-700",
-                    isActive ? "scale-110" : "scale-100",
+        <div className="mt-12 grid gap-6 lg:grid-cols-[1fr_320px]">
+          {/* Hero photo with pins */}
+          <div className="relative aspect-[4/3] overflow-hidden rounded-[5px] bg-black">
+            <Image
+              src="/images/locations/eimsbuettel/community/001-community-ei.webp"
+              alt="STACEY common space"
+              fill
+              className="object-cover"
+              sizes="(min-width: 1024px) 70vw, 100vw"
+              priority
+            />
+            {/* Subtle vignette so pins read against any photo content */}
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-black/0 via-black/10 to-black/35" />
+
+            {PINS.map((p) => {
+              const isActive = active === p.n;
+              return (
+                <button
+                  key={p.n}
+                  onClick={() => setActive(p.n)}
+                  onMouseEnter={() => setActive(p.n)}
+                  className="absolute -translate-x-1/2 -translate-y-1/2"
+                  style={{ top: p.top, left: p.left }}
+                  aria-label={`${p.n} ${p.title}`}
+                >
+                  {/* Pulse ring when active */}
+                  {isActive && (
+                    <span
+                      aria-hidden
+                      className="absolute inset-0 rounded-full bg-pink/40"
+                      style={{ animation: "stacey-marker-ping 1.5s cubic-bezier(0,0,0.2,1) infinite" }}
+                    />
                   )}
-                  sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
-                />
-                {/* Permanent bottom gradient so resting title is readable */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-black/0" />
-                {/* Hover layer — adds darker overlay so body copy reads */}
-                <div
-                  className={clsx(
-                    "absolute inset-0 bg-black/40 transition-opacity duration-300",
-                    isActive ? "opacity-100" : "opacity-0",
-                  )}
-                />
-                {f.highlight && (
-                  <span className="absolute right-3 top-3 rounded-[3px] bg-pink px-1.5 py-0.5 text-[8px] font-black uppercase tracking-[0.15em] text-black">
-                    Stacey only
-                  </span>
-                )}
-                <div className="absolute inset-x-0 bottom-0 p-5 text-white">
                   <span
                     className={clsx(
-                      "inline-flex h-9 w-9 items-center justify-center rounded-[5px] transition-all duration-300",
+                      "relative flex items-center justify-center rounded-full font-mono text-[11px] font-black transition-all duration-300 ring-4",
                       isActive
-                        ? "bg-pink text-black"
-                        : "bg-white/15 text-white backdrop-blur-sm",
+                        ? "h-9 w-9 bg-pink text-black ring-white shadow-[0_4px_18px_rgba(0,0,0,0.4)] scale-100"
+                        : p.highlight
+                          ? "h-7 w-7 bg-pink text-black ring-white/80 shadow-[0_3px_12px_rgba(0,0,0,0.35)]"
+                          : "h-7 w-7 bg-black text-white ring-white/80 shadow-[0_3px_12px_rgba(0,0,0,0.35)]",
                     )}
                   >
-                    <Icon size={16} strokeWidth={2.25} />
+                    {p.n}
                   </span>
-                  <p className="mt-3 text-lg font-black leading-tight sm:text-xl">
-                    {f.title}
-                  </p>
-                  <p
+                </button>
+              );
+            })}
+
+            {/* Active pin's caption — anchored top-left of photo, magazine pull-quote feel */}
+            <div className="pointer-events-none absolute bottom-4 left-4 right-4 sm:bottom-6 sm:left-6 sm:max-w-sm">
+              {PINS.filter((p) => p.n === active).map((p) => {
+                const Icon = p.icon;
+                return (
+                  <div
+                    key={p.n}
+                    className="rounded-[5px] bg-white/95 p-4 shadow-[0_8px_30px_rgba(0,0,0,0.25)] backdrop-blur"
+                    style={{ animation: "fadeSlide 0.3s ease-out" }}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={clsx(
+                          "flex h-7 w-7 items-center justify-center rounded-[5px]",
+                          p.highlight ? "bg-pink text-black" : "bg-black text-white",
+                        )}
+                      >
+                        <Icon size={13} strokeWidth={2.5} />
+                      </span>
+                      <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-gray">
+                        Pin {p.n}
+                      </p>
+                      {p.highlight && (
+                        <span className="rounded-[3px] bg-pink px-1.5 py-0.5 text-[8px] font-black uppercase tracking-[0.15em] text-black">
+                          Stacey only
+                        </span>
+                      )}
+                    </div>
+                    <p className="mt-2 text-base font-black leading-tight">{p.title}</p>
+                    <p className="mt-1 text-xs leading-relaxed text-gray">{p.body}</p>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Index list — same numbers as pins, click-through navigation */}
+          <ol className="self-start lg:sticky lg:top-24">
+            {PINS.map((p, i) => {
+              const isActive = active === p.n;
+              return (
+                <li key={p.n}>
+                  <button
+                    onClick={() => setActive(p.n)}
+                    onMouseEnter={() => setActive(p.n)}
                     className={clsx(
-                      "overflow-hidden text-sm text-white/90 transition-all duration-300",
-                      isActive ? "mt-1.5 max-h-20 opacity-100" : "max-h-0 opacity-0",
+                      "group flex w-full items-start gap-3 border-b border-black/5 py-3 text-left transition-colors",
+                      i === PINS.length - 1 && "border-b-0",
                     )}
                   >
-                    {f.body}
-                  </p>
-                </div>
-              </button>
-            );
-          })}
+                    <span
+                      className={clsx(
+                        "flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full font-mono text-[11px] font-black transition-all",
+                        isActive
+                          ? p.highlight
+                            ? "bg-pink text-black"
+                            : "bg-black text-white"
+                          : "bg-[#F5F5F5] text-black/60 group-hover:bg-black group-hover:text-white",
+                      )}
+                    >
+                      {p.n}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p
+                        className={clsx(
+                          "text-sm font-bold leading-tight transition-colors",
+                          isActive ? "text-black" : "text-black/60 group-hover:text-black",
+                        )}
+                      >
+                        {p.title}
+                      </p>
+                      <p className="mt-0.5 truncate text-[11px] text-gray">{p.body}</p>
+                    </div>
+                    {p.highlight && (
+                      <span className="flex-shrink-0 rounded-[3px] bg-pink px-1 py-0.5 text-[8px] font-black uppercase tracking-[0.15em] text-black">
+                        ★
+                      </span>
+                    )}
+                  </button>
+                </li>
+              );
+            })}
+          </ol>
         </div>
 
-        <p className="mx-auto mt-10 max-w-2xl text-center text-sm text-gray sm:text-base">
+        <p className="mx-auto mt-12 max-w-2xl text-center text-sm text-gray sm:text-base">
           You bring{" "}
           <span className="font-semibold text-black">your clothes</span>,{" "}
           <span className="font-semibold text-black">a toothbrush</span>, and{" "}
-          <span className="font-semibold text-black">yourself</span>. We&rsquo;ve
-          got the rest.
+          <span className="font-semibold text-black">yourself</span>.
         </p>
-
         <div className="mt-8 flex justify-center">
           <Link
             href="/move-in"
-            className="group inline-flex items-center gap-2 rounded-[5px] bg-black px-6 py-3 text-sm font-semibold text-white transition-all hover:opacity-80"
+            className="group inline-flex items-center gap-2 rounded-[5px] bg-black px-6 py-3 text-sm font-semibold text-white hover:opacity-80"
           >
             Find your room
             <ArrowRight size={14} className="transition-transform group-hover:translate-x-0.5" />
@@ -349,99 +479,135 @@ function VariantB() {
   );
 }
 
-/* ------------------------------------------------------------------ */
-/* VARIANT C — Editorial Diptych Bands
-   Each feature gets its own horizontal band — alternating photo
-   left/right with copy on the opposite side. Big photos, big type.
-   Magazine-spread feel, slower scroll, premium.
-/* ------------------------------------------------------------------ */
-function VariantC() {
-  // Trim to 4 features for the diptych — full bands need to feel
-  // intentional, not endless. The USP gets its own dark band.
-  const bands = [FEATURES[0], FEATURES[1], FEATURES[4], FEATURES[3]];
+/* ================================================================== */
+/* VARIANT F — Receipt vs Receipt (Cost Reveal)
+   Side-by-side mock receipts. Left: "Renting somewhere else" with 7
+   itemised line items adding up to a big total. Right: a clean STACEY
+   receipt — one line, italic-keyword headline, no add-ons. The
+   features are the line items on the LEFT side, struck through (since
+   STACEY absorbs them). Drama is mathematical, not photographic.
+/* ================================================================== */
+
+type Cost = { label: string; price: string; sub?: string; included?: boolean };
+
+const RIVAL: Cost[] = [
+  { label: "Furnished apartment", price: "€1,100", sub: "1-room, Hamburg avg" },
+  { label: "Furniture (amortised)", price: "€120", sub: "bed, desk, sofa, storage / 24 mo" },
+  { label: "Utilities", price: "€180", sub: "power, water, heating" },
+  { label: "Fibre internet", price: "€40", sub: "100 Mbps contract, 24 mo lock-in" },
+  { label: "Weekly cleaning", price: "€100", sub: "common areas, fortnightly minimum" },
+  { label: "Maintenance buffer", price: "€60", sub: "your problem, your time, your money" },
+  { label: "Move-in admin", price: "€80", sub: "Schufa, Anmeldung, broker, deposits" },
+];
+
+function VariantF() {
   return (
     <section className="bg-[#FAFAFA] px-4 py-20 sm:px-6 sm:py-24 lg:px-8">
-      <div className="mx-auto max-w-7xl">
+      <div className="mx-auto max-w-6xl">
         <div className="mx-auto max-w-2xl text-center">
-          <Eyebrow />
+          <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-pink">
+            Do the math
+          </p>
           <h2 className="mt-2 text-3xl font-black leading-tight tracking-tight sm:text-5xl">
             Almost everything <span className="italic font-light">included</span>.
           </h2>
           <p className="mt-3 text-sm text-gray sm:text-base">
-            Move in with a suitcase. Here&rsquo;s what&rsquo;s waiting.
+            One number against seven. We&rsquo;ll make it short.
           </p>
         </div>
 
-        <div className="mt-14 space-y-12 sm:mt-20 sm:space-y-20">
-          {bands.map((f, i) => {
-            const reversed = i % 2 === 1;
-            const Icon = f.icon;
-            const isUSP = !!f.highlight;
-            return (
-              <div
-                key={f.title}
-                className={clsx(
-                  "grid items-center gap-6 sm:gap-12 lg:grid-cols-2 lg:gap-16",
-                )}
-              >
-                {/* Photo */}
-                <div
-                  className={clsx(
-                    "relative aspect-[4/3] overflow-hidden rounded-[5px] bg-black",
-                    reversed && "lg:order-2",
-                  )}
-                >
-                  <Image
-                    src={f.image}
-                    alt={f.title}
-                    fill
-                    className="object-cover"
-                    sizes="(min-width: 1024px) 50vw, 100vw"
-                  />
-                  {isUSP && (
-                    <span className="absolute left-4 top-4 rounded-[3px] bg-pink px-2 py-1 text-[9px] font-black uppercase tracking-[0.15em] text-black">
-                      Stacey only
-                    </span>
-                  )}
-                </div>
+        <div className="mt-12 grid gap-4 sm:gap-6 lg:grid-cols-[1fr_1fr]">
+          {/* Rival receipt — long, fragmented, struck through */}
+          <div className="relative rounded-[5px] bg-white p-6 ring-1 ring-black/10 shadow-sm sm:p-8">
+            <div className="flex items-baseline justify-between border-b border-dashed border-black/15 pb-3">
+              <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-gray">
+                Renting solo
+              </p>
+              <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-gray">
+                Hamburg · monthly
+              </p>
+            </div>
 
-                {/* Copy */}
-                <div className={clsx(reversed && "lg:order-1")}>
-                  <span
-                    className={clsx(
-                      "inline-flex h-10 w-10 items-center justify-center rounded-[5px]",
-                      isUSP ? "bg-pink text-black" : "bg-black text-white",
+            <ul className="mt-4 space-y-3">
+              {RIVAL.map((c) => (
+                <li
+                  key={c.label}
+                  className="grid grid-cols-[1fr_auto] gap-3 border-b border-black/5 pb-3 last:border-b-0 last:pb-0"
+                >
+                  <div>
+                    <p className="text-sm font-bold leading-tight text-black/80 line-through decoration-pink decoration-2">
+                      {c.label}
+                    </p>
+                    {c.sub && (
+                      <p className="mt-0.5 text-[11px] leading-tight text-gray">{c.sub}</p>
                     )}
-                  >
-                    <Icon size={18} strokeWidth={2.25} />
-                  </span>
-                  <p className="mt-4 text-[10px] font-bold uppercase tracking-[0.25em] text-pink">
-                    Feature 0{i + 1}
+                  </div>
+                  <p className="self-start font-mono text-sm font-bold text-black/60 line-through decoration-pink decoration-2">
+                    {c.price}
                   </p>
-                  <h3 className="mt-1 text-3xl font-black leading-tight tracking-tight sm:text-4xl">
-                    {f.title.replace("Move between cities", "Move between cities")}
-                  </h3>
-                  <p className="mt-3 max-w-md text-base leading-relaxed text-gray">
-                    {f.body}
-                  </p>
-                </div>
+                </li>
+              ))}
+            </ul>
+
+            <div className="mt-5 flex items-baseline justify-between border-t-2 border-double border-black/30 pt-4">
+              <p className="text-base font-black uppercase tracking-wide">Total</p>
+              <p className="font-mono text-3xl font-black sm:text-4xl">€1,680</p>
+            </div>
+            <p className="mt-3 text-[11px] leading-relaxed text-gray">
+              Plus 24 months of locked contracts, three deposits, one Schufa,
+              and an evening on hold with the internet provider.
+            </p>
+          </div>
+
+          {/* STACEY receipt — short, clean, one number */}
+          <div className="relative flex flex-col justify-between rounded-[5px] bg-black p-6 text-white shadow-[0_18px_50px_rgba(0,0,0,0.18)] sm:p-8">
+            <div>
+              <div className="flex items-baseline justify-between border-b border-dashed border-white/20 pb-3">
+                <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-pink">
+                  STACEY
+                </p>
+                <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-white/50">
+                  Hamburg · monthly
+                </p>
               </div>
-            );
-          })}
+
+              <p className="mt-8 text-sm font-medium uppercase tracking-[0.15em] text-white/60">
+                Your move-in
+              </p>
+              <p className="mt-2 text-3xl font-black leading-tight sm:text-4xl">
+                One private suite.{" "}
+                <span className="italic font-light text-pink">Everything in.</span>
+              </p>
+              <p className="mt-3 text-sm leading-relaxed text-white/70">
+                Furnished. Cleaned weekly. Fibre wifi. Utilities, maintenance,
+                community, and free transfers between STACEY cities — all on
+                the bill below.
+              </p>
+            </div>
+
+            <div className="mt-10">
+              <div className="flex items-baseline justify-between border-t-2 border-double border-white/30 pt-4">
+                <p className="text-base font-black uppercase tracking-wide">Total</p>
+                <p className="font-mono text-4xl font-black text-pink sm:text-5xl">€1,290</p>
+              </div>
+              <p className="mt-3 text-[11px] leading-relaxed text-white/55">
+                You save ~<span className="font-semibold text-pink">€390/mo</span>.
+                You skip seven contracts. You start tomorrow.
+              </p>
+            </div>
+          </div>
         </div>
 
-        <p className="mx-auto mt-16 max-w-2xl text-center text-sm text-gray sm:text-base">
+        <p className="mx-auto mt-10 max-w-2xl text-center text-sm text-gray sm:mt-14 sm:text-base">
           You bring{" "}
           <span className="font-semibold text-black">your clothes</span>,{" "}
           <span className="font-semibold text-black">a toothbrush</span>, and{" "}
-          <span className="font-semibold text-black">yourself</span>. We&rsquo;ve
-          got the rest.
+          <span className="font-semibold text-black">yourself</span>.
         </p>
-
         <div className="mt-8 flex justify-center">
           <Link
             href="/move-in"
-            className="group inline-flex items-center gap-2 rounded-[5px] bg-black px-6 py-3 text-sm font-semibold text-white transition-all hover:opacity-80"
+            className="group inline-flex items-center gap-2 rounded-[5px] bg-black px-6 py-3 text-sm font-semibold text-white hover:opacity-80"
           >
             Find your room
             <ArrowRight size={14} className="transition-transform group-hover:translate-x-0.5" />
@@ -452,47 +618,46 @@ function VariantC() {
   );
 }
 
-export default function PreviewFeatures() {
+export default function PreviewPage() {
   return (
     <main className="bg-white">
       <div className="mx-auto max-w-3xl px-6 py-10">
         <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-pink">
-          Internal preview
+          Internal preview · take 2
         </p>
         <h1 className="mt-2 text-3xl font-black sm:text-4xl">
           &ldquo;Almost everything included&rdquo; —{" "}
-          <span className="italic font-light">A vs B vs C</span>
+          <span className="italic font-light">D, E, F</span>
         </h1>
         <p className="mt-3 text-sm text-gray">
-          Drei Varianten der Features-Sektion mit echten Fotos. Jede behält die
-          editoriale Tonalität (pink eyebrow + italic-keyword headline + &ldquo;You
-          bring&rdquo; reveal), variiert aber das Foto-Layout.
+          Drei radikal andere Ansätze. Kein Card-Grid. Storytelling, Annotated
+          Hero, oder Math. Pick whichever feels closest, ich verfeinere weiter.
         </p>
       </div>
 
       <VariantLabel
-        n="A"
-        title="Bento Magazine Grid — asymmetric, hero-card driven"
-        desc="Magazin-Spread Look. Private Suite als 2×2 Hero, USP (Move between cities) als breites schwarzes Band ohne Foto. 5 Photo-Cards + 1 Statement-Card. Premium, dicht, viel zu sehen ohne lang zu scrollen."
+        n="D"
+        title="A Day at STACEY — Polaroid Timeline"
+        desc="Sechs Momente eines Dienstags, jeder Moment = ein Feature. Pinkes Mittel-Timeline, Polaroid-Fotos mit Member-Quotes. Liest sich wie eine Story, nicht wie eine Liste."
       />
-      <VariantA />
+      <VariantD />
 
       <VariantLabel
-        n="B"
-        title="Full-Photo Cards — hover/tap reveals body copy"
-        desc='Foto füllt jede Card komplett. Nur Icon + Titel sichtbar. Auf Hover/Tap erscheint Body-Text mit dunklerem Overlay + pink Icon. Cinematic, mutig — Fokus liegt auf der Photographie selbst.'
+        n="E"
+        title="Read the Apartment — Annotated Hero Photo (NYT-Style)"
+        desc="EIN großes Foto einer STACEY Common Area. Sechs nummerierte Pink-Pins markieren Spots im Raum. Hover/Tap → Feature-Card pop-out. Begleitend rechts: nummerierte Index-Liste. Die Wohnung IST der Inhalt."
       />
-      <VariantB />
+      <VariantE />
 
       <VariantLabel
-        n="C"
-        title="Editorial Diptych Bands — alternating photo + text rows"
-        desc="Vier große Bänder, abwechselnd Foto-Links/Foto-Rechts. Wie eine Magazin-Doppelseite. Langsamer Scroll, jede Feature bekommt richtig Gewicht. Fokus auf Größe, weniger auf Quantität."
+        n="F"
+        title="Receipt vs Receipt — Mathematical Drama"
+        desc="Side-by-side Rechnungen. Links: 7 durchgestrichene Posten beim Solo-Mieten = €1.680. Rechts: STACEY = ein Posten = €1.290. Zahl statt Foto. Killer Argument für die preisbewusste Zielgruppe."
       />
-      <VariantC />
+      <VariantF />
 
       <div className="mx-auto max-w-3xl px-6 py-16 text-center">
-        <p className="text-sm text-gray">— Pick A, B, oder C — und ich verdrahte es als neuen Default. —</p>
+        <p className="text-sm text-gray">— Pick D, E, oder F. Oder kombiniert. —</p>
       </div>
     </main>
   );
