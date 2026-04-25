@@ -15,8 +15,8 @@ import { clsx } from "clsx";
 // opening the modal — modal opens via the "Watch the film" CTA which
 // plays the full video with controls.
 //
-// Section is min-h-[85vh] so it reads as a destination moment, not a
-// content block.
+// Section is min-h-[70vh] so it still reads as a destination moment
+// but doesn't dominate the page like 85vh did.
 
 const VIDEO_SRC = "/images/life-at-stacey.mp4";
 
@@ -107,7 +107,7 @@ export default function VideoSection() {
   return (
     <section
       id="stacey-video"
-      className="relative flex min-h-[85vh] items-center overflow-hidden bg-black py-20 sm:py-24"
+      className="relative flex min-h-[70vh] items-center overflow-hidden bg-black py-20 sm:py-24"
     >
       <video
         ref={ref}

@@ -284,12 +284,12 @@ export default function HomePage() {
       <Navbar transparent />
 
       {/* ── HERO — brand headline + progressive SearchFields.
-           min-h-[88vh] so ~12% of the next section peeks on first load
-           (mobile-first: user immediately senses there's more below
-           without scrolling). The 640px floor prevents squashing on
-           very short laptops. Growing content (expanded SearchFields)
-           pushes the hero taller naturally — no fixed height clash. */}
-      <section className="relative flex min-h-[max(88vh,640px)] items-center justify-center overflow-hidden pb-36 pt-28 sm:pt-32">
+           min-h-[82vh] (was 88vh) leaves more of the next section
+           visible on first load and doesn't dominate big screens.
+           600px floor prevents squashing on very short laptops.
+           Growing content (expanded SearchFields) pushes the hero
+           taller naturally — no fixed height clash. */}
+      <section className="relative flex min-h-[max(82vh,600px)] items-center justify-center overflow-hidden pb-36 pt-28 sm:pt-32">
         <Image
           src="/images/website-hero.webp"
           alt="STACEY Coliving"

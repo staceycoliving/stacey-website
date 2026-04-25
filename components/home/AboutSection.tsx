@@ -10,7 +10,7 @@ import FadeIn from "@/components/ui/FadeIn";
 // interviews. Same card style for both so they read as a pair.
 export default function AboutSection() {
   return (
-    <section className="bg-[#FAFAFA] px-4 py-20 sm:px-6 sm:py-24 lg:px-8">
+    <section className="bg-white px-4 py-20 sm:px-6 sm:py-24 lg:px-8">
       <FadeIn>
         <div className="mx-auto grid max-w-6xl gap-4 sm:gap-6 lg:grid-cols-2">
           {/* About teaser — Hamburg-since-2019 brand handshake */}

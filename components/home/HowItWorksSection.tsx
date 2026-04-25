@@ -10,7 +10,7 @@ const STEPS = [
 
 export default function HowItWorksSection() {
   return (
-    <section className="bg-[#FAFAFA] py-20">
+    <section className="bg-white py-20">
       <FadeIn>
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <h2 className="text-center text-2xl font-extrabold tracking-tight sm:text-3xl">
@@ -18,9 +18,11 @@ export default function HowItWorksSection() {
           </h2>
           <div className="mt-12 grid grid-cols-1 gap-4 sm:grid-cols-3">
             {STEPS.map((s) => (
-              <div key={s.num} className="relative overflow-hidden rounded-[5px] border-2 border-dashed border-[#D9D9D9] bg-white p-6">
-                <div className="absolute -right-3 top-1/2 h-6 w-6 -translate-y-1/2 rounded-full bg-[#FAFAFA]" />
-                <div className="absolute -left-3 top-1/2 h-6 w-6 -translate-y-1/2 rounded-full bg-[#FAFAFA]" />
+              <div key={s.num} className="relative overflow-hidden rounded-[5px] border-2 border-dashed border-[#D9D9D9] bg-[#FAFAFA] p-6">
+                {/* Boarding-pass perforation circles — match the section
+                    background so they read as punched holes in the card. */}
+                <div className="absolute -right-3 top-1/2 h-6 w-6 -translate-y-1/2 rounded-full bg-white" />
+                <div className="absolute -left-3 top-1/2 h-6 w-6 -translate-y-1/2 rounded-full bg-white" />
                 <p className="text-[10px] font-bold uppercase tracking-widest text-pink">Boarding Pass</p>
                 <p className="mt-3 text-4xl font-black text-black/[0.07]">{s.num}</p>
                 <h3 className="mt-2 text-base font-bold">{s.title}</h3>
