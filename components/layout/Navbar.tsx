@@ -178,7 +178,7 @@ export default function Navbar({
                       className="absolute left-1/2 top-full z-50 -translate-x-1/2 pt-3"
                       style={{ width: "360px" }}
                     >
-                      <div className="rounded-[5px] bg-black/85 p-4 shadow-2xl ring-1 ring-white/15 backdrop-blur-xl">
+                      <div className="rounded-[5px] bg-black/95 p-4 shadow-2xl ring-1 ring-white/15 backdrop-blur-xl">
                         <p className="mb-3 text-[10px] font-bold uppercase tracking-widest text-white/50">
                           {city.name} · {city.locs.length}{" "}
                           {city.locs.length === 1 ? "location" : "locations"}

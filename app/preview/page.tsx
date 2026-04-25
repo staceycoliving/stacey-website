@@ -1,74 +1,18 @@
 "use client";
 
-// Dev-only preview — comparing 4 mega-menu variants for the Hamburg
-// dropdown. Each preview shows the pill with the dropdown OPEN
-// (in production it opens on hover). Open /preview manually.
+// Dev-only preview — 6 map section ideas. Some variants are live mocks
+// over a fake "map" surface; the real Mapbox integration would replace
+// the placeholder for #2, #3, #4. Open /preview manually.
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import { ArrowRight, ChevronDown } from "lucide-react";
+import Link from "next/link";
+import dynamic from "next/dynamic";
+import { ArrowRight, MapPin } from "lucide-react";
 import { clsx } from "clsx";
 import { locations } from "@/lib/data";
 
-const HAMBURG_LOCS = [
-  ...locations.filter((l) => l.city === "hamburg" && l.stayType === "SHORT"),
-  ...locations.filter((l) => l.city === "hamburg" && l.stayType === "LONG"),
-];
-
-const CITIES = [
-  { name: "Hamburg", slug: "hamburg" },
-  { name: "Berlin", slug: "berlin" },
-  { name: "Vallendar", slug: "vallendar" },
-];
-
-// ── Shared scaffolds ─────────────────────────────────────────
-
-function StageWithDropdown({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="relative h-[600px] overflow-hidden">
-      <Image src="/images/website-hero.webp" alt="" fill className="object-cover" sizes="100vw" />
-      {/* Pill with Hamburg button, fixed at top */}
-      <div className="absolute inset-x-4 top-6 z-10 flex justify-center sm:inset-x-8">
-        <div className="flex w-full max-w-4xl items-center justify-between gap-4 rounded-[5px] bg-black/60 px-3 py-2 shadow-[0_8px_32px_rgba(0,0,0,0.25)] ring-1 ring-white/10 backdrop-blur-xl">
-          <div className="relative h-9 w-28 shrink-0">
-            <Image
-              src="/images/stacey-logo-new-white-001.webp"
-              alt="STACEY"
-              fill
-              className="object-contain object-left"
-              sizes="120px"
-            />
-          </div>
-          <div className="hidden items-center gap-1 lg:flex relative">
-            {CITIES.map((c, i) => (
-              <button
-                key={c.slug}
-                className={clsx(
-                  "flex items-center gap-1 rounded-[4px] px-3 py-1.5 text-xs font-semibold transition-colors",
-                  i === 0
-                    ? "bg-white/10 text-white"
-                    : "text-white/80 hover:bg-white/10 hover:text-white",
-                )}
-              >
-                {c.name}
-                <ChevronDown
-                  size={11}
-                  className={clsx("transition-transform duration-200", i === 0 && "rotate-180")}
-                />
-              </button>
-            ))}
-            {/* Dropdown anchored under Hamburg button */}
-            <div className="absolute left-0 top-full pt-3">{children}</div>
-          </div>
-          <button className="inline-flex items-center gap-1.5 rounded-[4px] bg-pink px-5 py-2 text-sm font-bold text-black hover:scale-[1.04] transition-transform">
-            Move in
-            <ArrowRight size={13} />
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
+const LocationMap = dynamic(() => import("@/components/ui/LocationMap"), { ssr: false });
 
 function Label({ n, title, desc }: { n: string; title: string; desc?: string }) {
   return (
@@ -91,296 +35,441 @@ const PinkPulseDot = () => (
   </span>
 );
 
-// ── Variant 0 — Baseline (current white) ─────────────────────
-
-function Dropdown0_Baseline() {
+// Faux map surface so we can preview overlays without spinning up Mapbox.
+function FauxMap({ height = "h-[480px]", children }: { height?: string; children?: React.ReactNode }) {
   return (
-    <div className="rounded-[5px] bg-white p-4 shadow-2xl ring-1 ring-[#E5E5E5]" style={{ width: "360px" }}>
-      <p className="mb-3 text-[10px] font-bold uppercase tracking-widest text-gray">
-        Hamburg · {HAMBURG_LOCS.length} locations
-      </p>
-      <div className="space-y-1">
-        {HAMBURG_LOCS.map((loc) => (
-          <div
-            key={loc.slug}
-            className="flex items-center gap-3 rounded-[5px] p-2 transition-all hover:bg-[#F0F0F0]"
-          >
-            <div className="relative h-10 w-14 flex-shrink-0 overflow-hidden rounded-[3px]">
-              <Image src={loc.images[0]} alt={loc.name} fill className="object-cover" sizes="56px" />
-            </div>
-            <div className="flex-1">
-              <p className="text-sm font-semibold">{loc.name}</p>
-              <p className="text-[11px] text-gray">
-                from €{loc.priceFrom}
-                {loc.stayType === "SHORT" ? "/night" : "/mo"}
-              </p>
-            </div>
-            <span
-              className={clsx(
-                "rounded-[5px] px-2 py-0.5 text-[9px] font-bold",
-                loc.stayType === "SHORT" ? "bg-black text-white" : "bg-pink text-white",
-              )}
-            >
-              {loc.stayType === "SHORT" ? "SHORT" : "LONG"}
-            </span>
-          </div>
-        ))}
-      </div>
+    <div
+      className={clsx(
+        "relative w-full overflow-hidden rounded-[5px] ring-1 ring-black/5",
+        height,
+      )}
+      style={{
+        backgroundImage:
+          "linear-gradient(135deg, #E5E7EB 0%, #D1D5DB 30%, #E5E7EB 60%, #D1D5DB 100%)",
+      }}
+    >
+      {/* Faux map "streets" */}
+      <svg className="absolute inset-0 h-full w-full opacity-40" preserveAspectRatio="none">
+        <defs>
+          <pattern id="streets" width="80" height="80" patternUnits="userSpaceOnUse">
+            <path d="M0 40 L80 40 M40 0 L40 80" stroke="#9CA3AF" strokeWidth="1" />
+            <path d="M0 0 L80 80" stroke="#9CA3AF" strokeWidth="0.5" opacity="0.5" />
+          </pattern>
+        </defs>
+        <rect width="100%" height="100%" fill="url(#streets)" />
+      </svg>
+      {children}
     </div>
   );
 }
 
-// ── Variant 1 — Dark-glass aesthetic match ───────────────────
+// ── Variant 1 — Editorial header upgrade ─────────────────────
 
-function Dropdown1_DarkMatch() {
+function V1_EditorialHeader() {
   return (
-    <div
-      className="rounded-[5px] bg-black/85 p-4 shadow-2xl ring-1 ring-white/15 backdrop-blur-xl"
-      style={{ width: "360px" }}
-    >
-      <p className="mb-3 text-[10px] font-bold uppercase tracking-widest text-white/50">
-        Hamburg · {HAMBURG_LOCS.length} locations
-      </p>
-      <div className="space-y-1">
-        {HAMBURG_LOCS.map((loc) => (
-          <div
-            key={loc.slug}
-            className="flex items-center gap-3 rounded-[5px] p-2 transition-all hover:bg-white/10"
-          >
-            <div className="relative h-10 w-14 flex-shrink-0 overflow-hidden rounded-[3px]">
-              <Image src={loc.images[0]} alt={loc.name} fill className="object-cover" sizes="56px" />
-            </div>
-            <div className="flex-1">
-              <p className="text-sm font-semibold text-white">{loc.name}</p>
-              <p className="text-[11px] text-white/60">
-                from €{loc.priceFrom}
-                {loc.stayType === "SHORT" ? "/night" : "/mo"}
-              </p>
-            </div>
-            <span
-              className={clsx(
-                "rounded-[5px] px-2 py-0.5 text-[9px] font-bold",
-                loc.stayType === "SHORT" ? "bg-white text-black" : "bg-pink text-white",
-              )}
-            >
-              {loc.stayType === "SHORT" ? "SHORT" : "LONG"}
-            </span>
-          </div>
-        ))}
+    <section className="bg-[#FAFAFA] px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
+      <div className="mx-auto max-w-6xl">
+        <div className="mb-8 text-center sm:mb-10">
+          <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-pink">
+            8 homes · 3 cities
+          </p>
+          <h2 className="mt-2 text-3xl font-black leading-tight tracking-tight sm:text-5xl">
+            Find us in <span className="italic font-light">Hamburg, Berlin, Vallendar</span>.
+          </h2>
+          <p className="mx-auto mt-3 max-w-md text-sm text-gray sm:text-base">
+            Pick your city, your neighbourhood, your home.
+          </p>
+        </div>
+        <LocationMap />
       </div>
-    </div>
+    </section>
   );
 }
 
-// ── Variant 2 — Dark-glass + bigger images + live "X rooms" ──
+// ── Variant 2 — Map + scrolling side-panel ───────────────────
 
-function Dropdown2_BigPlusLive({
-  stats,
-}: {
-  stats: Record<string, { available: number }>;
-}) {
+function V2_MapWithSidePanel() {
   return (
-    <div
-      className="rounded-[5px] bg-black/85 p-4 shadow-2xl ring-1 ring-white/15 backdrop-blur-xl"
-      style={{ width: "440px" }}
-    >
-      <p className="mb-3 text-[10px] font-bold uppercase tracking-widest text-white/50">
-        Hamburg · {HAMBURG_LOCS.length} locations
-      </p>
-      <div className="space-y-2">
-        {HAMBURG_LOCS.map((loc) => {
-          const avail = stats[loc.slug]?.available ?? 0;
-          return (
-            <div
-              key={loc.slug}
-              className="flex items-center gap-3 rounded-[5px] p-2 transition-all hover:bg-white/10"
-            >
-              <div className="relative h-20 w-28 flex-shrink-0 overflow-hidden rounded-[3px]">
-                <Image src={loc.images[0]} alt={loc.name} fill className="object-cover" sizes="112px" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-white">{loc.name}</p>
-                <p className="text-[11px] text-white/60">
-                  from €{loc.priceFrom}
-                  {loc.stayType === "SHORT" ? "/night" : "/mo"}
-                </p>
-                {avail > 0 && (
-                  <span className="mt-1.5 inline-flex items-center gap-1 text-[10px] font-semibold text-pink">
-                    <PinkPulseDot />
-                    {avail} {avail === 1 ? "room" : "rooms"} available
-                  </span>
-                )}
-              </div>
-              <span
-                className={clsx(
-                  "rounded-[5px] px-2 py-0.5 text-[9px] font-bold",
-                  loc.stayType === "SHORT" ? "bg-white text-black" : "bg-pink text-white",
-                )}
-              >
-                {loc.stayType === "SHORT" ? "SHORT" : "LONG"}
-              </span>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
+    <section className="bg-[#FAFAFA] px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
+      <div className="mx-auto max-w-7xl">
+        <div className="mb-8 text-center">
+          <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-pink">
+            8 homes · 3 cities
+          </p>
+          <h2 className="mt-2 text-3xl font-black leading-tight tracking-tight sm:text-5xl">
+            Find us in <span className="italic font-light">Hamburg, Berlin, Vallendar</span>.
+          </h2>
+        </div>
 
-// ── Variant 3 — All of #2 + 2-col grid + active state + kicker ─
-
-function Dropdown3_TwoCol({
-  stats,
-  activeSlug,
-  totalMembers,
-}: {
-  stats: Record<string, { available: number; newResidents: number }>;
-  activeSlug: string;
-  totalMembers: number;
-}) {
-  return (
-    <div
-      className="rounded-[5px] bg-black/85 p-4 shadow-2xl ring-1 ring-white/15 backdrop-blur-xl"
-      style={{ width: "560px" }}
-    >
-      <div className="mb-3 flex items-baseline justify-between">
-        <p className="text-[10px] font-bold uppercase tracking-widest text-white/50">
-          Hamburg · {HAMBURG_LOCS.length} locations
-        </p>
-        <p className="text-[10px] font-medium text-white/40">+ {totalMembers} members</p>
-      </div>
-      <div className="grid grid-cols-2 gap-2">
-        {HAMBURG_LOCS.map((loc) => {
-          const avail = stats[loc.slug]?.available ?? 0;
-          const isActive = loc.slug === activeSlug;
-          return (
-            <div
-              key={loc.slug}
-              className={clsx(
-                "flex flex-col gap-2 overflow-hidden rounded-[5px] p-2 transition-all hover:bg-white/10",
-                isActive && "bg-white/5 ring-1 ring-pink/50",
-              )}
-            >
-              <div className="relative aspect-[3/2] overflow-hidden rounded-[3px]">
-                <Image src={loc.images[0]} alt={loc.name} fill className="object-cover" sizes="240px" />
-                <div className="absolute left-1.5 top-1.5">
+        <div className="grid gap-4 lg:grid-cols-[400px_1fr] lg:gap-6">
+          {/* Side panel — scrollable list. On mobile this falls below the
+              map; on desktop it's a fixed-height scroll alongside. */}
+          <div className="order-2 lg:order-1">
+            <div className="lg:max-h-[560px] lg:overflow-y-auto lg:pr-2 space-y-2">
+              {locations.map((loc) => (
+                <Link
+                  key={loc.slug}
+                  href={`/locations/${loc.slug}`}
+                  className="group flex items-center gap-3 rounded-[5px] bg-white p-2.5 shadow-sm ring-1 ring-black/5 transition-all hover:shadow-md hover:ring-pink/40"
+                >
+                  <div className="relative h-14 w-20 flex-shrink-0 overflow-hidden rounded-[3px]">
+                    <Image src={loc.images[0]} alt={loc.name} fill className="object-cover" sizes="80px" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-gray">
+                      {loc.city === "hamburg"
+                        ? "Hamburg"
+                        : loc.city === "berlin"
+                          ? "Berlin"
+                          : "Vallendar"}
+                    </p>
+                    <p className="truncate text-sm font-bold">{loc.name}</p>
+                    <p className="truncate text-[11px] text-gray">
+                      from €{loc.priceFrom}
+                      {loc.stayType === "SHORT" ? "/night" : "/mo"}
+                    </p>
+                  </div>
                   <span
                     className={clsx(
-                      "rounded-[3px] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider",
+                      "shrink-0 rounded-[5px] px-2 py-0.5 text-[9px] font-bold",
                       loc.stayType === "SHORT" ? "bg-black text-white" : "bg-pink text-white",
                     )}
                   >
                     {loc.stayType === "SHORT" ? "SHORT" : "LONG"}
                   </span>
-                </div>
-              </div>
-              <div className="flex items-baseline justify-between gap-2">
-                <p
-                  className={clsx(
-                    "truncate text-sm",
-                    isActive ? "font-extrabold text-white" : "font-bold text-white",
-                  )}
-                >
-                  {loc.name}
-                </p>
-                <p className="shrink-0 text-[10px] font-bold text-white/70">
-                  €{loc.priceFrom}
-                  {loc.stayType === "SHORT" ? "/n" : "/mo"}
-                </p>
-              </div>
-              {avail > 0 ? (
-                <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-pink">
-                  <PinkPulseDot />
-                  {avail} {avail === 1 ? "room" : "rooms"}
-                </span>
-              ) : (
-                <span className="text-[10px] font-medium text-white/40">Fully booked</span>
-              )}
+                </Link>
+              ))}
             </div>
-          );
-        })}
+          </div>
+          {/* Map column */}
+          <div className="order-1 lg:order-2">
+            <LocationMap />
+          </div>
+        </div>
+        <p className="mt-4 text-center text-xs text-gray">
+          Hover/click in the list to highlight a marker. Hover/click a marker to
+          scroll the list. (Cross-highlight is a wiring detail — UI shown for
+          structure.)
+        </p>
       </div>
-    </div>
+    </section>
   );
 }
 
-// ── Page ─────────────────────────────────────────────────────
+// ── Variant 3 — Custom branded markers ───────────────────────
 
-export default function PreviewPage() {
-  const [stats, setStats] = useState<Record<string, { available: number; newResidents: number }>>({});
+function V3_BrandedMarkers() {
+  return (
+    <section className="bg-[#FAFAFA] px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
+      <div className="mx-auto max-w-6xl">
+        <div className="mb-8 text-center">
+          <h2 className="text-2xl font-extrabold sm:text-3xl">
+            New marker style — STACEY <span className="italic font-light">S</span>
+          </h2>
+          <p className="mt-2 text-sm text-gray">
+            Three states: idle (small black) · active filter (pink with pulse
+            ring) · hovered (scaled, shadow).
+          </p>
+        </div>
+        <FauxMap height="h-[420px]">
+          {/* Idle marker */}
+          <div className="absolute" style={{ left: "20%", top: "30%" }}>
+            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-black text-white shadow-lg ring-2 ring-white">
+              <span className="text-sm font-black">S</span>
+            </span>
+            <p className="mt-2 text-center text-[10px] font-bold uppercase tracking-wider text-gray">
+              idle
+            </p>
+          </div>
+          {/* Active marker */}
+          <div className="absolute" style={{ left: "50%", top: "30%" }}>
+            <span className="relative flex h-9 w-9 items-center justify-center rounded-full bg-pink text-white shadow-lg ring-2 ring-white">
+              <span className="absolute inset-0 animate-ping rounded-full bg-pink opacity-50" />
+              <span className="relative text-sm font-black">S</span>
+            </span>
+            <p className="mt-2 text-center text-[10px] font-bold uppercase tracking-wider text-pink">
+              active
+            </p>
+          </div>
+          {/* Hovered marker */}
+          <div className="absolute" style={{ left: "80%", top: "30%" }}>
+            <span className="flex h-11 w-11 items-center justify-center rounded-full bg-black text-white shadow-2xl ring-4 ring-pink/30">
+              <span className="text-base font-black">S</span>
+            </span>
+            <p className="mt-2 text-center text-[10px] font-bold uppercase tracking-wider text-gray">
+              hovered
+            </p>
+          </div>
+        </FauxMap>
+      </div>
+    </section>
+  );
+}
 
+// ── Variant 4 — Marker popup as mini-booking-card ────────────
+
+function V4_PopupCard() {
+  const loc = locations.find((l) => l.slug === "alster")!;
+  return (
+    <section className="bg-[#FAFAFA] px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
+      <div className="mx-auto max-w-6xl">
+        <div className="mb-8 text-center">
+          <h2 className="text-2xl font-extrabold sm:text-3xl">
+            New marker popup — <span className="italic font-light">mini booking card</span>
+          </h2>
+          <p className="mt-2 text-sm text-gray">
+            Click a marker → richer card with badge, live availability, CTA.
+            Same DNA as homepage cards.
+          </p>
+        </div>
+        <FauxMap>
+          {/* Marker */}
+          <div className="absolute" style={{ left: "30%", top: "40%" }}>
+            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-pink text-white shadow-lg ring-2 ring-white">
+              <span className="text-sm font-black">S</span>
+            </span>
+          </div>
+          {/* Popup */}
+          <div className="absolute" style={{ left: "32%", top: "44%", width: "280px" }}>
+            <div className="overflow-hidden rounded-[5px] bg-white shadow-2xl ring-1 ring-black/5">
+              <div className="relative aspect-[3/2] overflow-hidden">
+                <Image src={loc.images[0]} alt={loc.name} fill className="object-cover" sizes="280px" />
+                <div className="absolute inset-x-0 top-0 flex items-center justify-between p-2">
+                  <span className="rounded-[5px] bg-black px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.12em] text-white">
+                    SHORT
+                  </span>
+                  <span className="inline-flex items-center gap-1 rounded-[5px] bg-pink px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-white">
+                    <PinkPulseDot />2 rooms
+                  </span>
+                </div>
+              </div>
+              <div className="p-3">
+                <p className="text-[9px] font-bold uppercase tracking-[0.15em] text-gray">
+                  Hamburg
+                </p>
+                <p className="mt-0.5 text-base font-bold">{loc.name}</p>
+                <div className="mt-2 flex items-center justify-between">
+                  <p className="text-xs font-semibold">
+                    from €{loc.priceFrom}
+                    <span className="text-gray">/night</span>
+                  </p>
+                  <Link
+                    href={`/locations/${loc.slug}`}
+                    className="inline-flex items-center gap-1 rounded-[5px] bg-black px-3 py-1.5 text-[11px] font-bold text-white hover:opacity-80"
+                  >
+                    View rooms <ArrowRight size={11} />
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </div>
+        </FauxMap>
+      </div>
+    </section>
+  );
+}
+
+// ── Variant 5 — Filter pills as floating dark-glass overlay ──
+
+function V5_FilterPillsOverlay() {
+  const [active, setActive] = useState<string | null>(null);
+  const cities = [
+    { name: "All", slug: null },
+    { name: "Hamburg", slug: "hamburg" },
+    { name: "Berlin", slug: "berlin" },
+    { name: "Vallendar", slug: "vallendar" },
+  ];
+  return (
+    <section className="bg-[#FAFAFA] px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
+      <div className="mx-auto max-w-6xl">
+        <div className="mb-8 text-center">
+          <h2 className="text-2xl font-extrabold sm:text-3xl">
+            Filter pills — <span className="italic font-light">floating overlay</span>
+          </h2>
+          <p className="mt-2 text-sm text-gray">
+            Same dark-glass aesthetic as the navbar. Floats top-left of the
+            map, no longer takes a separate row above.
+          </p>
+        </div>
+        <FauxMap>
+          <div className="absolute left-3 top-3 flex gap-1 rounded-[5px] bg-black/95 p-1 ring-1 ring-white/15 backdrop-blur-xl">
+            {cities.map((c) => (
+              <button
+                key={c.slug ?? "all"}
+                onClick={() => setActive(c.slug)}
+                className={clsx(
+                  "rounded-[3px] px-3 py-1.5 text-xs font-semibold transition-all",
+                  active === c.slug
+                    ? "bg-white text-black"
+                    : "text-white/80 hover:bg-white/10 hover:text-white",
+                )}
+              >
+                {c.name}
+              </button>
+            ))}
+          </div>
+        </FauxMap>
+      </div>
+    </section>
+  );
+}
+
+// ── Variant 6 — City stats overlay ───────────────────────────
+
+function V6_StatsOverlay() {
+  const [stats, setStats] = useState<{ available: number; members: number }>({ available: 12, members: 124 });
   useEffect(() => {
     fetch("/api/locations/stats")
       .then((r) => (r.ok ? r.json() : null))
       .then((res) => {
-        if (res?.ok) setStats(res.data ?? {});
+        if (!res?.ok) return;
+        const hamburg = ["alster", "downtown", "muehlenkamp", "eppendorf", "st-pauli", "eimsbuettel"];
+        let avail = 0, mem = 0;
+        for (const slug of hamburg) {
+          avail += res.data?.[slug]?.available ?? 0;
+          mem += res.data?.[slug]?.newResidents ?? 0;
+        }
+        if (avail || mem) setStats({ available: avail, members: mem });
       })
       .catch(() => {});
   }, []);
-
-  const totalHamburgMembers = HAMBURG_LOCS.reduce(
-    (sum, loc) => sum + (stats[loc.slug]?.newResidents ?? 0),
-    0,
-  );
-
   return (
-    <main className="bg-white pt-6">
-      <div className="mx-auto max-w-3xl px-6 pb-6">
+    <section className="bg-[#FAFAFA] px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
+      <div className="mx-auto max-w-6xl">
+        <div className="mb-8 text-center">
+          <h2 className="text-2xl font-extrabold sm:text-3xl">
+            City stats overlay — <span className="italic font-light">live context</span>
+          </h2>
+          <p className="mt-2 text-sm text-gray">
+            When a city filter is selected, a dark-glass card top-right shows
+            live data for that city. Pulls /api/locations/stats.
+          </p>
+        </div>
+        <FauxMap>
+          <div className="absolute right-3 top-3 rounded-[5px] bg-black/95 px-4 py-3 shadow-2xl ring-1 ring-white/15 backdrop-blur-xl">
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-pink">
+              Hamburg
+            </p>
+            <p className="mt-1 text-base font-bold text-white">6 homes</p>
+            <div className="mt-2 flex items-center gap-3 text-[11px] text-white/70">
+              <span className="inline-flex items-center gap-1">
+                <PinkPulseDot />
+                {stats.available} rooms available
+              </span>
+              <span className="text-white/30">·</span>
+              <span>+ {stats.members} new this month</span>
+            </div>
+          </div>
+        </FauxMap>
+      </div>
+    </section>
+  );
+}
+
+// ── Bonus — Combined gallery + map under one section header ──
+
+function VB_CombinedHeader() {
+  return (
+    <section className="bg-[#FAFAFA] px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
+      <div className="mx-auto max-w-6xl">
+        <div className="mb-8 text-center">
+          <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-pink">
+            Browse our homes
+          </p>
+          <h2 className="mt-2 text-3xl font-black leading-tight tracking-tight sm:text-5xl">
+            8 homes. 3 cities. <span className="italic font-light">One feeling.</span>
+          </h2>
+          <p className="mx-auto mt-3 max-w-md text-sm text-gray sm:text-base">
+            Swipe the gallery or pick from the map.
+          </p>
+        </div>
+        <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.2em] text-gray">
+          Gallery
+        </p>
+        <div className="mb-6 rounded-[5px] bg-white p-4 ring-1 ring-black/5">
+          <p className="text-center text-sm text-gray">
+            (existing horizontal cards carousel sits here)
+          </p>
+        </div>
+        <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.2em] text-gray">
+          Map
+        </p>
+        <LocationMap />
+      </div>
+    </section>
+  );
+}
+
+export default function PreviewPage() {
+  return (
+    <main className="bg-white">
+      <div className="mx-auto max-w-3xl px-6 py-10">
         <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-pink">
           Internal preview
         </p>
         <h1 className="mt-2 text-3xl font-black sm:text-4xl">
-          Mega-menu — <span className="italic font-light">dropdown ideas</span>
+          Map section — <span className="italic font-light">six lifts</span>
         </h1>
         <p className="mt-3 text-sm text-gray">
-          Each variant shows the Hamburg dropdown forced open under the
-          floating pill. Live availability comes from /api/locations/stats.
+          Variants 1, 2 and B use the real LocationMap. 3, 4, 5, 6 use a
+          faux map surface so we can preview overlays without rewiring
+          Mapbox first — those would land on the real map in production.
         </p>
       </div>
 
       <Label
-        n="0"
-        title="Baseline — current white dropdown (40×56 thumbnails)"
-        desc="What ships now. Visual jolt from dark-glass pill to bright-white panel."
-      />
-      <StageWithDropdown>
-        <Dropdown0_Baseline />
-      </StageWithDropdown>
-
-      <Label
         n="1"
-        title="Dark-glass match (same sizes, same content)"
-        desc="Just style — bg-black/85 + backdrop-blur. Pill and dropdown read as one composed unit."
+        title="Editorial header upgrade"
+        desc="Eyebrow + bigger italic-keyword headline above the existing map. Easiest visual lift."
       />
-      <StageWithDropdown>
-        <Dropdown1_DarkMatch />
-      </StageWithDropdown>
+      <V1_EditorialHeader />
 
       <Label
         n="2"
-        title="Dark-glass + bigger images (80×112) + live rooms-available"
-        desc="Premium feel + actionable live data. Wider dropdown (440px). Each row gets a pink-pulse 'X rooms available' chip."
+        title="Map + scrolling side-panel (Discovery layout)"
+        desc="Two-column on desktop: scrolling location list left, map right. Mobile stacks. Cross-highlight (hover list ↔ marker) wired in production."
       />
-      <StageWithDropdown>
-        <Dropdown2_BigPlusLive stats={stats} />
-      </StageWithDropdown>
+      <V2_MapWithSidePanel />
 
       <Label
         n="3"
-        title="Editorial 2-col grid for Hamburg + active state + members kicker"
-        desc="Big 3:2 image cards. Hamburg's 6 locations fit a 3-row × 2-col grid (560px wide). Active location (Alster mocked) gets pink ring."
+        title="Custom branded markers — STACEY S"
+        desc="Three states demoed on a faux-map surface: idle, active (pink + pulse), hovered (scaled, ring)."
       />
-      <StageWithDropdown>
-        <Dropdown3_TwoCol
-          stats={stats}
-          activeSlug="alster"
-          totalMembers={totalHamburgMembers}
-        />
-      </StageWithDropdown>
+      <V3_BrandedMarkers />
+
+      <Label
+        n="4"
+        title="Marker popup as mini booking-card"
+        desc="Click a marker → card with image, badge, live rooms chip, View-rooms CTA. Same DNA as homepage cards."
+      />
+      <V4_PopupCard />
+
+      <Label
+        n="5"
+        title="Filter pills — floating dark-glass overlay"
+        desc="Pills move from a separate row to a floating overlay top-left of the map. Brand-on (matches navbar)."
+      />
+      <V5_FilterPillsOverlay />
+
+      <Label
+        n="6"
+        title="City stats overlay — live context on the map"
+        desc="Selected city → dark-glass card top-right shows live availability + new-this-month members. Pulls /api/locations/stats."
+      />
+      <V6_StatsOverlay />
+
+      <Label
+        n="B"
+        title="BONUS: Gallery + Map under one section header"
+        desc="Frames cards-carousel and map as ONE story under a unified intro headline. No more two stacked content blocks without a shared frame."
+      />
+      <VB_CombinedHeader />
 
       <div className="mx-auto max-w-3xl px-6 py-16 text-center">
         <p className="text-sm text-gray">
-          — Pick the winner. I&apos;d also wire Berlin / Vallendar to the same style. —
+          — Pick the combinations you want. My pick: 1 + 2 + 3 + B for the
+          big lift. Then 4, 5, 6 as polish iterations. —
         </p>
       </div>
     </main>

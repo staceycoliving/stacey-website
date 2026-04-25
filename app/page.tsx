@@ -562,18 +562,38 @@ export default function HomePage() {
                   </div>
                 </div>
             ))()}
-          {/* Map below cards */}
-          <div className="mx-auto mt-12 max-w-6xl px-4 sm:px-6 lg:px-8">
-            <h3 className="mb-6 text-center text-lg font-extrabold tracking-tight sm:text-xl">
-              Find us on the <span className="italic font-light">map</span>
-            </h3>
-            <LocationMap />
+        </div>
+      </section>
+
+      {/* ── VIDEO — promoted to position 3 (was below Features). The
+           video is the strongest emotional moment on the page; it
+           belongs right after the cards-driven browsing so users go
+           "see the homes" → "feel what living there is like" → "find
+           them on the map". ── */}
+      <VideoSection />
+
+      {/* ── MAP — own section now, with the upgraded editorial header
+           from /preview Variant 1. Sits after the video so it reads as
+           a spatial overview, not a weak cards-appendix. ── */}
+      <section className="bg-[#FAFAFA] px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
+        <div className="mx-auto max-w-6xl">
+          <div className="mb-8 text-center sm:mb-10">
+            <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-pink">
+              8 homes · 3 cities
+            </p>
+            <h2 className="mt-2 text-3xl font-black leading-tight tracking-tight sm:text-5xl">
+              Find us in{" "}
+              <span className="italic font-light">Hamburg, Berlin, Vallendar</span>.
+            </h2>
+            <p className="mx-auto mt-3 max-w-md text-sm text-gray sm:text-base">
+              Pick your city, your neighbourhood, your home.
+            </p>
           </div>
+          <LocationMap />
         </div>
       </section>
 
       <FeaturesSection />
-      <VideoSection />
       <HowItWorksSection />
       <TestimonialsSection />
       <AboutSection />
