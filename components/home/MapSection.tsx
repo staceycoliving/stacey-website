@@ -117,7 +117,7 @@ export default function MapSection() {
           </h2>
           <p className="mx-auto mt-3 max-w-xl text-xs text-gray sm:text-sm">
             {city === "all" &&
-              "Hover a marker, scroll the list — find the one that fits your week."}
+              "Hover a marker, scroll the list — click any home to check live availability."}
             {city === "hamburg" &&
               "Across the most-walkable neighbourhoods — canals, corner cafés, late-night ferment."}
             {city === "berlin" &&
