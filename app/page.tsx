@@ -15,7 +15,6 @@ import SearchFields from "@/components/move-in/SearchFields";
 import FeaturesSection from "@/components/home/FeaturesSection";
 import VideoSection from "@/components/home/VideoSection";
 import HowItWorksSection from "@/components/home/HowItWorksSection";
-import TestimonialsSection from "@/components/home/TestimonialsSection";
 import AboutSection from "@/components/home/AboutSection";
 import MapSection from "@/components/home/MapSection";
 import { locations, formatMoveInLabel } from "@/lib/data";
@@ -596,12 +595,11 @@ export default function HomePage() {
            what it actually costs. */}
       <FeaturesSection />
 
-      {/* PROOF — Member interviews. Final social-proof beat right
-           after the value claim, where conversion psychology puts it:
-           "yes, real members agree the math works." */}
-      <TestimonialsSection />
-
-      {/* BRAND — Who we are. Closing trust beat before the Footer. */}
+      {/* CLOSING TEASERS — one section with two 50:50 cards. Left:
+           about teaser → /why-stacey. Right: member-stories teaser →
+           /why-stacey#stories. Replaces the previous separate
+           TestimonialsSection + AboutSection. The full content (long
+           team story + all 3 interview videos) lives on /why-stacey. */}
       <AboutSection />
 
       <Footer />
