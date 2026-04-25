@@ -16,7 +16,7 @@ export default function AboutSection() {
           {/* About teaser — Hamburg-since-2019 brand handshake */}
           <Link
             href="/why-stacey"
-            className="group grid items-center gap-5 rounded-[5px] bg-white p-5 shadow-sm ring-1 ring-black/5 transition-all hover:-translate-y-0.5 hover:shadow-md sm:grid-cols-[180px_1fr] sm:gap-6 sm:p-6 lg:p-7"
+            className="group grid items-center gap-5 rounded-[5px] bg-[#FAFAFA] p-5 shadow-sm ring-1 ring-black/5 transition-all hover:-translate-y-0.5 hover:shadow-md sm:grid-cols-[180px_1fr] sm:gap-6 sm:p-6 lg:p-7"
           >
             <div className="relative aspect-square overflow-hidden rounded-[5px]">
               <Image
@@ -54,7 +54,7 @@ export default function AboutSection() {
               signals it's a video without launching one inline. */}
           <Link
             href="/why-stacey#stories"
-            className="group grid items-center gap-5 rounded-[5px] bg-white p-5 shadow-sm ring-1 ring-black/5 transition-all hover:-translate-y-0.5 hover:shadow-md sm:grid-cols-[180px_1fr] sm:gap-6 sm:p-6 lg:p-7"
+            className="group grid items-center gap-5 rounded-[5px] bg-[#FAFAFA] p-5 shadow-sm ring-1 ring-black/5 transition-all hover:-translate-y-0.5 hover:shadow-md sm:grid-cols-[180px_1fr] sm:gap-6 sm:p-6 lg:p-7"
           >
             <div className="relative aspect-square overflow-hidden rounded-[5px] bg-black">
               <Image
