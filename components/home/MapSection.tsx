@@ -106,78 +106,11 @@ export default function MapSection() {
             list left (340px — narrower since numbers are gone), map
             right. */}
         <div className="grid gap-4 lg:grid-cols-[340px_1fr] lg:gap-6">
-          {/* Side-panel — mobile collapses the vertical list into a
-              horizontal scroll-snap carousel so the section doesn't
-              stack to ~2000px tall. Desktop keeps the sticky-headered
-              vertical list. */}
-          <div className="order-2 min-w-0 lg:order-1">
-            {/* Mobile: horizontal carousel. min-w-0 on the parent +
-                px-[5px] here keeps the rail inside the map's
-                horizontal bounds with a 5px inset on both sides;
-                cards snap one at a time with a peek of the next. */}
-            <div
-              className="flex gap-2 overflow-x-auto px-[5px] pb-3 snap-x snap-mandatory lg:hidden"
-              style={{ scrollbarWidth: "none" }}
-            >
-              {filtered.map((loc) => {
-                const isActive = active === loc.slug;
-                const isShort = loc.stayType === "SHORT";
-                return (
-                  <div
-                    key={loc.slug}
-                    ref={(el) => {
-                      itemRefs.current[loc.slug] = el;
-                    }}
-                    className="w-[85%] flex-shrink-0 snap-start"
-                  >
-                    <Link
-                      href={`/locations/${loc.slug}`}
-                      onClick={() => setActive(loc.slug)}
-                      className={clsx(
-                        "flex w-full items-center gap-3 rounded-[5px] bg-white p-2.5 text-left shadow-sm ring-1 transition-all",
-                        isActive
-                          ? isShort
-                            ? "ring-black/60 shadow-md"
-                            : "ring-pink/60 shadow-md"
-                          : "ring-black/5",
-                      )}
-                    >
-                      <div className="relative h-12 w-16 flex-shrink-0 overflow-hidden rounded-[3px]">
-                        <Image
-                          src={loc.images[0]}
-                          alt={loc.name}
-                          fill
-                          className="object-cover"
-                          sizes="64px"
-                        />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-bold text-black">
-                          {loc.name}
-                        </p>
-                        <p className="truncate text-[11px] text-gray">
-                          from €{loc.priceFrom}
-                          {loc.stayType === "SHORT" ? "/night" : "/mo"}
-                        </p>
-                      </div>
-                      <span
-                        className={clsx(
-                          "flex-shrink-0 rounded-[5px] px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.12em]",
-                          loc.stayType === "SHORT"
-                            ? "bg-black text-white"
-                            : "bg-pink text-white",
-                        )}
-                      >
-                        {loc.stayType === "SHORT" ? "SHORT" : "LONG"}
-                      </span>
-                    </Link>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Desktop: vertical sticky-header list. */}
-            <div className="relative hidden max-h-[600px] overflow-y-auto pr-1 lg:block lg:max-h-[600px]">
+          {/* Side-panel — Mobile renders the carousel OVERLAID on the
+              map (Airbnb-style), see below. This column only renders
+              the desktop sticky-header list. */}
+          <div className="order-2 hidden min-w-0 lg:order-1 lg:block">
+            <div className="relative max-h-[600px] overflow-y-auto pr-1 lg:max-h-[600px]">
               {grouped.map((group) => (
                 <div key={group.city} className="mb-3">
                   {city === "all" && (
@@ -250,12 +183,81 @@ export default function MapSection() {
             </div>
           </div>
           <div className="order-1 lg:order-2">
-            <LocationMap
-              cityFilter={city}
-              activeSlug={active}
-              onSelect={setActive}
-              markerVariant="expand"
-            />
+            <div className="relative">
+              <LocationMap
+                cityFilter={city}
+                activeSlug={active}
+                onSelect={setActive}
+                markerVariant="expand"
+              />
+              {/* Mobile: cards float over the map's bottom edge,
+                  Airbnb/Google-Maps style. 5px inset from the map
+                  borders, scroll-snap one card at a time with a peek
+                  of the next. lg+ hides this since the side-panel
+                  list takes over. */}
+              <div className="pointer-events-none absolute inset-x-[5px] bottom-[5px] lg:hidden">
+                <div
+                  className="pointer-events-auto flex gap-2 overflow-x-auto snap-x snap-mandatory"
+                  style={{ scrollbarWidth: "none" }}
+                >
+                  {filtered.map((loc) => {
+                    const isActive = active === loc.slug;
+                    const isShort = loc.stayType === "SHORT";
+                    return (
+                      <div
+                        key={loc.slug}
+                        ref={(el) => {
+                          itemRefs.current[loc.slug] = el;
+                        }}
+                        className="w-full flex-shrink-0 snap-start"
+                      >
+                        <Link
+                          href={`/locations/${loc.slug}`}
+                          onClick={() => setActive(loc.slug)}
+                          className={clsx(
+                            "flex w-full items-center gap-2.5 rounded-[5px] bg-white p-2 text-left shadow-[0_4px_18px_rgba(0,0,0,0.18)] ring-1 transition-all",
+                            isActive
+                              ? isShort
+                                ? "ring-black/60"
+                                : "ring-pink/60"
+                              : "ring-black/5",
+                          )}
+                        >
+                          <div className="relative h-11 w-14 flex-shrink-0 overflow-hidden rounded-[3px]">
+                            <Image
+                              src={loc.images[0]}
+                              alt={loc.name}
+                              fill
+                              className="object-cover"
+                              sizes="56px"
+                            />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-[13px] font-bold leading-tight text-black">
+                              {loc.name}
+                            </p>
+                            <p className="truncate text-[11px] leading-tight text-gray">
+                              from €{loc.priceFrom}
+                              {loc.stayType === "SHORT" ? "/night" : "/mo"}
+                            </p>
+                          </div>
+                          <span
+                            className={clsx(
+                              "flex-shrink-0 rounded-[5px] px-1.5 py-0.5 text-[9px] font-black uppercase tracking-[0.1em]",
+                              loc.stayType === "SHORT"
+                                ? "bg-black text-white"
+                                : "bg-pink text-white",
+                            )}
+                          >
+                            {loc.stayType === "SHORT" ? "SHORT" : "LONG"}
+                          </span>
+                        </Link>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
