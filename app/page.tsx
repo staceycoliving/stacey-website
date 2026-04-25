@@ -563,25 +563,25 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Page narrative arc:
-           1) DISCOVER — Locations cards (above) + Map (geography)
-           2) EMOTION  — Video, the cinematic lifestyle moment
-           3) CONVERT  — Receipts (value) + HowItWorks (process)
-           4) PROOF    — Testimonials, classic "right before CTA" slot
-           5) BRAND    — About
-         Testimonials are deliberately separated from Video: both are
-         video-heavy "members talking" content, so stacking them was
-         redundant. The interview block now sits as final trust before
-         the user makes a decision. */}
+      {/* Customer-question sequence drives the order:
+           Hero        → "what is this?"
+           Locations   → "what's available?"
+           Video       → "what's the vibe?"        (emotional palate-cleanser)
+           Map         → "is one near me?"          (info-dense, benefits from emotional warm-up)
+           Receipts    → "is it worth it?"
+           HowItWorks  → "how do I book?"
+           Testimonials→ "can I trust this?"
+           About       → "who's behind it?" */}
 
-      {/* DISCOVER — Map directly after the location cards. Same task:
-           "where can I live". Closes the discovery cluster. */}
-      <MapSection />
-
-      {/* EMOTION — Cinematic Life at STACEY moment. Sets the lifestyle
-           tone. Stands alone so the moment lands without competing
-           video content right after. */}
+      {/* VIDEO — placed between Locations and Map as a vibe-check.
+           Locations cards are visually dense; the cinematic Video
+           gives the eye a break before the equally-dense Map. */}
       <VideoSection />
+
+      {/* MAP — interactive geographic discovery, lands after the
+           emotional warm-up so the "is there one in my neighbourhood?"
+           question reads in colour, not as a cold lookup. */}
+      <MapSection />
 
       {/* CONVERT — Receipts make the value case, HowItWorks turns
            intent into action. Read as one beat. */}
