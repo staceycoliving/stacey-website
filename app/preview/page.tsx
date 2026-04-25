@@ -19,8 +19,8 @@ const STEPS = [
   {
     num: "02",
     title: "Sign + pay",
-    body: "Sign your lease digitally, pay the €195 booking fee, and your room is locked in. For long stays the deposit of 2× monthly rent follows by email and is due within 48 hours.",
-    time: "Same day",
+    body: "Sign your lease digitally and pay the €195 booking fee on the same day. Your room is locked in. For long stays the deposit of 2× monthly rent follows by email and is due within 48 hours.",
+    time: "Same day + 48h for deposit",
   },
   {
     num: "03",
