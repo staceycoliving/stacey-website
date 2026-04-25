@@ -2,121 +2,112 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import FadeIn from "@/components/ui/FadeIn";
+import Link from "next/link";
+import { ArrowRight, Play, X } from "lucide-react";
 
-type Testimonial = {
-  name: string;
-  desc: string;
-  video: string;
-  thumb: string;
-  quote?: string;
+// Compact testimonial — single hero interview (Jihane) with the pull-
+// quote overlaid, plus a "More member stories →" link out to
+// /why-stacey where all three interviews live in full. Cuts the
+// homepage testimonial block to ~50% of its previous height.
+const FEATURED = {
+  name: "Jihane",
+  age: 28,
+  desc: "Moved from Lebanon to Berlin",
+  quote: "Strangers became neighbors. Neighbors became family.",
+  video: "/images/interview-3.mp4",
+  thumb: "/images/interview-3-thumb.webp",
 };
 
-const TESTIMONIALS: Testimonial[] = [
-  { name: "Daniel", desc: "First time in Hamburg for studies", video: "/images/interview-1.mp4", thumb: "/images/interview-1-thumb.webp" },
-  { name: "Christian", desc: "Relocated to Hamburg for work", video: "/images/interview-2.mp4", thumb: "/images/interview-2-thumb.webp" },
-  { name: "Jihane", desc: "Moved from Lebanon to Berlin", video: "/images/interview-3.mp4", thumb: "/images/interview-3-thumb.webp", quote: "Strangers became neighbors and neighbors became family." },
-];
+function VideoModal({ src, onClose }: { src: string; onClose: () => void }) {
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-4 backdrop-blur"
+      onClick={onClose}
+    >
+      <button
+        onClick={onClose}
+        className="absolute right-4 top-4 rounded-full bg-white/10 p-2 text-white hover:bg-white/20"
+        aria-label="Close"
+      >
+        <X size={20} />
+      </button>
+      <video
+        autoPlay
+        controls
+        playsInline
+        className="max-h-[90vh] w-full max-w-5xl rounded-[5px]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <source src={src} type="video/mp4" />
+      </video>
+    </div>
+  );
+}
 
 export default function TestimonialsSection() {
-  const [spotlightIndex, setSpotlightIndex] = useState(0);
-  const [spotlightPlaying, setSpotlightPlaying] = useState<number | null>(null);
-
-  const spotlightMember = TESTIMONIALS[spotlightIndex];
-  const smallMembers = TESTIMONIALS.filter((_, i) => i !== spotlightIndex);
+  const [playing, setPlaying] = useState(false);
 
   return (
-    <section className="bg-white py-20">
-      <FadeIn>
-        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-          <h2 className="text-center text-2xl font-extrabold tracking-tight sm:text-3xl">
-            Hear from our <span className="italic font-light">members</span>
+    <section className="bg-black px-4 py-20 sm:px-6 sm:py-24 lg:px-8">
+      <div className="mx-auto max-w-6xl">
+        <div className="mx-auto max-w-2xl text-center">
+          <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-pink">
+            Member stories
+          </p>
+          <h2 className="mt-2 text-3xl font-black leading-tight tracking-tight text-white sm:text-5xl">
+            One story.{" "}
+            <span className="italic font-light">In her own words.</span>
           </h2>
-          <div className="mt-10 grid grid-cols-1 gap-5 sm:grid-cols-3">
-            {/* Spotlight */}
-            <div className="sm:col-span-2 sm:row-span-2">
-              {(() => {
-                const isPlaying = spotlightPlaying === spotlightIndex;
-                return (
-                  <div className="relative h-full overflow-hidden rounded-[5px]">
-                    {!isPlaying ? (
-                      <>
-                        <Image
-                          src={spotlightMember.thumb}
-                          alt={spotlightMember.name}
-                          fill
-                          className="object-cover"
-                          sizes="(max-width: 768px) 100vw, 60vw"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent" />
-                        <button
-                          onClick={() => setSpotlightPlaying(spotlightIndex)}
-                          className="absolute inset-0 flex items-center justify-center"
-                        >
-                          <div className="relative flex h-14 w-14 items-center justify-center rounded-full bg-white shadow-xl transition-transform hover:scale-110 sm:h-16 sm:w-16">
-                            <div className="absolute inset-0 animate-ping rounded-full bg-white/40" />
-                            <svg viewBox="0 0 24 24" fill="currentColor" className="relative ml-1 h-6 w-6 text-black"><polygon points="5,3 19,12 5,21" /></svg>
-                          </div>
-                        </button>
-                        <div className="pointer-events-none absolute bottom-0 left-0 right-0 p-5" style={{ textShadow: "0 1px 4px rgba(0,0,0,0.5)" }}>
-                          <p className="text-xl font-extrabold text-white sm:text-2xl">{spotlightMember.name}</p>
-                          <p className="mt-1 text-sm text-white/80 sm:text-base">{spotlightMember.desc}</p>
-                          {spotlightMember.quote && (
-                            <p className="mt-2 text-sm italic leading-relaxed text-white/90">
-                              &ldquo;{spotlightMember.quote}&rdquo;
-                            </p>
-                          )}
-                        </div>
-                      </>
-                    ) : (
-                      <video
-                        key={spotlightMember.video}
-                        autoPlay
-                        controls
-                        playsInline
-                        className="absolute inset-0 h-full w-full rounded-[5px]"
-                      >
-                        <source src={spotlightMember.video} type="video/mp4" />
-                      </video>
-                    )}
-                  </div>
-                );
-              })()}
-            </div>
-            {/* Small cards */}
-            {smallMembers.map((t) => {
-              const originalIndex = TESTIMONIALS.indexOf(t);
-              return (
-                <button
-                  key={t.name}
-                  onClick={() => { setSpotlightIndex(originalIndex); setSpotlightPlaying(null); }}
-                  className="group relative overflow-hidden rounded-[5px] text-left transition-all"
-                >
-                  <div className="relative aspect-video">
-                    <Image
-                      src={t.thumb}
-                      alt={t.name}
-                      fill
-                      className="object-cover transition-transform duration-300 group-hover:scale-105"
-                      sizes="300px"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/90 shadow-md transition-transform group-hover:scale-110">
-                        <svg viewBox="0 0 24 24" fill="currentColor" className="ml-0.5 h-4 w-4 text-black"><polygon points="5,3 19,12 5,21" /></svg>
-                      </div>
-                    </div>
-                    <div className="pointer-events-none absolute bottom-0 left-0 right-0 p-3" style={{ textShadow: "0 1px 4px rgba(0,0,0,0.5)" }}>
-                      <p className="text-sm font-bold text-white">{t.name}</p>
-                      <p className="text-[11px] text-white/80">{t.desc}</p>
-                    </div>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
         </div>
-      </FadeIn>
+
+        <button
+          onClick={() => setPlaying(true)}
+          className="group relative mt-12 block aspect-[16/9] w-full overflow-hidden rounded-[5px] bg-black"
+        >
+          <Image
+            src={FEATURED.thumb}
+            alt={FEATURED.name}
+            fill
+            className="object-cover transition-transform duration-700 group-hover:scale-[1.03]"
+            sizes="100vw"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-black/10" />
+          <span className="absolute inset-0 flex items-center justify-center">
+            <span className="relative flex h-20 w-20 items-center justify-center rounded-full bg-white shadow-2xl transition-transform group-hover:scale-110 sm:h-24 sm:w-24">
+              <span className="absolute inset-0 animate-ping rounded-full bg-white/40" />
+              <Play size={28} className="relative ml-1 fill-black text-black" />
+            </span>
+          </span>
+          <div className="absolute bottom-0 left-0 right-0 p-6 text-left sm:p-10">
+            <span
+              aria-hidden
+              className="font-serif text-5xl leading-none text-pink sm:text-7xl"
+            >
+              &ldquo;
+            </span>
+            <p className="-mt-3 max-w-2xl text-2xl font-light italic leading-tight text-white sm:text-4xl">
+              {FEATURED.quote}
+            </p>
+            <p className="mt-4 font-mono text-xs font-bold uppercase tracking-[0.2em] text-pink">
+              {FEATURED.name}, {FEATURED.age} · {FEATURED.desc}
+            </p>
+          </div>
+        </button>
+
+        <div className="mt-8 text-center">
+          <Link
+            href="/why-stacey#stories"
+            className="group inline-flex items-center gap-2 text-sm font-semibold text-white/80 transition-colors hover:text-pink"
+          >
+            More member stories
+            <ArrowRight
+              size={14}
+              className="transition-transform group-hover:translate-x-0.5"
+            />
+          </Link>
+        </div>
+      </div>
+      {playing && <VideoModal src={FEATURED.video} onClose={() => setPlaying(false)} />}
     </section>
   );
 }
