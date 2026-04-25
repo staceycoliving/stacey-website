@@ -1,32 +1,79 @@
 "use client";
 
-// Dev-only preview — Map marker variants A (photo) vs B (expand on
-// hover). Each is a full MapSection-style layout so we can compare
-// them in real Mapbox context. Open /preview manually.
+// Dev-only preview — three takes on the "Almost everything included"
+// section. All keep photography front-and-centre (matching stacey.de's
+// existing photo-first vibe) but vary in layout drama. Open
+// /preview/features manually.
 
-import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import dynamic from "next/dynamic";
+import { ArrowRight, ArrowLeftRight, Sofa, Sparkles, Users, Wifi, Wrench } from "lucide-react";
 import { clsx } from "clsx";
-import { locations } from "@/lib/data";
+import { useState } from "react";
 
-const LocationMap = dynamic(() => import("@/components/ui/LocationMap"), { ssr: false });
-
-const CITY_LABELS: Record<string, string> = {
-  hamburg: "Hamburg",
-  berlin: "Berlin",
-  vallendar: "Vallendar",
+type Feature = {
+  icon: typeof Sofa;
+  title: string;
+  body: string;
+  image: string;
+  highlight?: boolean;
 };
 
-const CITY_ORDER = ["hamburg", "berlin", "vallendar"] as const;
-type CityFilter = "all" | (typeof CITY_ORDER)[number];
+const FEATURES: Feature[] = [
+  {
+    icon: Sofa,
+    title: "Fully furnished suite",
+    body: "Bed, desk, storage. Every detail thought through.",
+    image: "/images/locations/muehlenkamp/jumbo/001-jumbo-mk.webp",
+  },
+  {
+    icon: Users,
+    title: "Common spaces",
+    body: "Living rooms, kitchens, work zones — all built for hanging out.",
+    image: "/images/locations/muehlenkamp/01-muehlenkamp.webp",
+  },
+  {
+    icon: Wifi,
+    title: "Utilities & fibre WiFi",
+    body: "Power, water, heating, internet. One price.",
+    image: "/images/locations/muehlenkamp/02-muehlenkamp.webp",
+  },
+  {
+    icon: Sparkles,
+    title: "Weekly cleaning",
+    body: "Common areas every week. Your room stays your space.",
+    image: "/images/locations/muehlenkamp/03-muehlenkamp.webp",
+  },
+  {
+    icon: ArrowLeftRight,
+    title: "Move between cities",
+    body: "Change STACEY homes mid-stay. No fees. No break clauses.",
+    image: "/images/locations/eimsbuettel/community/001-community-ei.webp",
+    highlight: true,
+  },
+  {
+    icon: Wrench,
+    title: "On-call maintenance",
+    body: "Something broken? Often fixed the same day.",
+    image: "/images/locations/muehlenkamp/04-muehlenkamp.webp",
+  },
+];
 
-const ORDERED_LOCATIONS = CITY_ORDER.flatMap((c) =>
-  locations.filter((l) => l.city === c),
-);
+function Eyebrow({ city = "ALL-INCLUSIVE LIVING" }: { city?: string }) {
+  return (
+    <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-pink">{city}</p>
+  );
+}
 
-function Label({ n, title, desc }: { n: string; title: string; desc?: string }) {
+function VariantLabel({
+  n,
+  title,
+  desc,
+}: {
+  n: string;
+  title: string;
+  desc?: string;
+}) {
   return (
     <div className="bg-black px-6 py-4">
       <div className="mx-auto max-w-7xl">
@@ -40,151 +87,372 @@ function Label({ n, title, desc }: { n: string; title: string; desc?: string }) 
   );
 }
 
-function MapStage({ markerVariant }: { markerVariant: "photo" | "expand" }) {
-  const [city, setCity] = useState<CityFilter>("all");
-  const [active, setActive] = useState<string | null>(null);
-  const itemRefs = useRef<Record<string, HTMLDivElement | null>>({});
-
-  const filtered = useMemo(
-    () => (city === "all" ? ORDERED_LOCATIONS : ORDERED_LOCATIONS.filter((l) => l.city === city)),
-    [city],
-  );
-
-  const grouped = useMemo(() => {
-    return CITY_ORDER.filter((c) => filtered.some((l) => l.city === c)).map((c) => ({
-      city: c,
-      locs: filtered.filter((l) => l.city === c),
-    }));
-  }, [filtered]);
-
-  useEffect(() => {
-    if (!active) return;
-    itemRefs.current[active]?.scrollIntoView({ behavior: "smooth", block: "nearest" });
-  }, [active]);
-
+/* ------------------------------------------------------------------ */
+/* VARIANT A — Bento Magazine Grid
+   Asymmetric grid. Hero card (Private Suite) spans 2 cells with a big
+   photo + overlay title. Supporting cards vary in size. The black
+   "STACEY only" card is a no-photo stat tile that interrupts the
+   photography rhythm — feels like a magazine spread.
+/* ------------------------------------------------------------------ */
+function VariantA() {
   return (
-    <section className="bg-[#FAFAFA] px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
+    <section className="bg-[#FAFAFA] px-4 py-20 sm:px-6 sm:py-24 lg:px-8">
       <div className="mx-auto max-w-7xl">
-        <div className="mb-8 text-center sm:mb-10">
-          <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-pink">
-            8 homes · 3 cities
-          </p>
+        <div className="mx-auto max-w-2xl text-center">
+          <Eyebrow />
           <h2 className="mt-2 text-3xl font-black leading-tight tracking-tight sm:text-5xl">
-            Find us in{" "}
-            <span className="italic font-light">
-              {city === "all" ? "Hamburg, Berlin, Vallendar" : CITY_LABELS[city]}
-            </span>
-            .
+            Almost everything <span className="italic font-light">included</span>.
           </h2>
+          <p className="mt-3 text-sm text-gray sm:text-base">
+            One price. No surprises. Move in with a suitcase — we handle the rest.
+          </p>
         </div>
-        <div className="mb-5 flex justify-center">
-          <div className="inline-flex gap-1 rounded-[5px] border border-black/10 bg-white p-1 shadow-sm">
-            <button
-              type="button"
-              onClick={() => setCity("all")}
-              className={clsx(
-                "rounded-[3px] px-3 py-1.5 text-xs font-semibold",
-                city === "all" ? "bg-black text-white" : "text-black/70 hover:bg-[#F5F5F5]",
-              )}
-            >
-              All
-            </button>
-            {CITY_ORDER.map((c) => (
-              <button
-                key={c}
-                type="button"
-                onClick={() => setCity(c)}
-                className={clsx(
-                  "rounded-[3px] px-3 py-1.5 text-xs font-semibold",
-                  city === c ? "bg-black text-white" : "text-black/70 hover:bg-[#F5F5F5]",
-                )}
-              >
-                {CITY_LABELS[c]}
-              </button>
-            ))}
+
+        {/* Bento — 4 columns, custom row spans. Hero spans col-1+2 row 1+2.
+            USP card spans col-3+4 row 2 (wide black band). */}
+        <div className="mt-12 grid grid-cols-1 gap-3 sm:grid-cols-4 sm:grid-rows-[260px_220px_260px]">
+          {/* Hero — Private Suite, big */}
+          <div className="group relative col-span-1 overflow-hidden rounded-[5px] bg-black sm:col-span-2 sm:row-span-2">
+            <Image
+              src={FEATURES[0].image}
+              alt={FEATURES[0].title}
+              fill
+              className="object-cover transition-transform duration-700 group-hover:scale-105"
+              sizes="(min-width: 640px) 50vw, 100vw"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+            <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
+              <span className="inline-flex h-8 w-8 items-center justify-center rounded-[5px] bg-pink text-black">
+                <Sofa size={16} strokeWidth={2.25} />
+              </span>
+              <p className="mt-3 text-xl font-black leading-tight sm:text-2xl">
+                {FEATURES[0].title}
+              </p>
+              <p className="mt-1 max-w-md text-sm text-white/80">{FEATURES[0].body}</p>
+            </div>
+          </div>
+
+          {/* Common spaces */}
+          <div className="group relative h-[220px] overflow-hidden rounded-[5px] bg-black sm:h-auto">
+            <Image
+              src={FEATURES[1].image}
+              alt={FEATURES[1].title}
+              fill
+              className="object-cover transition-transform duration-700 group-hover:scale-105"
+              sizes="(min-width: 640px) 25vw, 100vw"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
+            <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
+              <p className="text-base font-black leading-tight">{FEATURES[1].title}</p>
+              <p className="mt-1 text-xs text-white/75">{FEATURES[1].body}</p>
+            </div>
+          </div>
+
+          {/* Utilities */}
+          <div className="group relative h-[220px] overflow-hidden rounded-[5px] bg-black sm:h-auto">
+            <Image
+              src={FEATURES[2].image}
+              alt={FEATURES[2].title}
+              fill
+              className="object-cover transition-transform duration-700 group-hover:scale-105"
+              sizes="(min-width: 640px) 25vw, 100vw"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
+            <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
+              <p className="text-base font-black leading-tight">{FEATURES[2].title}</p>
+              <p className="mt-1 text-xs text-white/75">{FEATURES[2].body}</p>
+            </div>
+          </div>
+
+          {/* USP — wide black card spans 2 cols, no photo */}
+          <div className="group relative col-span-1 flex h-[220px] flex-col justify-between overflow-hidden rounded-[5px] bg-black p-5 text-white transition-all hover:bg-[#0F0F0F] sm:col-span-2 sm:h-auto">
+            <div className="flex items-start justify-between">
+              <span className="inline-flex h-9 w-9 items-center justify-center rounded-[5px] bg-pink text-black">
+                <ArrowLeftRight size={16} strokeWidth={2.25} />
+              </span>
+              <span className="rounded-[3px] bg-pink px-1.5 py-0.5 text-[8px] font-black uppercase tracking-[0.15em] text-black">
+                Stacey only
+              </span>
+            </div>
+            <div>
+              <p className="text-2xl font-black leading-tight sm:text-3xl">
+                Move between cities,{" "}
+                <span className="italic font-light text-pink">mid-stay</span>.
+              </p>
+              <p className="mt-2 max-w-md text-sm text-white/70">
+                Hamburg in spring, Berlin in summer, Vallendar in autumn. No fees,
+                no break clauses. No other coliving lets you do this.
+              </p>
+            </div>
+          </div>
+
+          {/* Weekly cleaning — small */}
+          <div className="group relative h-[220px] overflow-hidden rounded-[5px] bg-black sm:h-auto">
+            <Image
+              src={FEATURES[3].image}
+              alt={FEATURES[3].title}
+              fill
+              className="object-cover transition-transform duration-700 group-hover:scale-105"
+              sizes="(min-width: 640px) 25vw, 100vw"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
+            <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
+              <p className="text-base font-black leading-tight">{FEATURES[3].title}</p>
+              <p className="mt-1 text-xs text-white/75">{FEATURES[3].body}</p>
+            </div>
+          </div>
+
+          {/* Maintenance — small */}
+          <div className="group relative h-[220px] overflow-hidden rounded-[5px] bg-black sm:h-auto">
+            <Image
+              src={FEATURES[5].image}
+              alt={FEATURES[5].title}
+              fill
+              className="object-cover transition-transform duration-700 group-hover:scale-105"
+              sizes="(min-width: 640px) 25vw, 100vw"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
+            <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
+              <p className="text-base font-black leading-tight">{FEATURES[5].title}</p>
+              <p className="mt-1 text-xs text-white/75">{FEATURES[5].body}</p>
+            </div>
           </div>
         </div>
-        <div className="grid gap-4 lg:grid-cols-[400px_1fr] lg:gap-6">
-          <div className="relative max-h-[600px] overflow-y-auto pr-1">
-            {grouped.map((group) => (
-              <div key={group.city} className="mb-3">
-                <p className="sticky top-0 z-10 -mx-1 mb-2 bg-[#FAFAFA] px-1 py-2 text-[10px] font-bold uppercase tracking-[0.25em] text-pink shadow-[0_8px_8px_-8px_rgba(0,0,0,0.06)]">
-                  {CITY_LABELS[group.city]} · {group.locs.length}{" "}
-                  {group.locs.length === 1 ? "home" : "homes"}
-                </p>
-                <div className="space-y-2">
-                  {group.locs.map((loc) => {
-                    const isActive = active === loc.slug;
-                    return (
-                      <div
-                        key={loc.slug}
-                        ref={(el) => {
-                          itemRefs.current[loc.slug] = el;
-                        }}
-                      >
-                        <Link
-                          href={`/locations/${loc.slug}`}
-                          onMouseEnter={() => setActive(loc.slug)}
-                          onMouseLeave={() => setActive(null)}
-                          className={clsx(
-                            "flex w-full items-center gap-3 rounded-[5px] bg-white p-2.5 text-left shadow-sm ring-1 transition-all",
-                            isActive
-                              ? "ring-pink/60 shadow-md"
-                              : "ring-black/5 hover:ring-pink/30",
-                          )}
-                        >
-                          <div className="relative h-12 w-16 flex-shrink-0 overflow-hidden rounded-[3px]">
-                            <Image
-                              src={loc.images[0]}
-                              alt={loc.name}
-                              fill
-                              className="object-cover"
-                              sizes="64px"
-                            />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-gray">
-                              {CITY_LABELS[loc.city]}
-                            </p>
-                            <p className="truncate text-sm font-bold text-black">
-                              {loc.name}
-                            </p>
-                            <p className="truncate text-[11px] text-gray">
-                              from €{loc.priceFrom}
-                              {loc.stayType === "SHORT" ? "/night" : "/mo"}
-                            </p>
-                          </div>
-                          <span
-                            className={clsx(
-                              "flex-shrink-0 rounded-[5px] px-1.5 py-0.5 text-[9px] font-bold",
-                              loc.stayType === "SHORT"
-                                ? "bg-black text-white"
-                                : "bg-pink text-white",
-                            )}
-                          >
-                            {loc.stayType === "SHORT" ? "S" : "L"}
-                          </span>
-                        </Link>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
-          </div>
-          <LocationMap
-            cityFilter={city}
-            activeSlug={active}
-            onSelect={setActive}
-            markerVariant={markerVariant}
-          />
+
+        <p className="mx-auto mt-10 max-w-2xl text-center text-sm text-gray sm:text-base">
+          You bring{" "}
+          <span className="font-semibold text-black">your clothes</span>,{" "}
+          <span className="font-semibold text-black">a toothbrush</span>, and{" "}
+          <span className="font-semibold text-black">yourself</span>. We&rsquo;ve
+          got the rest.
+        </p>
+
+        <div className="mt-8 flex justify-center">
+          <Link
+            href="/move-in"
+            className="group inline-flex items-center gap-2 rounded-[5px] bg-black px-6 py-3 text-sm font-semibold text-white transition-all hover:opacity-80"
+          >
+            Find your room
+            <ArrowRight size={14} className="transition-transform group-hover:translate-x-0.5" />
+          </Link>
         </div>
       </div>
     </section>
   );
 }
 
-export default function PreviewPage() {
+/* ------------------------------------------------------------------ */
+/* VARIANT B — Full-Photo Hover-Reveal
+   Square photo cards. Photo fills the card. Title visible at rest in
+   the gradient; body text slides up on hover. Dramatic, cinematic, but
+   tap-friendly on mobile (we expand the active card permanently).
+/* ------------------------------------------------------------------ */
+function VariantB() {
+  const [active, setActive] = useState<number | null>(null);
+
+  return (
+    <section className="bg-white px-4 py-20 sm:px-6 sm:py-24 lg:px-8">
+      <div className="mx-auto max-w-7xl">
+        <div className="mx-auto max-w-2xl text-center">
+          <Eyebrow />
+          <h2 className="mt-2 text-3xl font-black leading-tight tracking-tight sm:text-5xl">
+            Almost everything <span className="italic font-light">included</span>.
+          </h2>
+          <p className="mt-3 text-sm text-gray sm:text-base">
+            One price. No surprises. Move in with a suitcase — we handle the rest.
+          </p>
+        </div>
+
+        <div className="mt-12 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {FEATURES.map((f, i) => {
+            const isActive = active === i;
+            const Icon = f.icon;
+            return (
+              <button
+                key={f.title}
+                onClick={() => setActive(isActive ? null : i)}
+                onMouseEnter={() => setActive(i)}
+                onMouseLeave={() => setActive(null)}
+                className="group relative aspect-[4/3] overflow-hidden rounded-[5px] bg-black text-left"
+              >
+                <Image
+                  src={f.image}
+                  alt={f.title}
+                  fill
+                  className={clsx(
+                    "object-cover transition-transform duration-700",
+                    isActive ? "scale-110" : "scale-100",
+                  )}
+                  sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+                />
+                {/* Permanent bottom gradient so resting title is readable */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-black/0" />
+                {/* Hover layer — adds darker overlay so body copy reads */}
+                <div
+                  className={clsx(
+                    "absolute inset-0 bg-black/40 transition-opacity duration-300",
+                    isActive ? "opacity-100" : "opacity-0",
+                  )}
+                />
+                {f.highlight && (
+                  <span className="absolute right-3 top-3 rounded-[3px] bg-pink px-1.5 py-0.5 text-[8px] font-black uppercase tracking-[0.15em] text-black">
+                    Stacey only
+                  </span>
+                )}
+                <div className="absolute inset-x-0 bottom-0 p-5 text-white">
+                  <span
+                    className={clsx(
+                      "inline-flex h-9 w-9 items-center justify-center rounded-[5px] transition-all duration-300",
+                      isActive
+                        ? "bg-pink text-black"
+                        : "bg-white/15 text-white backdrop-blur-sm",
+                    )}
+                  >
+                    <Icon size={16} strokeWidth={2.25} />
+                  </span>
+                  <p className="mt-3 text-lg font-black leading-tight sm:text-xl">
+                    {f.title}
+                  </p>
+                  <p
+                    className={clsx(
+                      "overflow-hidden text-sm text-white/90 transition-all duration-300",
+                      isActive ? "mt-1.5 max-h-20 opacity-100" : "max-h-0 opacity-0",
+                    )}
+                  >
+                    {f.body}
+                  </p>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        <p className="mx-auto mt-10 max-w-2xl text-center text-sm text-gray sm:text-base">
+          You bring{" "}
+          <span className="font-semibold text-black">your clothes</span>,{" "}
+          <span className="font-semibold text-black">a toothbrush</span>, and{" "}
+          <span className="font-semibold text-black">yourself</span>. We&rsquo;ve
+          got the rest.
+        </p>
+
+        <div className="mt-8 flex justify-center">
+          <Link
+            href="/move-in"
+            className="group inline-flex items-center gap-2 rounded-[5px] bg-black px-6 py-3 text-sm font-semibold text-white transition-all hover:opacity-80"
+          >
+            Find your room
+            <ArrowRight size={14} className="transition-transform group-hover:translate-x-0.5" />
+          </Link>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* VARIANT C — Editorial Diptych Bands
+   Each feature gets its own horizontal band — alternating photo
+   left/right with copy on the opposite side. Big photos, big type.
+   Magazine-spread feel, slower scroll, premium.
+/* ------------------------------------------------------------------ */
+function VariantC() {
+  // Trim to 4 features for the diptych — full bands need to feel
+  // intentional, not endless. The USP gets its own dark band.
+  const bands = [FEATURES[0], FEATURES[1], FEATURES[4], FEATURES[3]];
+  return (
+    <section className="bg-[#FAFAFA] px-4 py-20 sm:px-6 sm:py-24 lg:px-8">
+      <div className="mx-auto max-w-7xl">
+        <div className="mx-auto max-w-2xl text-center">
+          <Eyebrow />
+          <h2 className="mt-2 text-3xl font-black leading-tight tracking-tight sm:text-5xl">
+            Almost everything <span className="italic font-light">included</span>.
+          </h2>
+          <p className="mt-3 text-sm text-gray sm:text-base">
+            Move in with a suitcase. Here&rsquo;s what&rsquo;s waiting.
+          </p>
+        </div>
+
+        <div className="mt-14 space-y-12 sm:mt-20 sm:space-y-20">
+          {bands.map((f, i) => {
+            const reversed = i % 2 === 1;
+            const Icon = f.icon;
+            const isUSP = !!f.highlight;
+            return (
+              <div
+                key={f.title}
+                className={clsx(
+                  "grid items-center gap-6 sm:gap-12 lg:grid-cols-2 lg:gap-16",
+                )}
+              >
+                {/* Photo */}
+                <div
+                  className={clsx(
+                    "relative aspect-[4/3] overflow-hidden rounded-[5px] bg-black",
+                    reversed && "lg:order-2",
+                  )}
+                >
+                  <Image
+                    src={f.image}
+                    alt={f.title}
+                    fill
+                    className="object-cover"
+                    sizes="(min-width: 1024px) 50vw, 100vw"
+                  />
+                  {isUSP && (
+                    <span className="absolute left-4 top-4 rounded-[3px] bg-pink px-2 py-1 text-[9px] font-black uppercase tracking-[0.15em] text-black">
+                      Stacey only
+                    </span>
+                  )}
+                </div>
+
+                {/* Copy */}
+                <div className={clsx(reversed && "lg:order-1")}>
+                  <span
+                    className={clsx(
+                      "inline-flex h-10 w-10 items-center justify-center rounded-[5px]",
+                      isUSP ? "bg-pink text-black" : "bg-black text-white",
+                    )}
+                  >
+                    <Icon size={18} strokeWidth={2.25} />
+                  </span>
+                  <p className="mt-4 text-[10px] font-bold uppercase tracking-[0.25em] text-pink">
+                    Feature 0{i + 1}
+                  </p>
+                  <h3 className="mt-1 text-3xl font-black leading-tight tracking-tight sm:text-4xl">
+                    {f.title.replace("Move between cities", "Move between cities")}
+                  </h3>
+                  <p className="mt-3 max-w-md text-base leading-relaxed text-gray">
+                    {f.body}
+                  </p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <p className="mx-auto mt-16 max-w-2xl text-center text-sm text-gray sm:text-base">
+          You bring{" "}
+          <span className="font-semibold text-black">your clothes</span>,{" "}
+          <span className="font-semibold text-black">a toothbrush</span>, and{" "}
+          <span className="font-semibold text-black">yourself</span>. We&rsquo;ve
+          got the rest.
+        </p>
+
+        <div className="mt-8 flex justify-center">
+          <Link
+            href="/move-in"
+            className="group inline-flex items-center gap-2 rounded-[5px] bg-black px-6 py-3 text-sm font-semibold text-white transition-all hover:opacity-80"
+          >
+            Find your room
+            <ArrowRight size={14} className="transition-transform group-hover:translate-x-0.5" />
+          </Link>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+export default function PreviewFeatures() {
   return (
     <main className="bg-white">
       <div className="mx-auto max-w-3xl px-6 py-10">
@@ -192,31 +460,39 @@ export default function PreviewPage() {
           Internal preview
         </p>
         <h1 className="mt-2 text-3xl font-black sm:text-4xl">
-          Map markers — <span className="italic font-light">A vs B</span>
+          &ldquo;Almost everything included&rdquo; —{" "}
+          <span className="italic font-light">A vs B vs C</span>
         </h1>
         <p className="mt-3 text-sm text-gray">
-          Hover the list cards or the markers to test the sync. Click a
-          city tab to filter. Click a marker to navigate to the location
-          page.
+          Drei Varianten der Features-Sektion mit echten Fotos. Jede behält die
+          editoriale Tonalität (pink eyebrow + italic-keyword headline + &ldquo;You
+          bring&rdquo; reveal), variiert aber das Foto-Layout.
         </p>
       </div>
 
-      <Label
+      <VariantLabel
         n="A"
-        title="Photo markers — small thumbnail with white border"
-        desc="48px rounded-[5px] photo of the location. Active = scale + pink ring + pulse. Cleanest visual identification at a glance."
+        title="Bento Magazine Grid — asymmetric, hero-card driven"
+        desc="Magazin-Spread Look. Private Suite als 2×2 Hero, USP (Move between cities) als breites schwarzes Band ohne Foto. 5 Photo-Cards + 1 Statement-Card. Premium, dicht, viel zu sehen ohne lang zu scrollen."
       />
-      <MapStage markerVariant="photo" />
+      <VariantA />
 
-      <Label
+      <VariantLabel
         n="B"
-        title='Expand-on-hover marker — small "S" pill that grows to photo + name'
-        desc="22px photo dot in resting state; on hover/active it expands into a pink pill with photo + location name (Airbnb price-bubble DNA)."
+        title="Full-Photo Cards — hover/tap reveals body copy"
+        desc='Foto füllt jede Card komplett. Nur Icon + Titel sichtbar. Auf Hover/Tap erscheint Body-Text mit dunklerem Overlay + pink Icon. Cinematic, mutig — Fokus liegt auf der Photographie selbst.'
       />
-      <MapStage markerVariant="expand" />
+      <VariantB />
+
+      <VariantLabel
+        n="C"
+        title="Editorial Diptych Bands — alternating photo + text rows"
+        desc="Vier große Bänder, abwechselnd Foto-Links/Foto-Rechts. Wie eine Magazin-Doppelseite. Langsamer Scroll, jede Feature bekommt richtig Gewicht. Fokus auf Größe, weniger auf Quantität."
+      />
+      <VariantC />
 
       <div className="mx-auto max-w-3xl px-6 py-16 text-center">
-        <p className="text-sm text-gray">— Pick A or B and we wire it as the new default. —</p>
+        <p className="text-sm text-gray">— Pick A, B, oder C — und ich verdrahte es als neuen Default. —</p>
       </div>
     </main>
   );
