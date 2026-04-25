@@ -23,6 +23,70 @@ const LocationMap = dynamic(() => import("@/components/ui/LocationMap"), { ssr: 
 import { locations, formatMoveInLabel } from "@/lib/data";
 import { expandMoveInDates } from "@/lib/availability";
 
+// Faces hand-picked for the hero strip — frontal, well-lit, work at
+// 40px. These five can also appear on location cards (a member living
+// somewhere AND showing up in the hero "+ 295 more" intro is logical
+// — they really do live in one of these homes). The constraint that
+// matters is that no member appears in two LOCATIONS at once.
+const HERO_AVATARS: readonly string[] = [
+  "/images/members/member-2.jpeg",
+  "/images/members/member-3.jpeg",
+  "/images/members/member-7.jpeg",
+  "/images/members/member-16.jpeg",
+  "/images/members/member-19.jpeg",
+];
+
+// Full pool of 26 member shots for the per-card "X new residents this
+// month" mini-avatars. 8 locations × 3 unique faces = 24 needed → 2
+// spare. Interview thumbnails stay out (those are interview subjects,
+// rendered elsewhere on the site).
+const AVATAR_POOL: readonly string[] = [
+  ...Array.from({ length: 25 }, (_, i) => `/images/members/member-${i + 1}.jpeg`),
+  "/images/members/member-26.png",
+];
+
+// Deterministically shuffle the pool ONCE per build so the assignment
+// is stable across re-renders / HMR, but doesn't follow the file-naming
+// order (which would cluster sequentially-named photos onto the same
+// card).
+function deterministicShuffle<T>(pool: readonly T[], seed: number): T[] {
+  const arr = [...pool];
+  let s = seed;
+  for (let i = arr.length - 1; i > 0; i--) {
+    s = (s * 1103515245 + 12345) & 0x7fffffff;
+    const j = s % (i + 1);
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+// Build the global "this slug → these N faces" map. Each location gets
+// a CONSECUTIVE non-overlapping slice of the shuffled pool — so the
+// same person never appears under two homes. Falls back to wrapping if
+// we ever exceed the pool size (won't happen with 26 photos / 24 slots,
+// but defensive).
+const AVATARS_PER_LOCATION = 3;
+const AVATAR_ASSIGNMENT: Record<string, readonly string[]> = (() => {
+  const shuffled = deterministicShuffle(AVATAR_POOL, 1234567);
+  const sortedSlugs = locations.map((l) => l.slug).sort();
+  const map: Record<string, string[]> = {};
+  let cursor = 0;
+  for (const slug of sortedSlugs) {
+    const slice: string[] = [];
+    for (let i = 0; i < AVATARS_PER_LOCATION; i++) {
+      slice.push(shuffled[cursor % shuffled.length]);
+      cursor++;
+    }
+    map[slug] = slice;
+  }
+  return map;
+})();
+
+function avatarsForLocation(slug: string, count: number): string[] {
+  if (count <= 0) return [];
+  return (AVATAR_ASSIGNMENT[slug] ?? []).slice(0, Math.min(count, AVATARS_PER_LOCATION));
+}
+
 
 export default function HomePage() {
   const router = useRouter();
@@ -268,13 +332,7 @@ export default function HomePage() {
             className="mx-auto mt-5 flex flex-col items-center justify-center gap-2 sm:mt-8 sm:flex-row sm:gap-3"
           >
             <div className="flex -space-x-2">
-              {[
-                "/images/members/member-1.jpeg",
-                "/images/interview-1-thumb.webp",
-                "/images/members/member-2.jpeg",
-                "/images/interview-2-thumb.webp",
-                "/images/members/member-3.jpeg",
-              ].map((src, i) => (
+              {HERO_AVATARS.map((src, i) => (
                 <span
                   key={i}
                   className="relative inline-block h-8 w-8 overflow-hidden rounded-full ring-2 ring-white/90 shadow-md sm:h-10 sm:w-10"
@@ -336,16 +394,13 @@ export default function HomePage() {
                     {orderedLocations.map((loc) => {
                       const href = `/locations/${loc.slug}`;
                       const s = locationStats[loc.slug];
-                      // Up to 3 mini-avatars per card. We always pull from
-                      // the 5 hero portraits — same faces, same brand.
-                      const avatarSrc = [
-                        "/images/members/member-1.jpeg",
-                        "/images/members/member-2.jpeg",
-                        "/images/members/member-3.jpeg",
-                      ];
+                      // Up to 3 mini-avatars per card, deterministically
+                      // sampled from a 6-face pool so adjacent cards
+                      // don't show the same trio (would read as fake).
                       const avatarsToShow = s
                         ? Math.min(3, Math.max(0, s.newResidents))
                         : 0;
+                      const avatarSrc = avatarsForLocation(loc.slug, avatarsToShow);
                       return (
                         <Link
                           key={loc.slug}
@@ -395,7 +450,7 @@ export default function HomePage() {
                               {s && s.newResidents > 0 && avatarsToShow > 0 && (
                                 <div className="mt-3 flex items-center gap-2">
                                   <div className="flex -space-x-1.5">
-                                    {avatarSrc.slice(0, avatarsToShow).map((src, i) => (
+                                    {avatarSrc.map((src, i) => (
                                       <span
                                         key={i}
                                         className="relative inline-block h-7 w-7 overflow-hidden rounded-full ring-2 ring-white/90"
