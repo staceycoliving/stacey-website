@@ -6,7 +6,7 @@ import { ArrowRight, Plus } from "lucide-react";
 import FadeIn from "@/components/ui/FadeIn";
 import { clsx } from "clsx";
 
-// FAQ accordion — answers the five conversion-blocking questions that
+// FAQ accordion, answers the five conversion-blocking questions that
 // don't get covered elsewhere on the homepage. Sits between Receipts
 // (the math case) and the Closing Teasers (about + member stories).
 // Best practice for SEO + objection-handling: real specific answers,
@@ -17,23 +17,23 @@ type QA = { q: string; a: string };
 const QUESTIONS: QA[] = [
   {
     q: "How long do I have to stay?",
-    a: "Three months minimum for our long-stay homes (Mühlenkamp, Eimsbüttel, St. Pauli, Eppendorf, Berlin Mitte, Vallendar). Short-stay homes (Alster + Downtown) start at five nights. Notice period for ending a long stay is three months — and you can move between STACEY cities anytime in between, no fees.",
+    a: "Three months minimum for our long-stay homes (Mühlenkamp, Eimsbüttel, St. Pauli, Eppendorf, Berlin Mitte, Vallendar). Short-stay homes (Alster + Downtown) start at five nights. Notice period for ending a long stay is three months. You can move between STACEY cities anytime in between, no fees.",
   },
   {
     q: "What&rsquo;s actually included in the rent?",
-    a: "Furnished private suite, weekly cleaning of common areas, fibre-grade internet, all utilities (power, water, heating), maintenance on call, community events, and free transfers between STACEY cities. You bring clothes, a toothbrush, and yourself — the rest is on us.",
+    a: "Furnished private suite, weekly cleaning of common areas, fibre-grade internet, all utilities (power, water, heating), maintenance on call, community events, and free transfers between STACEY cities. You bring clothes, a toothbrush, and yourself. The rest is on us.",
   },
   {
     q: "Can I bring my partner?",
-    a: "Yes — Jumbo, Jumbo Balcony, Studio, and Premium+ Balcony rooms are couple-friendly and priced for two occupants. Other categories are single occupancy. Use the &lsquo;2 persons&rsquo; toggle on any location page to filter the available rooms.",
+    a: "Yes. Jumbo, Jumbo Balcony, Studio, and Premium+ Balcony rooms are couple-friendly and priced for two occupants. Other categories are single occupancy. Use the &lsquo;2 persons&rsquo; toggle on any location page to filter the available rooms.",
   },
   {
     q: "What about pets?",
-    a: "We love dogs and cats — but communal living means we keep it case-by-case. Tell your community manager what you have, breed and size included; we&rsquo;ll see what fits the house. Some homes are pet-friendly, others aren&rsquo;t — depends on the building and the housemates.",
+    a: "We love dogs and cats, but communal living means we keep it case-by-case. Tell your community manager what you have, breed and size included; we&rsquo;ll see what fits the house. Some homes are pet-friendly, others aren&rsquo;t. Depends on the building and the housemates.",
   },
   {
     q: "Why is this cheaper than renting alone?",
-    a: "Because we share fixed costs — building, fibre, cleaning, furniture, maintenance — across more people. The math is in our &lsquo;Do the math&rsquo; section above: roughly €685/month savings vs. solo Hamburg, €8,200/year. Plus you skip seven contracts, three deposits, and one Schufa.",
+    a: "Because we share fixed costs across more people: building, fibre, cleaning, furniture, maintenance. The math is in our &lsquo;Do the math&rsquo; section above: roughly €685/month savings vs. solo Hamburg, €8,200/year. Plus you skip seven contracts, three deposits, and one Schufa.",
   },
 ];
 

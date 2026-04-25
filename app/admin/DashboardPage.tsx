@@ -251,7 +251,7 @@ function fmtEuro(cents: number) {
 }
 
 function fmtDate(d: string | null) {
-  if (!d) return "—";
+  if (!d) return ",";
   return new Date(d).toLocaleDateString("de-DE", {
     day: "2-digit",
     month: "2-digit",
@@ -303,7 +303,7 @@ export default function DashboardPage({ data }: { data: Dashboard }) {
   } = data;
   const actionRef = useRef<HTMLDivElement>(null);
 
-  // All bookable dates across every location/category — same logic as the
+  // All bookable dates across every location/category, same logic as the
   // public booking tool (14-day flex expanded).
   const today = new Date().toISOString().slice(0, 10);
   const allBookableDates = Array.from(
@@ -320,7 +320,7 @@ export default function DashboardPage({ data }: { data: Dashboard }) {
   const [locationFilter, setLocationFilter] = useState<string>(""); // slug or ""
   const [personsFilter, setPersonsFilter] = useState<1 | 2>(1);
 
-  // Action-items UI state — persisted across reloads via localStorage
+  // Action-items UI state, persisted across reloads via localStorage
   const [hiddenTypes, setHiddenTypes] = useState<Set<ActionTypeKey>>(new Set());
   const [olderCollapsed, setOlderCollapsed] = useState<boolean>(true);
 
@@ -406,7 +406,7 @@ export default function DashboardPage({ data }: { data: Dashboard }) {
         />
       </div>
 
-      {/* Action Items — morning top priority (what must be done today) */}
+      {/* Action Items, morning top priority (what must be done today) */}
       <div ref={actionRef}>
         <div className="flex items-baseline justify-between mb-3 gap-3 flex-wrap">
           <h2 className="text-sm font-semibold">
@@ -541,7 +541,7 @@ export default function DashboardPage({ data }: { data: Dashboard }) {
               accent: "warn",
               label: "No payment method yet",
               detail: `${t.name} · ${t.room} · move-in ${fmtDate(t.moveIn)}`,
-              hoverDetail: `Mieter zieht in ${days}d ein ohne Zahlungsmethode — erster Einzug schlägt fehl.`,
+              hoverDetail: `Mieter zieht in ${days}d ein ohne Zahlungsmethode, erster Einzug schlägt fehl.`,
               href: `/admin/tenants/${t.id}`,
               sortKey: days,
               tenantKey: `t-${t.id}`,
@@ -607,7 +607,7 @@ export default function DashboardPage({ data }: { data: Dashboard }) {
             });
           }
 
-          // Bank-transfer tenants — this-month rent pending
+          // Bank-transfer tenants, this-month rent pending
           for (const r of actionItems.bankTransfersDue) {
             thisWeek.push({
               key: `bankRent-${r.id}`,
@@ -707,17 +707,17 @@ export default function DashboardPage({ data }: { data: Dashboard }) {
         })()}
       </div>
 
-      {/* Team pinboard — shared notes for async coordination */}
+      {/* Team pinboard, shared notes for async coordination */}
       <PinboardSection notes={teamNotes} />
 
-      {/* Vacancy pipeline — free rooms now + moveOuts in next 30 days */}
+      {/* Vacancy pipeline, free rooms now + moveOuts in next 30 days */}
       {vacancyPipeline.length > 0 && (
         <div>
           <div className="flex items-baseline justify-between mb-3 flex-wrap gap-2">
             <div>
               <h2 className="text-sm font-semibold">Vacancy pipeline · next 30 days</h2>
               <p className="text-xs text-gray mt-0.5">
-                Freie Zimmer jetzt + Kündigungen ohne Nachmieter — planbare
+                Freie Zimmer jetzt + Kündigungen ohne Nachmieter, planbare
                 Einnahmen-Lücken.
               </p>
             </div>
@@ -781,15 +781,15 @@ export default function DashboardPage({ data }: { data: Dashboard }) {
         </div>
       )}
 
-      {/* Booking conversion funnel — last 30 days */}
+      {/* Booking conversion funnel, last 30 days */}
       <BookingFunnelSection funnel={funnel} />
 
-      {/* Availability — reference for calls */}
+      {/* Availability, reference for calls */}
       <div>
         <div className="mb-3">
           <h2 className="text-sm font-semibold">Availability</h2>
           <p className="text-xs text-gray mt-0.5">
-            Für Anrufe — filter + sort damit du die passende Option schnell findest.
+            Für Anrufe, filter + sort damit du die passende Option schnell findest.
           </p>
         </div>
         <AvailabilityTable
@@ -810,10 +810,10 @@ export default function DashboardPage({ data }: { data: Dashboard }) {
         />
       </div>
 
-      {/* Open Defects — maintenance pipeline */}
+      {/* Open Defects, maintenance pipeline */}
       <OpenDefectsSection defects={openDefects} />
 
-      {/* Upcoming move-ins next 4 weeks — operational heads-up */}
+      {/* Upcoming move-ins next 4 weeks, operational heads-up */}
       <div>
         <h2 className="text-sm font-semibold mb-3">
           Upcoming move-ins · next 4 weeks
@@ -826,10 +826,10 @@ export default function DashboardPage({ data }: { data: Dashboard }) {
         </Card>
       </div>
 
-      {/* Recent emails — widget with quick link to full /admin/emails */}
+      {/* Recent emails, widget with quick link to full /admin/emails */}
       <RecentEmailsSection emails={recentEmails} />
 
-      {/* Activity feed — last 15 admin actions across the team */}
+      {/* Activity feed, last 15 admin actions across the team */}
       <ActivityFeedSection items={activityFeed} />
     </div>
   );
@@ -956,7 +956,7 @@ function splitContiguousDates(sorted: string[]): string[][] {
 }
 
 /** Option A: flattened table of every (location, category) slot. Built
- *  for call-center UX — filter by city/persons/date, sort by price,
+ *  for call-center UX, filter by city/persons/date, sort by price,
  *  copy-paste a one-liner into an email. */
 function AvailabilityTable({
   locations,
@@ -996,7 +996,7 @@ function AvailabilityTable({
 
   // Measure filter bar height so thead can stick directly below it no
   // matter how the filters wrap on narrow screens. Use
-  // getBoundingClientRect so the number includes padding + border —
+  // getBoundingClientRect so the number includes padding + border ,
   // contentRect excludes those and leaves a gap under the filter bar.
   useEffect(() => {
     const el = filterBarRef.current;
@@ -1012,9 +1012,9 @@ function AvailabilityTable({
   // Total offset from viewport top = AdminShell navbar (h-14 = 56px) + filter bar
   const theadTop = 56 + filterBarHeight;
 
-  // Flatten to rows — ONE row per contiguous booking segment. A category
+  // Flatten to rows, ONE row per contiguous booking segment. A category
   // with 3 separate fixed dates (e.g. 01.08 / 01.09 / 01.11) produces 3
-  // rows, not a misleading "01.08 – 01.11" range. Multi-day segments
+  // rows, not a misleading "01.08 to 01.11" range. Multi-day segments
   // come from the 14-day flex window when a room frees up soon.
   type Row = {
     key: string;
@@ -1074,7 +1074,7 @@ function AvailabilityTable({
 
   function copyRow(r: Row) {
     const priceText =
-      r.price !== null ? `€${Math.round(r.price / 100)}/Mo` : "—";
+      r.price !== null ? `€${Math.round(r.price / 100)}/Mo` : ",";
     const dateText = r.isFlex
       ? `ab ${fmtDate(r.segmentFirst)} flexibel bis ${fmtDate(r.segmentLast)}`
       : `ab ${fmtDate(r.segmentFirst)} (fix)`;
@@ -1085,7 +1085,7 @@ function AvailabilityTable({
 
   return (
     <div>
-      {/* Sub-filters — sticky just below the AdminShell navbar */}
+      {/* Sub-filters, sticky just below the AdminShell navbar */}
       <div
         ref={filterBarRef}
         className="flex items-center gap-3 flex-wrap sticky top-14 z-20 bg-background-alt/95 backdrop-blur-sm py-2 -mx-4 px-4 sm:-mx-6 sm:px-6 border-b border-lightgray/50"
@@ -1256,13 +1256,13 @@ function AvailabilityTable({
                     </td>
                     <td className="px-3 py-2">{r.category}</td>
                     <td className="px-3 py-2 text-right tabular-nums font-semibold text-black">
-                      {r.price !== null ? `€${Math.round(r.price / 100)}` : "—"}
+                      {r.price !== null ? `€${Math.round(r.price / 100)}` : ","}
                     </td>
                     <td className="px-3 py-2">
                       {r.couplesOK ? (
                         <span className="text-green-700">✓</span>
                       ) : (
-                        <span className="text-gray">—</span>
+                        <span className="text-gray">,</span>
                       )}
                     </td>
                     <td className="px-3 py-2">
@@ -1275,7 +1275,7 @@ function AvailabilityTable({
                         <span className="text-xs tabular-nums">
                           {r.isFlex ? (
                             <>
-                              {fmtDate(r.segmentFirst)} –{" "}
+                              {fmtDate(r.segmentFirst)} -{" "}
                               {fmtDate(r.segmentLast)}
                             </>
                           ) : (
@@ -1388,7 +1388,7 @@ function BookingFunnelSection({
       label: "Started",
       count: funnel.total,
       stage: funnel.stages.started,
-      pushTemplate: null, // no fee reminder template yet — admin opens booking manually
+      pushTemplate: null, // no fee reminder template yet, admin opens booking manually
     },
     {
       key: "signed",
@@ -1408,7 +1408,7 @@ function BookingFunnelSection({
       key: "depositPaid",
       label: "Deposit paid",
       count: funnel.depositPaid,
-      stage: null, // terminal — waiting for move-in is not a stuck state
+      stage: null, // terminal, waiting for move-in is not a stuck state
       pushTemplate: null,
       isTerminal: true,
     },
@@ -1476,7 +1476,7 @@ function BookingFunnelSection({
               const canExpand = !s.isTerminal && s.stage !== null;
 
               const tooltip = (() => {
-                if (s.isTerminal) return "Done — waiting for move-in";
+                if (s.isTerminal) return "Done, waiting for move-in";
                 if (!s.stage) return "";
                 const parts: string[] = [];
                 if (s.stage.stuckCount > 0) {
@@ -1493,7 +1493,7 @@ function BookingFunnelSection({
                   : "Click to see people";
               })();
 
-              // "% of started" — always relative to the top of the funnel so
+              // "% of started", always relative to the top of the funnel so
               // it's easy to compare stages horizontally.
               const pctOfStarted =
                 funnel.total > 0
@@ -1578,7 +1578,7 @@ function BookingFunnelSection({
             })}
           </div>
 
-          {/* Expanded stage drawer — only for non-terminal stages */}
+          {/* Expanded stage drawer, only for non-terminal stages */}
           {openStage && (() => {
             const s = stages.find((x) => x.key === openStage);
             if (!s || !s.stage) return null;
@@ -1704,7 +1704,7 @@ function OpenDefectsSection({
   );
 }
 
-/** Activity feed — last ~15 admin actions across the team. Uses the
+/** Activity feed, last ~15 admin actions across the team. Uses the
  *  existing AuditLog rows. Gives the team visibility into what others
  *  are doing right now (reduces duplicate work / step-on-toes). */
 function ActivityFeedSection({
@@ -1760,7 +1760,7 @@ function ActivityFeedSection({
   );
 }
 
-/** Team pinboard — inline add/delete/sticky. Sticky notes float to top;
+/** Team pinboard, inline add/delete/sticky. Sticky notes float to top;
  *  otherwise newest first. Optimistic refresh via router.refresh(). */
 function PinboardSection({ notes }: { notes: Dashboard["teamNotes"] }) {
   const router = useRouter();
@@ -1962,7 +1962,7 @@ function RecentEmailsSection({
   );
 }
 
-/** "3m ago", "2h ago", "yesterday" — compact timestamps for the feed. */
+/** "3m ago", "2h ago", "yesterday", compact timestamps for the feed. */
 function relativeTime(iso: string): string {
   const ms = Date.now() - new Date(iso).getTime();
   const m = Math.floor(ms / 60000);
@@ -2062,7 +2062,7 @@ function MonthlyRentCard({
 }
 
 /** Actual cash in this calendar month: rent paid + booking fees + extras.
- *  Complementary to MonthlyRentCard which shows expected-for-the-rent-month —
+ *  Complementary to MonthlyRentCard which shows expected-for-the-rent-month ,
  *  a tenant paying January rent in March shows up here in March, there in
  *  January. */
 function CashThisMonthCard({
@@ -2175,7 +2175,7 @@ function ActionBucket({
   title: string;
   items: ActionRowRich[];
   emptyDone?: boolean;
-  /** Optional collapse support — when provided, renders a toggle chevron
+  /** Optional collapse support, when provided, renders a toggle chevron
    *  and hides the list until clicked. Used for "Older" bucket. */
   collapsed?: boolean;
   onToggleCollapse?: () => void;
@@ -2311,7 +2311,7 @@ function GroupedTenantRows({
           )}
           <div className="min-w-0">
             <div className="text-sm font-medium text-black truncate">
-              {group.tenantName ?? "—"}
+              {group.tenantName ?? ","}
             </div>
             <div className="text-xs text-gray">
               {group.rows.length} issues · {group.rows.map((r) => ACTION_TYPE_META[r.type].label).join(" · ")}
@@ -2460,7 +2460,7 @@ function ActionItemRow({ row }: { row: ActionRowRich }) {
 }
 
 /** Small inline overview of every action type with live counts. Now
- *  clickable — clicking a badge hides items of that type. Hidden state
+ *  clickable, clicking a badge hides items of that type. Hidden state
  *  is indicated with a strikethrough and persisted via localStorage. */
 function ActionTypesLegend({
   items,
@@ -2500,8 +2500,8 @@ function ActionTypesLegend({
             } hover:ring-1 hover:ring-black/20`}
             title={
               hidden
-                ? `${meta.label} versteckt — klicken zum Einblenden`
-                : `${meta.label} (${e.count}) — klicken zum Ausblenden`
+                ? `${meta.label} versteckt, klicken zum Einblenden`
+                : `${meta.label} (${e.count}), klicken zum Ausblenden`
             }
           >
             <Icon className="w-2.5 h-2.5" />

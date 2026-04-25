@@ -63,7 +63,7 @@ export async function sendTrackedEmail(
   const entityId = meta.tenantId ?? meta.bookingId ?? null;
   const triggeredBy = meta.triggeredBy ?? "auto";
 
-  // Base log payload — filled with actual result below.
+  // Base log payload, filled with actual result below.
   const base = {
     templateKey: meta.templateKey,
     recipient,
@@ -216,7 +216,7 @@ export function layout(
 </html>`;
 }
 
-/** Internal (team) email layout — simpler footer, no legal info. */
+/** Internal (team) email layout, simpler footer, no legal info. */
 export function internalLayout(content: string): string {
   return `<!DOCTYPE html>
 <html>

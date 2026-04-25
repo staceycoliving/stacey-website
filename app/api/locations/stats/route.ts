@@ -8,13 +8,13 @@ import { ROOM_BLOCKING_BOOKING_STATUSES } from "@/lib/booking-status";
 import { reportError } from "@/lib/observability";
 
 // Per-location homepage card stats:
-//   available     — rooms a guest could realistically check into within
+//   available    , rooms a guest could realistically check into within
 //                   the next 14 days (LONG: room is free or current
 //                   tenant has moveOut ≤ today+14; SHORT: # of (slug,
 //                   category) slots apaleo says are sellable today)
-//   newResidents  — Tenants whose moveIn date sits in the last 30 days
-//                   (LONG only — SHORT stays aren't "residents")
-//   nextAvailable — fallback for cards with available=0: ISO date when
+//   newResidents , Tenants whose moveIn date sits in the last 30 days
+//                   (LONG only, SHORT stays aren't "residents")
+//   nextAvailable, fallback for cards with available=0: ISO date when
 //                   inventory next opens up
 //
 // Edge-cached for 10 min so the homepage doesn't slam the DB / apaleo.
@@ -130,7 +130,7 @@ export async function GET() {
   // ─── SHORT locations from apaleo ──────────────────────────
   // We use the calendar endpoint (already optimised for portfolio
   // queries) and read out today's slot count + first available date.
-  // newResidents is left at 0 — SHORT stays come and go in days, the
+  // newResidents is left at 0, SHORT stays come and go in days, the
   // "moved in this month" frame doesn't apply.
   const todayStr = todayLocal();
   const horizon30Str = fmtISO(addDays(today, 30));

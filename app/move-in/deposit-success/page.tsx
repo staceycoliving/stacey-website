@@ -13,7 +13,7 @@ export default function DepositSuccessPage() {
               <Check size={28} className="text-white" strokeWidth={3} />
             </div>
             <h1 className="mt-6 text-3xl font-bold sm:text-4xl">
-              Deposit received — <em className="font-bold italic">welcome to STACEY!</em>
+              Deposit received, <em className="font-bold italic">welcome to STACEY!</em>
             </h1>
             <p className="mx-auto mt-4 max-w-md text-base text-gray leading-relaxed">
               Your security deposit has been received. Your room is now fully reserved and your move-in is confirmed.

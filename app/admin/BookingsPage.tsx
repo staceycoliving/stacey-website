@@ -157,7 +157,7 @@ const KANBAN_COLUMNS = [
 ] as const;
 
 function formatDate(d: string | null) {
-  if (!d) return "—";
+  if (!d) return ",";
   return new Date(d).toLocaleDateString("de-DE", {
     day: "2-digit",
     month: "2-digit",
@@ -260,7 +260,7 @@ export default function BookingsPage({
   const [cancelTarget, setCancelTarget] = useState<CancelTarget | null>(null);
 
   // Debounce the search input so typing doesn't rewrite the URL on every
-  // keystroke — easier on both React and the URL history stack.
+  // keystroke, easier on both React and the URL history stack.
   const [searchInput, setSearchInput] = useState(search);
   useEffect(() => {
     setSearchInput(search); // keep in sync when URL changes (back button)
@@ -292,7 +292,7 @@ export default function BookingsPage({
         if (!b.moveInDate) return false;
         if (new Date(b.moveInDate).getTime() > moveInToTs) return false;
       }
-      // KPI filter — narrows to the subset behind each KPI card
+      // KPI filter, narrows to the subset behind each KPI card
       if (kpiFilter === "overdue") {
         if (b.status !== "DEPOSIT_PENDING") return false;
         if (!b.depositDeadline) return false;
@@ -406,7 +406,7 @@ export default function BookingsPage({
   }, [bookings, filterLocation, search, moveInFrom, moveInTo]);
 
   // KPIs come from the server (see app/admin/bookings/page.tsx) so we keep
-  // the client render pure — React Compiler rejects Date.now() calls here.
+  // the client render pure, React Compiler rejects Date.now() calls here.
   const {
     depositSoon,
     depositOverdue,
@@ -416,7 +416,7 @@ export default function BookingsPage({
     confirmedWithoutTenant,
   } = kpis;
 
-  // IDs of all DEPOSIT_PENDING bookings currently in the filtered list —
+  // IDs of all DEPOSIT_PENDING bookings currently in the filtered list ,
   // for the "Remind all" bulk action. Recomputed whenever filters change.
   const depositPendingIds = useMemo(
     () => filtered.filter((b) => b.status === "DEPOSIT_PENDING").map((b) => b.id),
@@ -528,7 +528,7 @@ export default function BookingsPage({
   return (
     <div className="space-y-4">
       <Breadcrumbs items={[{ label: "Bookings" }]} />
-      {/* Data-integrity banner — CONFIRMED with no Tenant row is an
+      {/* Data-integrity banner, CONFIRMED with no Tenant row is an
           operational bug and should be cleaned up manually. */}
       {confirmedWithoutTenant > 0 && (
         <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-[5px] text-sm text-red-800 flex items-start gap-2">
@@ -536,13 +536,13 @@ export default function BookingsPage({
           <div>
             <strong>{confirmedWithoutTenant}</strong> confirmed booking
             {confirmedWithoutTenant === 1 ? " is" : "s are"} missing a linked
-            Tenant. The webhook should have created one — investigate in the
+            Tenant. The webhook should have created one, investigate in the
             table below.
           </div>
         </div>
       )}
 
-      {/* Action-focused KPIs — click to filter */}
+      {/* Action-focused KPIs, click to filter */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-4">
         <Stat
           label="Deposits overdue"
@@ -948,7 +948,7 @@ function TableView({
                     {b.firstName} {b.lastName}
                   </td>
                   <td className="px-4 py-3">{b.location.name}</td>
-                  <td className="px-4 py-3">{b.room ? `#${b.room.roomNumber}` : "—"}</td>
+                  <td className="px-4 py-3">{b.room ? `#${b.room.roomNumber}` : ","}</td>
                   <td className="px-4 py-3">{formatCategory(b.category)}</td>
                   <td className="px-4 py-3 text-gray">{formatDate(b.moveInDate)}</td>
                   <td className="px-4 py-3">
@@ -1169,7 +1169,7 @@ function BookingActions({
 }
 
 /** Resend email dropdown scoped to a single Booking. Currently offers
- *  deposit_reminder for bookings in the DEPOSIT_PENDING stage — other
+ *  deposit_reminder for bookings in the DEPOSIT_PENDING stage, other
  *  templates can be added as we wire more booking-state emails. */
 function ResendBookingEmailDropdown({
   bookingId,
@@ -1241,7 +1241,7 @@ function ResendBookingEmailDropdown({
   );
 }
 
-/** Structured cancellation modal. Admin picks a kind (enum) — that
+/** Structured cancellation modal. Admin picks a kind (enum), that
  *  determines whether the guest's booking fee is refundable. Reason is
  *  optional free text for internal detail. */
 const CANCEL_KIND_OPTIONS: { value: string; label: string; hint: string }[] = [
@@ -1253,7 +1253,7 @@ const CANCEL_KIND_OPTIONS: { value: string; label: string; hint: string }[] = [
   {
     value: "CANCELLED_BY_STACEY",
     label: "Storno durch uns",
-    hint: "Überbuchung / Supply-Problem. Volle Rückzahlung — Refund-Button erscheint danach.",
+    hint: "Überbuchung / Supply-Problem. Volle Rückzahlung, Refund-Button erscheint danach.",
   },
   {
     value: "DEPOSIT_TIMEOUT",
@@ -1543,7 +1543,7 @@ function BookingDetailPanel({
             </div>
           )}
 
-          {/* Guest message — prominent if present */}
+          {/* Guest message, prominent if present */}
           {(booking.message || booking.moveInReason) && (
             <div className="bg-pink/10 border-l-4 border-l-pink rounded-[5px] p-3">
               <div className="text-[11px] uppercase tracking-wider text-gray font-semibold mb-1 flex items-center gap-1">
@@ -2031,7 +2031,7 @@ function BookingAdvancedActions({ booking }: { booking: Booking }) {
           <div className="text-sm">
             <div className="font-medium">Booking fee refund</div>
             <div className="text-xs text-gray">
-              You cancelled this booking — guest gets the €195 back via Stripe.
+              You cancelled this booking, guest gets the €195 back via Stripe.
             </div>
           </div>
           <button
@@ -2131,7 +2131,7 @@ function BookingLeadSource({ booking }: { booking: Booking }) {
         </>
       ) : (
         <div className="text-xs text-gray italic">
-          No UTM / referrer captured — probably direct or pre-UTM booking.
+          No UTM / referrer captured, probably direct or pre-UTM booking.
         </div>
       )}
 
@@ -2358,7 +2358,7 @@ function CalendarView({
   const firstWeekday = (firstOfMonth.getDay() + 6) % 7; // Mon=0
 
   // Group bookings by day-of-month of moveInDate within the current month
-  // (React Compiler memoises this automatically — no useMemo needed).
+  // (React Compiler memoises this automatically, no useMemo needed).
   const byDay = new Map<number, Booking[]>();
   for (const b of bookings) {
     if (!b.moveInDate) continue;

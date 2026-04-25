@@ -134,7 +134,7 @@ export async function POST(request: NextRequest) {
           bookingId: apaleoBooking.id,
         }).catch((err) => console.error("Email error (guest):", err));
 
-        // No team notification for SHORT stay — booking is visible in apaleo
+        // No team notification for SHORT stay, booking is visible in apaleo
 
         return apiOk({
           id: apaleoBooking.id,
@@ -252,7 +252,7 @@ export async function POST(request: NextRequest) {
       });
     });
 
-    // No team notification at booking creation — team gets notified when deposit is paid (Stripe webhook)
+    // No team notification at booking creation, team gets notified when deposit is paid (Stripe webhook)
 
     return apiOk({
       id: booking.id,

@@ -33,7 +33,7 @@ export async function sendTeamNotification(booking: TeamNotification, meta?: Met
     : "";
 
   const badgeText = booking.depositAmount ? "New confirmed move-in" : "New booking";
-  const title = booking.depositAmount ? "Deposit paid — move-in confirmed" : `New ${isShort ? "booking" : "move-in request"}`;
+  const title = booking.depositAmount ? "Deposit paid, move-in confirmed" : `New ${isShort ? "booking" : "move-in request"}`;
 
   const html = internalLayout(`
     ${badge(badgeText, "green")}
@@ -41,7 +41,7 @@ export async function sendTeamNotification(booking: TeamNotification, meta?: Met
     ${detailTable(
       detailRow("Name", `${booking.firstName} ${booking.lastName}`) +
       detailRow("Email", `<a href="mailto:${booking.email}" style="color:#1A1A1A;">${booking.email}</a>`) +
-      detailRow("Phone", booking.phone || "—") +
+      detailRow("Phone", booking.phone || ",") +
       detailRow("Location", `STACEY ${booking.locationName}`) +
       detailRow("Type", isShort ? "SHORT Stay" : "LONG Stay") +
       detailRow("Room", categoryName(booking.category)) +
@@ -57,7 +57,7 @@ export async function sendTeamNotification(booking: TeamNotification, meta?: Met
     {
       from: FROM,
       to: TEAM_EMAIL,
-      subject: `[${isShort ? "SHORT" : "LONG"}] ${booking.firstName} ${booking.lastName} — STACEY ${booking.locationName}`,
+      subject: `[${isShort ? "SHORT" : "LONG"}] ${booking.firstName} ${booking.lastName}, STACEY ${booking.locationName}`,
       html,
     },
     { templateKey: "team_notification", bookingId: booking.bookingId, ...meta }

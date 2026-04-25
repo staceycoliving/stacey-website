@@ -46,7 +46,7 @@ export async function sendInvoice(data: InvoiceEmailData, meta?: Meta) {
     {
       from: FROM,
       to: data.email,
-      subject: `Invoice — STACEY ${data.locationName}`,
+      subject: `Invoice, STACEY ${data.locationName}`,
       html,
       attachments: [
         { filename: `invoice_${data.invoiceNumber}.pdf`, content: data.invoicePdf },

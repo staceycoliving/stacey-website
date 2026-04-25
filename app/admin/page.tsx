@@ -96,7 +96,7 @@ export default async function AdminDashboardPage() {
       orderBy: { moveOut: "asc" },
     }),
 
-    // SEPA tenants approaching move-in with no mandate set up — bank-transfer
+    // SEPA tenants approaching move-in with no mandate set up, bank-transfer
     // legacy tenants don't need one, so gate on paymentMethod.
     prisma.tenant.findMany({
       where: {
@@ -118,7 +118,7 @@ export default async function AdminDashboardPage() {
       orderBy: { moveOut: "asc" },
     }),
 
-    // Bank-transfer tenants with an open rent for the current month —
+    // Bank-transfer tenants with an open rent for the current month ,
     // admin needs to tick them off after bank statement arrives.
     prisma.rentPayment.findMany({
       where: {
@@ -204,7 +204,7 @@ export default async function AdminDashboardPage() {
       orderBy: { moveIn: "asc" },
     }),
 
-    // Recent 15 audit entries — activity feed for team awareness.
+    // Recent 15 audit entries, activity feed for team awareness.
     prisma.auditLog.findMany({
       orderBy: { at: "desc" },
       take: 15,
@@ -224,7 +224,7 @@ export default async function AdminDashboardPage() {
       select: { id: true, bookingFeePaidAt: true, monthlyRent: true },
     }),
 
-    // Open defects (tenant might have moved out or still live there — the
+    // Open defects (tenant might have moved out or still live there, the
     // defect is relevant either way for the maintenance ops list).
     prisma.defect.findMany({
       include: {
@@ -246,7 +246,7 @@ export default async function AdminDashboardPage() {
       orderBy: { createdAt: "desc" },
     }),
 
-    // Booking conversion funnel — bookings created in the last 30 days
+    // Booking conversion funnel, bookings created in the last 30 days
     // (rolling window). We also fetch 30-60d back for the previous-period
     // rate comparison. Stops at Deposit paid because everything after
     // (waiting for move-in) is outside admin influence.
@@ -267,13 +267,13 @@ export default async function AdminDashboardPage() {
       },
     }),
 
-    // Team pinboard — sticky first, then newest. Limit 20 for the widget.
+    // Team pinboard, sticky first, then newest. Limit 20 for the widget.
     prisma.teamNote.findMany({
       orderBy: [{ sticky: "desc" }, { createdAt: "desc" }],
       take: 20,
     }),
 
-    // Recent sent emails — dashboard widget + quick link to /admin/emails
+    // Recent sent emails, dashboard widget + quick link to /admin/emails
     prisma.sentEmail.findMany({
       orderBy: { sentAt: "desc" },
       take: 10,
@@ -312,7 +312,7 @@ export default async function AdminDashboardPage() {
 
     // Vacancy pipeline: tenants leaving within the next 30 days. We
     // filter in code to keep only rooms WITHOUT a replacement booking in
-    // the pipeline — those are the real revenue-at-risk items. Currently
+    // the pipeline, those are the real revenue-at-risk items. Currently
     // vacant rooms (no tenant, no active booking) are derived separately
     // from roomsAll and merged into the same pipeline.
     prisma.tenant.findMany({
@@ -417,7 +417,7 @@ export default async function AdminDashboardPage() {
 
   // ─── KPIs ────────────────────────────────────────────────────────────
   // A room is "currently occupied" only if a tenant lives there AND their
-  // moveOut isn't already in the past — otherwise the room is functionally
+  // moveOut isn't already in the past, otherwise the room is functionally
   // vacant (the public booking tool also treats it as available now).
   function isCurrentlyOccupied(r: typeof roomsAll[number]): boolean {
     const tenant = r.tenants[0];
@@ -479,7 +479,7 @@ export default async function AdminDashboardPage() {
         label: `${t.firstName} ${t.lastName}`,
         room: t.room
           ? `${t.room.apartment.location.name} · ${t.room.roomNumber}`
-          : "—",
+          : ",",
         category: t.room?.category ?? "",
         monthlyRent: t.monthlyRent,
         moveOut: t.moveOut?.toISOString() ?? null,
@@ -510,7 +510,7 @@ export default async function AdminDashboardPage() {
       }
     }
     // Future booking covers this date? (bookings don't have an end date
-    // in our model — treat them as indefinitely reserved from moveInDate.)
+    // in our model, treat them as indefinitely reserved from moveInDate.)
     return r.bookings.some((b) => {
       if (!b.moveInDate) return false;
       const bIn = new Date(b.moveInDate);
@@ -639,7 +639,7 @@ export default async function AdminDashboardPage() {
   // ─── Cash this month (actual money in, not expected) ──────────
   // Rent paid where paidAt falls in current calendar month
   const cashRentThisMonth = currentMonthRents.reduce(
-    (s, r) => s + 0, // placeholder — sum computed below using paidAt separately
+    (s, r) => s + 0, // placeholder, sum computed below using paidAt separately
     0
   );
   // Use a distinct query against paidAt (can be different month than rent.month)
@@ -689,7 +689,7 @@ export default async function AdminDashboardPage() {
       bookingsLast30Days.filter((b) => b.bookingFeePaidAt).length * BOOKING_FEE_CENTS,
   };
 
-  // Conversion funnel — split the 60-day window into the current and
+  // Conversion funnel, split the 60-day window into the current and
   // previous 30-day cohorts. Current is used for the balance bars +
   // stuck-people lists; previous only supplies the comparison rate.
   const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
@@ -740,7 +740,7 @@ export default async function AdminDashboardPage() {
   }
 
   // "Stuck" = reached this stage but not the next one. The final stage
-  // (Deposit paid) is a done-state — no stuck list because the wait for
+  // (Deposit paid) is a done-state, no stuck list because the wait for
   // move-in isn't something the admin can speed up.
   const stuckStarted = current30.filter(
     (b) => !b.signatureDocumentId && !b.bookingFeePaidAt && !b.depositPaidAt
@@ -753,7 +753,7 @@ export default async function AdminDashboardPage() {
   );
 
   // Previous period "made it to Deposit paid" rate for the trend badge.
-  // That's our true north — every stage before is just a leading indicator.
+  // That's our true north, every stage before is just a leading indicator.
   const previousRate =
     previous30.length > 0
       ? previous30.filter((b) => b.depositPaidAt).length / previous30.length
@@ -797,7 +797,7 @@ export default async function AdminDashboardPage() {
     tenantName: `${d.tenant.firstName} ${d.tenant.lastName}`,
     room: d.tenant.room
       ? `${d.tenant.room.apartment.location.name} · ${d.tenant.room.roomNumber}`
-      : "—",
+      : ",",
     movedOut: d.tenant.moveOut
       ? new Date(d.tenant.moveOut).getTime() < todayStart.getTime()
       : false,
@@ -899,7 +899,7 @@ export default async function AdminDashboardPage() {
               moveOut: t.moveOut,
               room: t.room
                 ? `${t.room.apartment.location.name} · ${t.room.roomNumber}`
-                : "—",
+                : ",",
             })),
             missingSepa: missingSepa.map((t) => ({
               id: t.id,
@@ -907,7 +907,7 @@ export default async function AdminDashboardPage() {
               moveIn: t.moveIn,
               room: t.room
                 ? `${t.room.apartment.location.name} · ${t.room.roomNumber}`
-                : "—",
+                : ",",
             })),
             dunningReminder1: dunningReminder1.map((r) => ({
               id: r.id,
@@ -944,7 +944,7 @@ export default async function AdminDashboardPage() {
               depositAmount: t.depositAmount ?? 0,
               room: t.room
                 ? `${t.room.apartment.location.name} · ${t.room.roomNumber}`
-                : "—",
+                : ",",
               daysOverdue: t.moveOut
                 ? Math.floor(
                     (todayStart.getTime() - new Date(t.moveOut).getTime()) /
@@ -1002,7 +1002,7 @@ export default async function AdminDashboardPage() {
               date: t.moveIn,
               room: t.room
                 ? `${t.room.apartment.location.name} · ${t.room.roomNumber}`
-                : "—",
+                : ",",
             })),
           },
           newBookings,

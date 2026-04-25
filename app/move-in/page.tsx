@@ -173,7 +173,7 @@ function MoveInFlow() {
   //
   // IMPORTANT: skip the initial mount. On mount the state is empty
   // defaults, so writing to URL here would strip incoming query params
-  // BEFORE the hydrate effect above reads them — leaving the /move-in
+  // BEFORE the hydrate effect above reads them, leaving the /move-in
   // page on the intro hero instead of jumping to results.
   const mirrorMountedRef = useRef(false);
   useEffect(() => {
@@ -219,7 +219,7 @@ function MoveInFlow() {
 
   // Helper: get nightly price for a room.
   // Once live availability has loaded for the location, only use the live (persons-aware)
-  // price — basePrices are always fetched for 1 person and would lie for couples.
+  // price, basePrices are always fetched for 1 person and would lie for couples.
   const getNightlyPrice = (roomName: string, locSlug: string): number | null => {
     const cat = ROOM_NAME_TO_CATEGORY[roomName];
     if (!cat) return null;
@@ -367,7 +367,7 @@ function MoveInFlow() {
     setSelectedRoomId(null);
     setExpandedRoomId(null);
     setRoomCollapsed(false);
-    // SHORT needs dates first — flag to auto-open calendar in compact filter
+    // SHORT needs dates first, flag to auto-open calendar in compact filter
     if (type === "SHORT") setFilterCalendarOpen(true);
   };
 
@@ -448,7 +448,7 @@ function MoveInFlow() {
   // ─── Submit / Next ───
   const handleSubmit = async () => {
     if (!isAboutComplete) return;
-    // Non-refundable acknowledgment is required on both flows — button is
+    // Non-refundable acknowledgment is required on both flows, button is
     // also disabled without it, this is a defensive second gate.
     if (!termsAccepted) return;
 
@@ -477,7 +477,7 @@ function MoveInFlow() {
             country,
             moveInReason,
             message,
-            // Lead-source tracking — captured on page load from URL + referrer
+            // Lead-source tracking, captured on page load from URL + referrer
             leadSource: leadSourceRef.current.source,
             leadMedium: leadSourceRef.current.medium,
             leadCampaign: leadSourceRef.current.campaign,
@@ -694,7 +694,7 @@ function MoveInFlow() {
                       <p className="text-sm font-bold">{selectedLocation.name} · {selectedRoom.name}</p>
                       <p className="mt-0.5 text-xs text-gray">
                         {persons} {persons === 1 ? "person" : "persons"} ·{" "}
-                        {moveInDate ? `from ${formatDate(moveInDate)}` : checkIn && checkOut ? `${formatDate(checkIn)} — ${formatDate(checkOut)}` : ""}
+                        {moveInDate ? `from ${formatDate(moveInDate)}` : checkIn && checkOut ? `${formatDate(checkIn)}, ${formatDate(checkOut)}` : ""}
                       </p>
                     </div>
                   </div>
@@ -771,7 +771,7 @@ function MoveInFlow() {
       <Navbar transparent={!showResults} />
 
       <main className="min-h-screen bg-white">
-        {/* ── INTRO — hero image background, like homepage ──
+        {/* ── INTRO, hero image background, like homepage ──
              Natural top-down flow (no justify-center). When the form
              expands (LONG + grouped date pills) the content grows
              downward from the top instead of pushing the headline off
@@ -898,7 +898,7 @@ function MoveInFlow() {
                   <p className="mt-2 text-sm text-gray">{searchSummary}</p>
                 </div>
 
-                {/* Sort chips — only if there are results */}
+                {/* Sort chips, only if there are results */}
                 {totalRooms > 0 && (
                   <div className="flex items-center gap-2 overflow-x-auto">
                     <span className="text-[10px] font-bold uppercase tracking-widest text-gray">
@@ -1021,7 +1021,7 @@ function MoveInFlow() {
                                     )}
                                     {room.forCouples && (
                                       <span className="inline-flex items-center gap-1 rounded-[5px] bg-[#F5F5F5] px-2 py-1 text-[11px] font-semibold text-gray">
-                                        <Users size={12} /> 1–2 people
+                                        <Users size={12} /> 1-2 people
                                       </span>
                                     )}
                                     {room.name.toLowerCase().includes("balcony") && (
@@ -1035,7 +1035,7 @@ function MoveInFlow() {
                                     {room.description}
                                   </p>
 
-                                  {/* Book CTA — always visible, pinned to card bottom */}
+                                  {/* Book CTA, always visible, pinned to card bottom */}
                                   <button
                                     onClick={() => handleRoomSelect(room.id)}
                                     disabled={loadingAvailability}
@@ -1067,7 +1067,7 @@ function MoveInFlow() {
                 </div>
               )}
 
-              {/* Empty state — prominent, action-oriented */}
+              {/* Empty state, prominent, action-oriented */}
               {!loadingAvailability && totalRooms === 0 && (
                 <div className="mt-10 rounded-[5px] bg-white p-8 text-center shadow-sm sm:p-12">
                   <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-pink/20 text-black">
@@ -1078,7 +1078,7 @@ function MoveInFlow() {
                   </h3>
                   <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-gray">
                     Your chosen combination is unusually specific. Try a nearby move-in date or
-                    a different city — coliving availability changes weekly.
+                    a different city, coliving availability changes weekly.
                   </p>
                   <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
                     <button
@@ -1178,7 +1178,7 @@ function MoveInFlow() {
                           <p className="text-lg font-bold">{selectedLocation.name} · {selectedRoom.name}</p>
                           <p className="mt-1 text-sm text-white/60">
                             {persons} {persons === 1 ? "person" : "persons"} ·{" "}
-                            {moveInDate ? `from ${formatDate(moveInDate)}` : checkIn && checkOut ? `${formatDate(checkIn)} — ${formatDate(checkOut)} · ${nightCount} nights` : ""}
+                            {moveInDate ? `from ${formatDate(moveInDate)}` : checkIn && checkOut ? `${formatDate(checkIn)}, ${formatDate(checkOut)} · ${nightCount} nights` : ""}
                           </p>
                           {selectedRoom.sizeSqm && <p className="mt-0.5 text-sm text-white/40">{selectedRoom.sizeSqm} m²</p>}
                         </div>
@@ -1250,32 +1250,32 @@ function MoveInFlow() {
                                   </div>
                                   <p className="text-base font-bold text-pink">€195</p>
                                 </div>
-                                {/* Explicit non-refundable terms — users need to see this
+                                {/* Explicit non-refundable terms, users need to see this
                                     before hitting the payment button so there are no
                                     surprises if the deposit isn't paid in time or they
                                     move in and expect a credit. */}
                                 <p className="mt-3 text-[11px] leading-relaxed text-white/50">
                                   The €195 booking fee is charged today to secure your
-                                  room and is <strong className="text-white/80">non-refundable</strong> — including
+                                  room and is <strong className="text-white/80">non-refundable</strong>, including
                                   if the €{rent * 2} deposit isn&apos;t paid within 48h and the
                                   reservation expires, or once you&apos;ve moved in.
                                   It is not credited against your rent.
                                 </p>
                                 <p className="mt-2 text-[11px] text-white/40">
-                                  Deposit (€{rent * 2}) comes next — separate payment link within 48h.
+                                  Deposit (€{rent * 2}) comes next, separate payment link within 48h.
                                 </p>
                               </>
                             );
                           })()}
                         </div>
 
-                        {/* Required acknowledgment — different checkbox copy
+                        {/* Required acknowledgment, different checkbox copy
                             per stay type:
                             • SHORT: T&C + Privacy Policy (consumer booking,
                               no individual contract beyond the booking).
                             • LONG: Non-refundable booking fee (the lease
                               itself covers T&C / privacy, so no need to
-                              duplicate — but the €195 fee is outside the
+                              duplicate, but the €195 fee is outside the
                               lease and needs its own explicit ack). */}
                         <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-[5px] border border-white/10 p-4 transition-colors hover:border-white/20">
                           <input

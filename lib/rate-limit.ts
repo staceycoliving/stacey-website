@@ -3,13 +3,13 @@
 //
 // Each route picks one of the named limiters below based on its risk profile:
 //
-//   - bookingLimiter   for /api/booking, /api/checkout/* — anything that
+//   - bookingLimiter   for /api/booking, /api/checkout/*, anything that
 //                      hits Stripe or apaleo and could cost real money or
 //                      trigger spam to the team. Tight limit.
-//   - readLimiter      for /api/availability — high-volume reads, looser.
-//   - leaseLimiter     for /api/lease — generates a docx + creates a Yousign
+//   - readLimiter      for /api/availability, high-volume reads, looser.
+//   - leaseLimiter     for /api/lease, generates a docx + creates a Yousign
 //                      signing session. Tight.
-//   - adminAuthLimiter for /api/admin/auth — brute-force password protection.
+//   - adminAuthLimiter for /api/admin/auth, brute-force password protection.
 //                      Very tight, per-IP.
 //
 // We accept both naming conventions:
@@ -82,7 +82,7 @@ function getClientId(req: NextRequest): string {
 
 /**
  * Run a rate-limit check. If the limiter is null (no Redis configured),
- * the request is always allowed — but we still return a "result" so callers
+ * the request is always allowed, but we still return a "result" so callers
  * don't have to special-case it.
  */
 export async function checkRateLimit(

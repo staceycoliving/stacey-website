@@ -56,7 +56,7 @@ const MODULE_COLORS: Record<string, string> = {
   email: "bg-indigo-100 text-indigo-800",
 };
 
-// Action patterns that indicate destructive operations — highlighted in red.
+// Action patterns that indicate destructive operations, highlighted in red.
 const DESTRUCTIVE_PATTERNS = [
   /delete/i,
   /remove/i,
@@ -162,7 +162,7 @@ function entityLabel(
   entityId: string | null,
   ref: EntityRef | undefined
 ): string {
-  if (!entityType || !entityId) return "—";
+  if (!entityType || !entityId) return ",";
   if (ref) return ref.label;
   // Fallback: short id
   return `${entityType}/${entityId.slice(-8)}`;
@@ -215,7 +215,7 @@ export default function AuditPage({
     [filters, router]
   );
 
-  // Debounce search input — push to URL after user stops typing
+  // Debounce search input, push to URL after user stops typing
   useEffect(() => {
     if (search === filters.search) return;
     const t = setTimeout(() => {
@@ -253,7 +253,7 @@ export default function AuditPage({
     navigate({ cursor: pagination.cursor + pagination.pageSize });
   }
 
-  // Export URL (inherits current filters, NO cursor — full filtered set up to 5000)
+  // Export URL (inherits current filters, NO cursor, full filtered set up to 5000)
   function exportUrl() {
     const p = new URLSearchParams();
     for (const key of [
@@ -685,14 +685,14 @@ function EventRow({
               {e.path ? (
                 <code className="font-mono">{e.path}</code>
               ) : (
-                <span className="text-gray">—</span>
+                <span className="text-gray">,</span>
               )}
             </Detail>
             <Detail label="IP">
               {e.ip ? (
                 <code className="font-mono">{e.ip}</code>
               ) : (
-                <span className="text-gray">—</span>
+                <span className="text-gray">,</span>
               )}
             </Detail>
           </div>
@@ -783,7 +783,7 @@ function MetadataValue({
   value: unknown;
 }) {
   if (value === null || value === undefined) {
-    return <span className="text-gray">—</span>;
+    return <span className="text-gray">,</span>;
   }
   // Heuristics: format known keys prettily
   if (typeof value === "number") {
@@ -826,7 +826,7 @@ function MetadataValue({
         );
       }
     }
-    // Long ID-ish — truncate
+    // Long ID-ish, truncate
     if (value.length > 40) {
       return (
         <code

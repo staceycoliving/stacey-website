@@ -1,8 +1,8 @@
 // Thin wrapper around @sentry/nextjs so the rest of the codebase doesn't have
 // to import Sentry directly. Two helpers:
 //
-//   logEvent(scope, msg, ctx)   — info-level structured log + Sentry breadcrumb
-//   reportError(err, ctx)        — captures the exception with full context
+//   logEvent(scope, msg, ctx)  , info-level structured log + Sentry breadcrumb
+//   reportError(err, ctx)       , captures the exception with full context
 //
 // Both write structured JSON to console (Vercel-friendly, grep-able) and
 // never throw out of error-handling paths.
@@ -68,7 +68,7 @@ export function logEvent(ctx: LogContext, msg: string) {
 }
 
 /**
- * Warn-level log + Sentry breadcrumb. Use for "expected weirdness" —
+ * Warn-level log + Sentry breadcrumb. Use for "expected weirdness" ,
  * something a normal user might cause that we don't want to alert on
  * but want to be able to find later (e.g. webhook for unknown booking).
  */

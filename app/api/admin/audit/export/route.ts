@@ -8,7 +8,7 @@ import type { Prisma } from "@/lib/generated/prisma/client";
  *   ?module&action&entityType&entityId&search&from&to
  *
  * CSV of all matching audit events. Caps at 5000 rows to avoid runaway
- * exports — narrow the filter if you need more.
+ * exports, narrow the filter if you need more.
  */
 function csvEscape(v: string | null | undefined): string {
   const s = v ?? "";

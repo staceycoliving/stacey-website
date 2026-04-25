@@ -9,11 +9,11 @@ import { ensureRentPayment, chargeRentPayment } from "@/lib/rent-charge";
  *
  * We always create RentPayment records for every active tenant (regardless
  * of payment method) so the rent roll is complete. Stripe charge is
- * attempted only for SEPA tenants with a valid mandate — BANK_TRANSFER
+ * attempted only for SEPA tenants with a valid mandate, BANK_TRANSFER
  * tenants are skipped and marked "bank-transfer" for the admin to tick off
  * manually once the money lands.
  *
- * Charge timing: we still respect the move-in-day rule — `chargeRentPayment`
+ * Charge timing: we still respect the move-in-day rule, `chargeRentPayment`
  * skips with "skipped_too_early" if today is before the tenant's move-in.
  */
 export async function POST() {
@@ -63,7 +63,7 @@ export async function POST() {
       continue;
     }
     if (rent.status !== "PENDING") {
-      // Already PROCESSING / PAID / FAILED — leave alone
+      // Already PROCESSING / PAID / FAILED, leave alone
       skipped++;
       continue;
     }

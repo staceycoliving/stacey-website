@@ -38,7 +38,7 @@ export default async function TenantFolioRoute({
 
   if (!tenant) notFound();
 
-  // Email history for this tenant — three sources:
+  // Email history for this tenant, three sources:
   //   1. entityType=tenant, entityId=this.id      (post-tenant emails)
   //   2. entityType=booking, entityId=bookingId   (pre-tenant/booking phase)
   //   3. recipient=tenant.email                    (fallback for legacy logs)
@@ -58,7 +58,7 @@ export default async function TenantFolioRoute({
       take: 50,
     }),
 
-    // Audit events for this tenant — entityType=tenant OR entityId matching
+    // Audit events for this tenant, entityType=tenant OR entityId matching
     // any of this tenant's child records.
     (async () => {
       const [rpIds, ecIds, dIds, nIds] = await Promise.all([
@@ -97,7 +97,7 @@ export default async function TenantFolioRoute({
     })(),
 
     // Related tenants: same current room (room-mate) OR same apartment
-    // history (alumni) — excluding self and archived.
+    // history (alumni), excluding self and archived.
     tenant.roomId
       ? prisma.tenant.findMany({
           where: {

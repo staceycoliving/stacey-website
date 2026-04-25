@@ -8,10 +8,10 @@ import { audit } from "@/lib/audit";
  * PATCH /api/admin/deposits
  *
  * Actions:
- *  - set_iban           — store IBAN for refund transfer
- *  - calculate_refund   — recompute deposit + overpayment – defects – open rent – open extras
- *  - send_settlement    — send settlement email (does NOT mark as transferred)
- *  - mark_transferred   — set depositStatus = RETURNED + depositReturnedAt
+ *  - set_iban          , store IBAN for refund transfer
+ *  - calculate_refund  , recompute deposit + overpayment to defects to open rent to open extras
+ *  - send_settlement   , send settlement email (does NOT mark as transferred)
+ *  - mark_transferred  , set depositStatus = RETURNED + depositReturnedAt
  *
  * Overpayment: aggregated across all PAID rent payments where paidAmount > amount.
  * Source is the moveOut reconcile that lowers RentPayment.amount (e.g. tenant
@@ -54,7 +54,7 @@ export async function PATCH(request: NextRequest) {
     return Response.json({ id: updated.id, depositRefundIban: updated.depositRefundIban });
   }
 
-  // Aggregate the same totals for both calculate_refund and send_settlement —
+  // Aggregate the same totals for both calculate_refund and send_settlement ,
   // refund = max(0, deposit + overpayment + discounts − defects − arrears − charges).
   // Adjustments with chargeOn=NEXT_RENT are ignored here (they flow through
   // the monthly SEPA instead); only DEPOSIT_SETTLEMENT entries count.

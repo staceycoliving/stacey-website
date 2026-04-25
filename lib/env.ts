@@ -70,7 +70,7 @@ const serverSchema = z.object({
 const clientSchema = z.object({
   NEXT_PUBLIC_BASE_URL: z.string().url(),
 
-  // Consent + tracking — all optional. If NEXT_PUBLIC_COOKIEBOT_CBID is not
+  // Consent + tracking, all optional. If NEXT_PUBLIC_COOKIEBOT_CBID is not
   // set, GA4 and Google Ads will NOT load (safeguard against accidental
   // tracking without consent management in place).
   NEXT_PUBLIC_COOKIEBOT_CBID: z.string().optional().default(""),

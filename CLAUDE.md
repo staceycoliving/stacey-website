@@ -2,7 +2,19 @@
 
 # STACEY Coliving Website
 
-Neuaufbau von stacey.de — modernes Coliving-Website mit Next.js.
+Neuaufbau von stacey.de, modernes Coliving-Website mit Next.js.
+
+## Schreibregel: keine Gedankenstriche
+
+NIEMALS Em-Dash (—) oder En-Dash (–) in Copy, Headlines, Subheads, Code-Comments, Commit-Messages oder UI-Text verwenden. Auch keine spaced hyphens als Gedankenstrich-Ersatz (" - "). Em-Dashes sind ein typisches KI-Signal und sollen vom STACEY-Content komplett verbannt werden.
+
+Stattdessen: Komma, Punkt, Doppelpunkt, oder Satz umstellen. Beispiele:
+- Statt: "Hover a marker, scroll the list — click any home to check availability."
+- Schreib: "Hover a marker, scroll the list. Click any home to check availability."
+- Statt: "Six homes — all in Hamburg."
+- Schreib: "Six homes, all in Hamburg." oder "Six homes. All in Hamburg."
+
+Gilt für ALLE Texte: User-facing, Comments, Commit-Messages.
 
 ## 🚨 Development & Deployment Workflow (WICHTIG — immer einhalten)
 

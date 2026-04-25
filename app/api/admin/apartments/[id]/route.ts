@@ -40,7 +40,7 @@ export async function DELETE(
   const roomCount = await prisma.room.count({ where: { apartmentId: id } });
   if (roomCount > 0) {
     return Response.json(
-      { error: `Apartment has ${roomCount} room(s) — delete those first.` },
+      { error: `Apartment has ${roomCount} room(s), delete those first.` },
       { status: 409 }
     );
   }

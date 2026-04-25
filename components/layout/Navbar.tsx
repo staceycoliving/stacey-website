@@ -37,7 +37,7 @@ export default function Navbar({
   const [logoHover, setLogoHover] = useState(false);
   const [megaOpen, setMegaOpen] = useState<string | null>(null);
   const [basePrices, setBasePrices] = useState<Record<string, Record<string, number>>>({});
-  // Live "just booked" feed — last 24h of committed bookings, used by
+  // Live "just booked" feed, last 24h of committed bookings, used by
   // the rotating activity badge inside the pill. Empty array (no
   // bookings or fetch failure) drops the badge into a heritage fallback.
   const [recentBookings, setRecentBookings] = useState<
@@ -48,7 +48,7 @@ export default function Navbar({
   // Hero-immersive on transparent pages until the user scrolls; then
   // pill chrome materialises. Non-transparent pages (everything off the
   // homepage) start in the chromed state immediately. Opening the
-  // mobile drawer also forces chrome — otherwise the transparent pill
+  // mobile drawer also forces chrome, otherwise the transparent pill
   // would sit over the white drawer body with white hamburger lines
   // invisibly.
   const chromed = mobileOpen || drawerVisible || !transparent || scrolled;
@@ -71,7 +71,7 @@ export default function Navbar({
   }, []);
 
   // Recent booking feed. /api/recent-bookings returns [] on failure, so
-  // a single shape covers both success-empty and error states — the
+  // a single shape covers both success-empty and error states, the
   // badge falls through to the heritage line cleanly.
   useEffect(() => {
     fetch("/api/recent-bookings")
@@ -132,7 +132,7 @@ export default function Navbar({
                 : "max-w-7xl bg-transparent shadow-none ring-0",
             )}
           >
-            {/* Logo — smart link (scroll to top on /, navigate elsewhere) */}
+            {/* Logo, smart link (scroll to top on /, navigate elsewhere) */}
             <Link
               href="/"
               onClick={(e) => {
@@ -232,10 +232,10 @@ export default function Navbar({
               ))}
             </div>
 
-            {/* Activity badge — rotating "Just booked · {location} · {ago}"
+            {/* Activity badge, rotating "Just booked · {location} · {ago}"
                 from the last 24h of real bookings. Heritage line is the
                 fallback when the feed is quiet (or the endpoint failed).
-                Only on chromed state — would clash with the transparent
+                Only on chromed state, would clash with the transparent
                 hero look. */}
             {chromed && (
               <span className="hidden items-center gap-1.5 rounded-[4px] bg-white/10 px-2.5 py-1.5 text-[11px] font-semibold text-white ring-1 ring-white/15 lg:inline-flex">
@@ -265,7 +265,7 @@ export default function Navbar({
               </span>
             )}
 
-            {/* CTA — pink, with arrow translate on hover */}
+            {/* CTA, pink, with arrow translate on hover */}
             {locationName ? (
               <button
                 onClick={() =>
@@ -294,7 +294,7 @@ export default function Navbar({
           </div>
         </div>
 
-        {/* Mobile bar — pill morph matching desktop. Wrapper is fixed
+        {/* Mobile bar, pill morph matching desktop. Wrapper is fixed
             h-14 so the drawer's top-14 anchor stays aligned. Inside, an
             h-10 inner pill picks up dark-glass chrome when chromed,
             stays transparent over the hero. CTA appears once chromed
@@ -367,7 +367,7 @@ export default function Navbar({
         </div>
       </nav>
 
-      {/* Mobile drawer — slides in from the right, anchored just below
+      {/* Mobile drawer, slides in from the right, anchored just below
           the slim mobile bar (h-14 = 56px). Dark-glass body matches the
           desktop mega menu so the brand stays consistent across
           breakpoints. */}
@@ -469,7 +469,7 @@ export default function Navbar({
         </div>
       </div>
 
-      {/* Mobile drawer bottom-fixed CTA — pink to pop against the
+      {/* Mobile drawer bottom-fixed CTA, pink to pop against the
           dark-glass drawer body. */}
       <div
         className={clsx(

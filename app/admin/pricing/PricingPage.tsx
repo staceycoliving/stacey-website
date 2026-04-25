@@ -153,7 +153,7 @@ export default function PricingPage({ locations }: { locations: LocationRow[] })
           <p className="text-sm text-gray mt-1">
             Preise gelten ab sofort für alle <strong>neuen</strong> Buchungen
             dieser Kategorie an der Location. Bestehende Mieter behalten den
-            beim Vertragsabschluss vereinbarten Preis — ihre laufende Miete
+            beim Vertragsabschluss vereinbarten Preis, ihre laufende Miete
             ist davon nicht betroffen.
           </p>
         </div>
@@ -283,7 +283,7 @@ function CityGroup({
                     saveSignal={saveSignal}
                   />
                 ) : (
-                  <div className="text-xs text-lightgray px-1 py-2">—</div>
+                  <div className="text-xs text-lightgray px-1 py-2">,</div>
                 )}
               </td>
             );
@@ -404,7 +404,7 @@ function CategoryCellEditor({
   useEffect(() => {
     if (saveSignal === 0) return; // initial
     if (dirty && valid) void saveInner(true);
-    // intentionally not depending on dirty/valid — only react to saveSignal
+    // intentionally not depending on dirty/valid, only react to saveSignal
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [saveSignal]);
 

@@ -35,7 +35,7 @@ type Result = {
 };
 
 /**
- * useAvailability — owns all availability/pricing fetches for the move-in flow.
+ * useAvailability, owns all availability/pricing fetches for the move-in flow.
  *
  * - basePrices: fetched once on mount (always 1-person; used as fallback before
  *   live data lands).

@@ -6,7 +6,7 @@
 //   - app/locations/[slug]/page.tsx (location detail page filter + dropdown)
 //   - app/move-in/page.tsx          (move-in page filter + dropdown)
 //
-// LONG stay rule: rooms freeing within 14 days of today are flexible — the
+// LONG stay rule: rooms freeing within 14 days of today are flexible, the
 // user can move in on any day from `earliest` to today+14. Rooms freeing
 // later can only be booked on the exact freeing date (Auszugstag+1).
 

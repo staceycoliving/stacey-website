@@ -5,7 +5,7 @@ import { prisma } from "@/lib/db";
  * GET /api/bookings/[id]/unsubscribe-retargeting
  *
  * Public endpoint hit when a guest clicks the unsubscribe link in a
- * retargeting email. Flips retargetingEligible=false. No auth — the
+ * retargeting email. Flips retargetingEligible=false. No auth, the
  * booking ID is the unguessable token. Returns a plain HTML page.
  */
 export async function GET(
@@ -62,7 +62,7 @@ function renderPage(message: string, success: boolean): string {
 </head>
 <body>
   <div class="card">
-    <div class="icon">${success ? "✓" : "—"}</div>
+    <div class="icon">${success ? "✓" : ","}</div>
     <h1>${success ? "Abgemeldet" : "Ups"}</h1>
     <p>${message}</p>
     <p style="margin-top:20px;font-size:13px;color:#888;">

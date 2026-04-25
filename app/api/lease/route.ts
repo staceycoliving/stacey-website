@@ -53,7 +53,7 @@ async function fillDocxTemplate(
 
     let xml = await file.async("string");
 
-    // Replace placeholders — handle cases where {placeholder} might be split
+    // Replace placeholders, handle cases where {placeholder} might be split
     // across multiple XML runs (e.g. <w:t>{</w:t><w:t>tenantName</w:t><w:t>}</w:t>)
     // First: try simple replacement
     for (const [key, value] of Object.entries(replacements)) {
@@ -67,7 +67,7 @@ async function fillDocxTemplate(
       xml = xml.split(placeholder).join(safeValue);
     }
 
-    // Second pass: handle split runs — rebuild <w:t> texts within each <w:r> parent,
+    // Second pass: handle split runs, rebuild <w:t> texts within each <w:r> parent,
     // find placeholders that span across <w:t> tags
     for (const [key, value] of Object.entries(replacements)) {
       const placeholder = `{${key}}`;

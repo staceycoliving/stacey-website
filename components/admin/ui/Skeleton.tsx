@@ -69,7 +69,7 @@ export function SkeletonCard({
   );
 }
 
-/** KPI-grid skeleton — 4 boxes with title + value + subtitle. */
+/** KPI-grid skeleton, 4 boxes with title + value + subtitle. */
 export function SkeletonKpiGrid({ count = 4 }: { count?: number }) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

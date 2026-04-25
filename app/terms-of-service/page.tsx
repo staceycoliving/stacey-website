@@ -6,7 +6,7 @@ import { termsOfService } from "@/lib/legal-content";
 export const metadata: Metadata = {
   title: "Terms of Service",
   description:
-    "Terms of service for short-stay bookings at STACEY Coliving — accommodation contracts with Stacey Real Estate GmbH.",
+    "Terms of service for short-stay bookings at STACEY Coliving, accommodation contracts with Stacey Real Estate GmbH.",
   alternates: { canonical: "/terms-of-service" },
 };
 

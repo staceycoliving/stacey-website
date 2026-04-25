@@ -36,7 +36,7 @@ export async function POST(
       { status: 409 }
     );
   }
-  // Bank-transfer tenants can't be auto-retried — admin marks them paid
+  // Bank-transfer tenants can't be auto-retried, admin marks them paid
   // after seeing the bank statement.
   if (rent.tenant.paymentMethod === "BANK_TRANSFER") {
     return Response.json(
@@ -44,7 +44,7 @@ export async function POST(
         ok: false,
         result: "skipped_bank_transfer",
         message:
-          "Mieter zahlt per Überweisung — nach Zahlungseingang manuell auf Paid setzen.",
+          "Mieter zahlt per Überweisung, nach Zahlungseingang manuell auf Paid setzen.",
       },
       { status: 400 }
     );
@@ -66,7 +66,7 @@ export async function POST(
 
   const message =
     result === "charged"
-      ? `Retry ausgelöst — Stripe PaymentIntent erstellt (${rent.tenant.firstName} ${rent.tenant.lastName}).`
+      ? `Retry ausgelöst, Stripe PaymentIntent erstellt (${rent.tenant.firstName} ${rent.tenant.lastName}).`
       : result === "skipped_no_sepa"
         ? "Skipped: Mieter hat keine Zahlungsmethode hinterlegt."
         : result === "skipped_too_early"

@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
           return Response.json(
             {
               error:
-                "No deposit payment link on this booking — booking fee likely not paid yet",
+                "No deposit payment link on this booking, booking fee likely not paid yet",
             },
             { status: 400 }
           );

@@ -34,7 +34,7 @@ export default async function AdminFinancePage() {
       orderBy: [{ month: "desc" }, { tenant: { lastName: "asc" } }],
     }),
 
-    // Tenants with deposit currently held — for Deposits tab.
+    // Tenants with deposit currently held, for Deposits tab.
     prisma.tenant.findMany({
       where: { depositStatus: "RECEIVED" },
       include: {
@@ -42,7 +42,7 @@ export default async function AdminFinancePage() {
       },
     }),
 
-    // All currently-active tenants (overlapping with today) — used for
+    // All currently-active tenants (overlapping with today), used for
     // "Next-month forecast" MRR.
     prisma.tenant.findMany({
       where: {
@@ -98,7 +98,7 @@ export default async function AdminFinancePage() {
       orderBy: { createdAt: "desc" },
     }),
 
-    // NEXT_RENT adjustments bundled into a rent PaymentIntent — for
+    // NEXT_RENT adjustments bundled into a rent PaymentIntent, for
     // per-row base/adj split in Rent Roll. We only need the rent PI IDs
     // of the 12-month window, so we can match them in-memory.
     prisma.extraCharge.findMany({

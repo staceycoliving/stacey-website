@@ -104,17 +104,17 @@ export async function PATCH(
   }
   if (booking.status === "CANCELLED") {
     return Response.json(
-      { error: "Booking is cancelled — can't reassign" },
+      { error: "Booking is cancelled, can't reassign" },
       { status: 400 }
     );
   }
-  // If already a Tenant (post-move-in), refuse — use tenant transfer flow instead
+  // If already a Tenant (post-move-in), refuse, use tenant transfer flow instead
   const tenant = await prisma.tenant.findUnique({ where: { bookingId: id } });
   if (tenant) {
     return Response.json(
       {
         error:
-          "Tenant already exists for this booking — use Room Transfer in the folio instead",
+          "Tenant already exists for this booking, use Room Transfer in the folio instead",
       },
       { status: 400 }
     );
@@ -155,7 +155,7 @@ export async function PATCH(
     entityType: "booking",
     entityId: id,
     summary: `Reassigned room for ${booking.firstName} ${booking.lastName}: ${
-      booking.roomId ? `#${booking.roomId.slice(-6)}` : "—"
+      booking.roomId ? `#${booking.roomId.slice(-6)}` : ","
     } → #${newRoom.roomNumber}${adjustRent ? " (rent adjusted)" : " (rent kept)"}`,
     metadata: {
       oldRoomId: booking.roomId,

@@ -30,7 +30,7 @@ type Result = {
 };
 
 /**
- * useRoomPricing — derives SHORT-stay pricing for the currently selected
+ * useRoomPricing, derives SHORT-stay pricing for the currently selected
  * room from the shared `availability` map.
  *
  * Single source of truth: useAvailability already fetches /api/availability
@@ -62,7 +62,7 @@ export function useRoomPricing({
     const cat = ROOM_NAME_TO_CATEGORY[roomName];
     if (!cat) return;
 
-    // Availability hasn't landed for this location yet — show a skeleton
+    // Availability hasn't landed for this location yet, show a skeleton
     // while useAvailability's background fetch is still in flight.
     const locEntry = availability[locSlug];
     if (!locEntry) {

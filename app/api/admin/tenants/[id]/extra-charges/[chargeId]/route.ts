@@ -21,12 +21,12 @@ export async function PATCH(
     return Response.json({ error: "Charge not found" }, { status: 404 });
   }
   // Items already bundled into a Stripe PaymentIntent with the monthly
-  // rent can't be toggled manually — their paidAt is part of the Stripe
+  // rent can't be toggled manually, their paidAt is part of the Stripe
   // ledger. Admin can still delete (for audit cleanup) but can't simply
   // flip the status.
   if (existing.stripePaymentIntentId) {
     return Response.json(
-      { error: "Bereits mit Miete via Stripe verrechnet — Status nicht manuell änderbar" },
+      { error: "Bereits mit Miete via Stripe verrechnet, Status nicht manuell änderbar" },
       { status: 409 }
     );
   }

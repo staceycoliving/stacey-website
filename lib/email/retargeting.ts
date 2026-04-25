@@ -41,7 +41,7 @@ export async function sendRetargetingNudge(
   const isFirstNudge = data.daysSinceBooking <= 10;
 
   const intro = isFirstNudge
-    ? `Vor ein paar Tagen hast du eine Anfrage bei uns gestartet für ein Zimmer in STACEY ${data.locationName}. Wir haben noch nichts von dir gehört — läuft alles?`
+    ? `Vor ein paar Tagen hast du eine Anfrage bei uns gestartet für ein Zimmer in STACEY ${data.locationName}. Wir haben noch nichts von dir gehört, läuft alles?`
     : `Falls du noch überlegst: dein Zimmer in STACEY ${data.locationName} ist weiterhin reserviert für dich.`;
 
   const html = layout(`

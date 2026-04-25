@@ -14,7 +14,7 @@ const STAGE_FIELD: Record<string, "reminder1SentAt" | "mahnung1SentAt" | "mahnun
  * Body: { stage: "reminder1" | "mahnung1" | "mahnung2" }
  *
  * Marks the given dunning stage as sent on the RentPayment. Does NOT
- * dispatch an email — the admin is expected to handle the outbound
+ * dispatch an email, the admin is expected to handle the outbound
  * communication manually (email/letter). This endpoint only records
  * that the step has been taken so the action item disappears from the
  * dashboard.

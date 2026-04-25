@@ -29,10 +29,10 @@ export async function POST(req: Request) {
   const rows = [
     ["Name", d.name],
     ["Email", d.email],
-    ["Company", d.company || "—"],
-    ["Phone", d.phone || "—"],
-    ["Property city", d.propertyCity || "—"],
-    ["Property size", d.propertySize || "—"],
+    ["Company", d.company || ","],
+    ["Phone", d.phone || ","],
+    ["Property city", d.propertyCity || ","],
+    ["Property size", d.propertySize || ","],
   ]
     .map(
       ([k, v]) =>
@@ -70,7 +70,7 @@ export async function POST(req: Request) {
       from: "STACEY Partners <booking@stacey.de>",
       to: PARTNER_EMAIL,
       replyTo: d.email,
-      subject: `Partners inquiry — ${d.name}${d.company ? ` (${d.company})` : ""}`,
+      subject: `Partners inquiry, ${d.name}${d.company ? ` (${d.company})` : ""}`,
       html,
       text,
     });

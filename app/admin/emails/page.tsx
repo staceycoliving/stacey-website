@@ -19,7 +19,7 @@ export default async function AdminEmailsPage() {
     }),
   ]);
 
-  // Resolve tenant name for each recipient — by linked entityId first,
+  // Resolve tenant name for each recipient, by linked entityId first,
   // then by matching email address (fallback for older logs without
   // tenant linkage).
   const tenantById = new Map(tenants.map((t) => [t.id, t]));

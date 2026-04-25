@@ -32,7 +32,7 @@ import { audit } from "@/lib/audit";
  *   Refunds are issued per Stripe PaymentIntent (deposit first, then PAID
  *   rents oldest-first) until refundTotal is satisfied.
  *
- *   Booking Fee €195 is NOT refunded — contractually non-refundable.
+ *   Booking Fee €195 is NOT refunded, contractually non-refundable.
  *   Booking → CANCELLED with cancellationReason + cancellationDate +
  *   proRataRentRetained + depositRefundedAmount snapshotted so accounting
  *   survives the tenant delete.
@@ -53,7 +53,7 @@ export async function POST(
   const body = await request.json().catch(() => ({}));
   const confirmExpired = body?.confirmExpired === true;
 
-  // Cancellation date — when the Widerruf actually arrived in our inbox.
+  // Cancellation date, when the Widerruf actually arrived in our inbox.
   // Default to today, normalize to start-of-day.
   const cancellationDate = body?.cancellationDate
     ? new Date(body.cancellationDate)
@@ -75,7 +75,7 @@ export async function POST(
   if (!tenant) return Response.json({ error: "Tenant not found" }, { status: 404 });
   if (!tenant.booking) {
     return Response.json(
-      { error: "Tenant has no linked booking — cannot withdraw" },
+      { error: "Tenant has no linked booking, cannot withdraw" },
       { status: 400 }
     );
   }
@@ -101,7 +101,7 @@ export async function POST(
   }
 
   // ─── Pro-rata rent calculation ───────────────────────────────
-  // Days inclusive on both ends — move-in day AND cancellation day count
+  // Days inclusive on both ends, move-in day AND cancellation day count
   // as full rent days (matches monthly-rent cron's startDay/endDay logic).
   // Use actual days of the move-in month; cross-month edge cases at 14d
   // window are rare enough to ignore for now.
@@ -138,7 +138,7 @@ export async function POST(
   const totalCollectedCents = depositPaid + paidRentsCents;
   const refundTotalCents = Math.max(0, totalCollectedCents - proRataRentCents);
 
-  // ─── Stripe refunds — distribute across PaymentIntents ──────
+  // ─── Stripe refunds, distribute across PaymentIntents ──────
   // Order: deposit first, then paid rents oldest-first. Each PI gets a
   // partial or full refund until refundTotalCents is satisfied.
   const refundsExecuted: { paymentIntentId: string; refundId: string; amount: number; source: string }[] = [];
@@ -250,7 +250,7 @@ export async function POST(
       },
     });
 
-    // Tenant has FK cascade on rentPayments / extraCharges / etc. — delete cleanly.
+    // Tenant has FK cascade on rentPayments / extraCharges / etc., delete cleanly.
     await tx.tenant.delete({ where: { id } });
   });
 
@@ -276,7 +276,7 @@ export async function POST(
     action: withinDeadline ? "withdraw" : "withdraw_after_deadline",
     entityType: "tenant",
     entityId: id,
-    summary: `Widerruf ${tenant.firstName} ${tenant.lastName} (${withinDeadline ? "within" : "AFTER"} 14-day window) — refund €${(actuallyRefundedCents / 100).toFixed(2)} across ${refundsExecuted.length} PI(s), retained pro-rata €${(proRataRentCents / 100).toFixed(2)} for ${daysOccupied} day${daysOccupied === 1 ? "" : "s"}`,
+    summary: `Widerruf ${tenant.firstName} ${tenant.lastName} (${withinDeadline ? "within" : "AFTER"} 14-day window), refund €${(actuallyRefundedCents / 100).toFixed(2)} across ${refundsExecuted.length} PI(s), retained pro-rata €${(proRataRentCents / 100).toFixed(2)} for ${daysOccupied} day${daysOccupied === 1 ? "" : "s"}`,
     metadata: {
       bookingId: booking.id,
       withinDeadline,

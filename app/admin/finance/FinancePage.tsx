@@ -175,7 +175,7 @@ function fmtMonthLong(d: string) {
 }
 
 function fmtDate(d: string | null) {
-  if (!d) return "—";
+  if (!d) return ",";
   return new Date(d).toLocaleDateString("de-DE", {
     day: "2-digit",
     month: "2-digit",
@@ -451,7 +451,7 @@ function OverviewTab({ data }: { data: Data }) {
 
   return (
     <div className="space-y-8">
-      {/* KPI cards — 6 across */}
+      {/* KPI cards, 6 across */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
         <KpiBox
           label="Cash this month"
@@ -633,7 +633,7 @@ function OverviewTab({ data }: { data: Data }) {
                       l.outstanding > 0 ? "text-red-600" : "text-gray"
                     }`}
                   >
-                    {l.outstanding > 0 ? fmtEur(l.outstanding) : "—"}
+                    {l.outstanding > 0 ? fmtEur(l.outstanding) : ","}
                   </td>
                   <td
                     className={`px-3 py-2 text-right tabular-nums font-semibold ${
@@ -796,7 +796,7 @@ function RentRollTab({
     if (rp.mahnung2SentAt) return "2. Mahnung";
     if (rp.mahnung1SentAt) return "1. Mahnung";
     if (rp.reminder1SentAt) return "Reminded";
-    return "—";
+    return ",";
   }
 
   function nextMahnungStage(
@@ -1004,10 +1004,10 @@ function RentRollTab({
                       <PaymentMethodBadge method={rp.tenant.paymentMethod} />
                     </td>
                     <td className="px-3 py-2">
-                      {rp.tenant.room?.apartment.location.name ?? "—"}
+                      {rp.tenant.room?.apartment.location.name ?? ","}
                     </td>
                     <td className="px-3 py-2">
-                      {rp.tenant.room ? `#${rp.tenant.room.roomNumber}` : "—"}
+                      {rp.tenant.room ? `#${rp.tenant.room.roomNumber}` : ","}
                     </td>
                     <td
                       className="px-3 py-2 text-right tabular-nums"
@@ -1032,7 +1032,7 @@ function RentRollTab({
                           {fmtEur(adjAmount)}
                         </span>
                       ) : (
-                        "—"
+                        ","
                       )}
                     </td>
                     <td className="px-3 py-2 text-right tabular-nums">
@@ -1218,7 +1218,7 @@ function RunRentPreviewModal({
       <div className="bg-white rounded-[5px] w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
         <div className="p-4 border-b border-lightgray flex items-center justify-between">
           <div>
-            <h3 className="text-base font-semibold">Run rent collection — Preview</h3>
+            <h3 className="text-base font-semibold">Run rent collection, Preview</h3>
             {preview && (
               <p className="text-xs text-gray mt-0.5">
                 Current month: {fmtMonthLong(preview.month + "-01")}
@@ -1304,7 +1304,7 @@ function RunRentPreviewModal({
                         <td className="px-3 py-1.5 text-right tabular-nums">
                           {r.adjustment !== 0
                             ? (r.adjustment > 0 ? "+" : "") + fmtEur(r.adjustment)
-                            : "—"}
+                            : ","}
                         </td>
                         <td className="px-3 py-1.5 text-right tabular-nums font-semibold">
                           {fmtEur(r.total)}
@@ -1517,8 +1517,8 @@ function ArrearsTab({
         tenantId: id,
         tenantName: `${rp.tenant.firstName} ${rp.tenant.lastName}`,
         email: rp.tenant.email,
-        location: rp.tenant.room?.apartment.location.name ?? "—",
-        room: rp.tenant.room?.roomNumber ?? "—",
+        location: rp.tenant.room?.apartment.location.name ?? ",",
+        room: rp.tenant.room?.roomNumber ?? ",",
         months: [rp],
         total: open,
         oldestDays: d,
@@ -1534,9 +1534,9 @@ function ArrearsTab({
 
   // Bucket summaries
   const buckets = {
-    b0_30: { label: "0–30 days", count: 0, total: 0, tone: "" },
-    b30_60: { label: "30–60 days", count: 0, total: 0, tone: "text-orange-600" },
-    b60_90: { label: "60–90 days", count: 0, total: 0, tone: "text-red-600" },
+    b0_30: { label: "0-30 days", count: 0, total: 0, tone: "" },
+    b30_60: { label: "30-60 days", count: 0, total: 0, tone: "text-orange-600" },
+    b60_90: { label: "60-90 days", count: 0, total: 0, tone: "text-red-600" },
     b90: { label: "90+ days", count: 0, total: 0, tone: "text-red-700 font-bold" },
   } as const;
   const bucketCounts: Record<string, number> = {
@@ -1775,7 +1775,7 @@ function ArrearsRow({
                           ? "1. Mahnung"
                           : rp.reminder1SentAt
                             ? "Reminder"
-                            : "—"}
+                            : ","}
                     </td>
                     <td className="py-1 text-right">
                       <div className="flex items-center justify-end gap-1">
@@ -1811,7 +1811,7 @@ function ArrearsRow({
 
 function DepositsTab({ tenants }: { tenants: DepositTenant[] }) {
   const now = new Date();
-  const RETURN_DEADLINE_DAYS = 42; // 6 weeks — see /admin/deposits
+  const RETURN_DEADLINE_DAYS = 42; // 6 weeks, see /admin/deposits
 
   // Age buckets based on createdAt (our best proxy for "deposit received")
   function monthsHeld(t: DepositTenant): number {
@@ -1821,9 +1821,9 @@ function DepositsTab({ tenants }: { tenants: DepositTenant[] }) {
     );
   }
   const ageBuckets = {
-    "0_3m": { label: "0–3 months", count: 0, total: 0 },
-    "3_12m": { label: "3–12 months", count: 0, total: 0 },
-    "12_24m": { label: "12–24 months", count: 0, total: 0 },
+    "0_3m": { label: "0-3 months", count: 0, total: 0 },
+    "3_12m": { label: "3-12 months", count: 0, total: 0 },
+    "12_24m": { label: "12-24 months", count: 0, total: 0 },
     "24m+": { label: "24+ months", count: 0, total: 0 },
   };
   for (const t of tenants) {
@@ -1865,7 +1865,7 @@ function DepositsTab({ tenants }: { tenants: DepositTenant[] }) {
     { name: string; count: number; total: number }
   >();
   for (const t of tenants) {
-    const id = t.room?.apartment.location.id ?? "—";
+    const id = t.room?.apartment.location.id ?? ",";
     const prev = byLocation.get(id);
     const amt = t.depositAmount ?? 0;
     if (prev) {
@@ -2010,8 +2010,8 @@ function DepositsTab({ tenants }: { tenants: DepositTenant[] }) {
                         </Link>
                       </td>
                       <td className="px-3 py-2">
-                        {t.room?.apartment.location.name ?? "—"} · #
-                        {t.room?.roomNumber ?? "—"}
+                        {t.room?.apartment.location.name ?? ","} · #
+                        {t.room?.roomNumber ?? ","}
                       </td>
                       <td className="px-3 py-2">
                         {fmtDate(t.moveOut)}{" "}
@@ -2194,8 +2194,8 @@ function ExtrasTab({ extraCharges }: { extraCharges: ExtraCharge[] }) {
                       </Link>
                     </td>
                     <td className="px-3 py-2 text-xs text-gray">
-                      {e.tenant.room?.apartment.location.name ?? "—"} · #
-                      {e.tenant.room?.roomNumber ?? "—"}
+                      {e.tenant.room?.apartment.location.name ?? ","} · #
+                      {e.tenant.room?.roomNumber ?? ","}
                     </td>
                     <td className="px-3 py-2">{e.description}</td>
                     <td className="px-3 py-2 text-xs">
@@ -2715,7 +2715,7 @@ function PaymentModal({
                   );
                   const hint =
                     cents === 0
-                      ? "— will skip"
+                      ? ", will skip"
                       : cents < remaining
                         ? `Under by ${fmtEur(remaining - cents)} → PARTIAL`
                         : cents > remaining
@@ -2729,8 +2729,8 @@ function PaymentModal({
                         </div>
                         <div className="text-gray">
                           {fmtMonthLong(r.month)} ·{" "}
-                          {r.tenant.room?.apartment.location.name ?? "—"} · #
-                          {r.tenant.room?.roomNumber ?? "—"}
+                          {r.tenant.room?.apartment.location.name ?? ","} · #
+                          {r.tenant.room?.roomNumber ?? ","}
                         </div>
                       </td>
                       <td className="px-3 py-2 text-right tabular-nums text-xs">

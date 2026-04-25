@@ -25,7 +25,7 @@ export async function sendDepositPaymentLink(data: DepositPaymentEmail, meta?: M
     ${badge("✓ Booking fee received", "green")}
     <h2 style="margin:0 0 8px;font-size:22px;font-weight:700;">Your room is reserved, ${data.firstName}!</h2>
     <p style="margin:0 0 24px;color:#555;font-size:15px;line-height:1.5;">
-      Thanks for your booking fee — your room at STACEY ${data.locationName} is now reserved.
+      Thanks for your booking fee, your room at STACEY ${data.locationName} is now reserved.
       To confirm your move-in, please pay the security deposit within ${data.deadlineHours} hours:
     </p>
     ${detailTable(
@@ -36,7 +36,7 @@ export async function sendDepositPaymentLink(data: DepositPaymentEmail, meta?: M
       detailRow("Monthly rent", `€${rentEur}`) +
       detailRow("Security deposit", `€${depositEur} <span style="font-weight:400;color:#888;">(2× monthly rent)</span>`, { highlight: "orange" })
     )}
-    ${ctaButton(`Pay deposit — €${depositEur}`, data.depositPaymentUrl)}
+    ${ctaButton(`Pay deposit, €${depositEur}`, data.depositPaymentUrl)}
     ${warningBox(
       `Please pay within ${data.deadlineHours} hours to secure your room.`,
       "If the deposit is not received in time, your reservation will be released."
@@ -52,7 +52,7 @@ export async function sendDepositPaymentLink(data: DepositPaymentEmail, meta?: M
     {
       from: FROM,
       to: data.email,
-      subject: `STACEY ${data.locationName} — Your room is reserved`,
+      subject: `STACEY ${data.locationName}, Your room is reserved`,
       html,
     },
     { templateKey: "deposit_payment_link", ...meta }
@@ -86,7 +86,7 @@ export async function sendDepositConfirmation(data: DepositConfirmationEmail, me
           </td>
           <td style="padding:0;vertical-align:middle;">
             <p style="margin:0;font-size:14px;font-weight:600;">Signed lease agreement attached</p>
-            <p style="margin:2px 0 0;font-size:13px;color:#888;">${pdfFilename} — Please save for your records.</p>
+            <p style="margin:2px 0 0;font-size:13px;color:#888;">${pdfFilename}, Please save for your records.</p>
           </td>
         </tr></table>
       </div>`
@@ -121,8 +121,8 @@ export async function sendDepositConfirmation(data: DepositConfirmationEmail, me
     <p style="font-size:14px;color:#555;line-height:1.6;">
       <strong>What happens next?</strong><br>
       ${data.paymentSetupUrl
-        ? "Once your payment method is set up, you'll receive your check-in details shortly before your move-in. That's it — you're almost home."
-        : "You'll receive your check-in details shortly before your move-in. That's it — you're almost home."}
+        ? "Once your payment method is set up, you'll receive your check-in details shortly before your move-in. That's it, you're almost home."
+        : "You'll receive your check-in details shortly before your move-in. That's it, you're almost home."}
     </p>
   `);
 
@@ -130,7 +130,7 @@ export async function sendDepositConfirmation(data: DepositConfirmationEmail, me
     {
       from: FROM,
       to: data.email,
-      subject: `Deposit received — Welcome to STACEY ${data.locationName}`,
+      subject: `Deposit received, Welcome to STACEY ${data.locationName}`,
       html,
       attachments: data.signedLeasePdf
         ? [{ filename: pdfFilename, content: data.signedLeasePdf }]
@@ -158,13 +158,13 @@ export async function sendDepositReminder(data: DepositReminderEmail, meta?: Met
     ${badge("Action required", "orange")}
     <h2 style="margin:0 0 8px;font-size:22px;font-weight:700;">Your deposit is still pending</h2>
     <p style="margin:0 0 24px;color:#555;font-size:15px;line-height:1.5;">
-      Hi ${data.firstName}, your room at STACEY ${data.locationName} is still reserved — but your security deposit
+      Hi ${data.firstName}, your room at STACEY ${data.locationName} is still reserved, but your security deposit
       hasn't been paid yet. You have about <strong>${data.hoursLeft} hours left</strong>.
     </p>
     ${detailTable(
       detailRow("Security deposit", `€${depositEur}`, { highlight: "orange" })
     )}
-    ${ctaButton(`Pay deposit — €${depositEur}`, data.depositPaymentUrl)}
+    ${ctaButton(`Pay deposit, €${depositEur}`, data.depositPaymentUrl)}
     ${warningBox(
       "Your reservation will be released if the deposit is not received in time.",
       "After that, the room may no longer be available."
@@ -175,7 +175,7 @@ export async function sendDepositReminder(data: DepositReminderEmail, meta?: Met
     {
       from: FROM,
       to: data.email,
-      subject: `Reminder: Deposit pending — STACEY ${data.locationName}`,
+      subject: `Reminder: Deposit pending, STACEY ${data.locationName}`,
       html,
     },
     { templateKey: "deposit_reminder", ...meta }
@@ -206,7 +206,7 @@ export async function sendDepositTimeoutNotification(data: DepositTimeoutEmail, 
     {
       from: FROM,
       to: data.email,
-      subject: `Room reservation expired — STACEY ${data.locationName}`,
+      subject: `Room reservation expired, STACEY ${data.locationName}`,
       html,
     },
     { templateKey: "deposit_timeout", ...meta }
@@ -222,7 +222,7 @@ interface DepositReturnData {
   depositAmount: number;
   damagesAmount: number;
   arrearsAmount: number;
-  /** Pro-rata rent the tenant overpaid (e.g. shortened stay). Optional —
+  /** Pro-rata rent the tenant overpaid (e.g. shortened stay). Optional ,
    *  omit or pass 0 for tenants without any overpayment. */
   overpaymentAmount?: number;
   refundAmount: number;
@@ -255,7 +255,7 @@ export async function sendDepositReturnNotification(data: DepositReturnData, met
     {
       from: FROM,
       to: data.email,
-      subject: `Deposit settlement — STACEY ${data.locationName}`,
+      subject: `Deposit settlement, STACEY ${data.locationName}`,
       html,
     },
     { templateKey: "deposit_return", ...meta }

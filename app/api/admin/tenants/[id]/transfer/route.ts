@@ -201,7 +201,7 @@ async function executeTransfer(
         }
       }
     } else {
-      // No rent payment yet for this month — update the PENDING one if exists
+      // No rent payment yet for this month, update the PENDING one if exists
       const pendingRent = await prisma.rentPayment.findFirst({
         where: { tenantId, month: monthStart, status: "PENDING" },
       });

@@ -4,7 +4,7 @@ import { getShortStayCalendarAvailability } from "@/lib/apaleo";
 // Per-day availability for the entire SHORT portfolio, 180 days ahead.
 // Frontend uses this to grey out fully-booked dates in the calendar.
 //
-// Cache at the edge for 30 minutes — apaleo availability changes slowly
+// Cache at the edge for 30 minutes, apaleo availability changes slowly
 // and we don't need to re-fetch on every calendar open.
 
 export const revalidate = 1800;

@@ -15,13 +15,13 @@ import { reportError } from "@/lib/observability";
 // - Guest booked with < 1 day notice
 // - Cron failure recovery
 
-// apaleo healthcheck — must return 2xx for subscription creation
+// apaleo healthcheck, must return 2xx for subscription creation
 export async function GET() {
   return Response.json({ ok: true });
 }
 
 export async function POST(request: NextRequest) {
-  // Feature flag — disabled until manually enabled
+  // Feature flag, disabled until manually enabled
   if (process.env.ENABLE_SHORT_STAY_EMAILS !== "true") {
     return Response.json({ ok: true, skipped: "short stay emails disabled" });
   }
@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
   }
 
   // apaleo webhook payload contains the event type and a list of affected entities
-  // Exact format depends on apaleo subscription config — handle common patterns
+  // Exact format depends on apaleo subscription config, handle common patterns
   const eventType = body.type || body.eventType || "";
   const reservationId = body.data?.id
     || body.reservationId
@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
   }
 
   // We only care about reservation modifications (unit assignment)
-  // Accept any event type — we'll check the actual state from apaleo
+  // Accept any event type, we'll check the actual state from apaleo
   try {
     const reservation = await getReservation(reservationId);
 
@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
     );
 
     if (daysUntilArrival > 2) {
-      // Too early — the daily cron will handle this closer to check-in
+      // Too early, the daily cron will handle this closer to check-in
       return Response.json({ ok: true, skipped: "check-in > 2 days away" });
     }
 
@@ -89,10 +89,10 @@ export async function POST(request: NextRequest) {
         checkIn: reservation.arrival,
         checkOut: reservation.departure,
         nights: Math.round((new Date(reservation.departure).getTime() - arrival.getTime()) / 86400000),
-        bookingId: `⚠️ No guest email — Pre-Arrival not sent! Room ${reservation.unitName}, check-in ${reservation.arrival}`,
+        bookingId: `⚠️ No guest email, Pre-Arrival not sent! Room ${reservation.unitName}, check-in ${reservation.arrival}`,
       }).catch((err) => console.error("Missing email team notif error:", err));
 
-      return Response.json({ ok: true, skipped: "no guest email — team notified" });
+      return Response.json({ ok: true, skipped: "no guest email, team notified" });
     }
 
     // Check if pre-arrival was already sent

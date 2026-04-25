@@ -16,7 +16,7 @@ interface MoveOutAdjustModalProps {
   moveIn: string;
   /** Current moveOut, may be null. */
   currentMoveOut: string | null;
-  /** All PAID/PARTIAL rent payments — modal picks the one matching the
+  /** All PAID/PARTIAL rent payments, modal picks the one matching the
    *  newly chosen move-out month for the live preview. The server does
    *  the authoritative reconcile on save. */
   paidRents: PaidRent[];
@@ -34,7 +34,7 @@ function todayLocalISO(): string {
 }
 
 /** Pro-rata for a (start, end) range using actual days of the start-month.
- *  Same logic as monthly-rent cron — endDay − startDay + 1, both inclusive. */
+ *  Same logic as monthly-rent cron, endDay − startDay + 1, both inclusive. */
 function calcMonthAmount(args: {
   fullRentCents: number;
   monthStart: Date;
@@ -161,7 +161,7 @@ export default function MoveOutAdjustModal({
       <div className="bg-white rounded-[5px] border border-lightgray p-6 max-w-lg w-full space-y-3">
         <h3 className="font-bold text-black">Move-out anpassen</h3>
         <p className="text-sm text-gray">
-          <strong className="text-black">{tenantName}</strong> — neuer Auszugstag.
+          <strong className="text-black">{tenantName}</strong>, neuer Auszugstag.
           Falls die Miete für den Monat schon eingezogen wurde, wird die
           Differenz bei der Kautionsauszahlung verrechnet (kein automatischer
           Stripe-Refund mehr).
@@ -183,7 +183,7 @@ export default function MoveOutAdjustModal({
           <div className="border border-lightgray rounded-[5px] divide-y divide-lightgray text-sm">
             <Row
               label={`Bisher gezahlt (${monthStart.getFullYear()}-${String(monthStart.getMonth() + 1).padStart(2, "0")})`}
-              value={paidThisMonthCents > 0 ? fmtEur(paidThisMonthCents) : "—"}
+              value={paidThisMonthCents > 0 ? fmtEur(paidThisMonthCents) : ","}
               muted
             />
             <Row
@@ -194,7 +194,7 @@ export default function MoveOutAdjustModal({
             {paidThisMonthCents === 0 && (
               <Row
                 label="Noch keine Miete für diesen Monat eingezogen"
-                value="—"
+                value=","
                 muted
               />
             )}
@@ -207,13 +207,13 @@ export default function MoveOutAdjustModal({
             )}
             {isUnderpaid && (
               <Row
-                label="Mieter unterzahlt — separat abrechnen"
+                label="Mieter unterzahlt, separat abrechnen"
                 value={`+${fmtEur(-diffCents)}`}
                 tone="warn"
               />
             )}
             {paidThisMonthCents > 0 && diffCents === 0 && (
-              <Row label="Keine Differenz" value="—" muted />
+              <Row label="Keine Differenz" value="," muted />
             )}
           </div>
         )}
@@ -225,7 +225,7 @@ export default function MoveOutAdjustModal({
             Die Überzahlung von <strong>€{(diffCents / 100).toFixed(2)}</strong>{" "}
             wird beim Schließen des Vertrags automatisch mit der Kaution,
             offenen Forderungen und Mängeln verrechnet. Kein separater
-            Stripe-Refund — der Mieter sieht alles in einem Schritt unter
+            Stripe-Refund, der Mieter sieht alles in einem Schritt unter
             Deposits → Settlement.
           </div>
         )}
@@ -238,7 +238,7 @@ export default function MoveOutAdjustModal({
             )}
             {isNotMonthEnd && (
               <div className="p-2 bg-orange-50 border border-orange-200 rounded-[5px] text-xs text-orange-900">
-                ⚠ Kein Monatsende — der {lastDayOfMoveOutMonth}. wäre das Monatsende.
+                ⚠ Kein Monatsende, der {lastDayOfMoveOutMonth}. wäre das Monatsende.
               </div>
             )}
           </div>

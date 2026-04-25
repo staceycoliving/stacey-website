@@ -36,7 +36,7 @@ const benefits = [
     icon: <Shield size={20} />,
     title: "Predictable income",
     text:
-      "One master lease covers the entire building. We pay you every month — regardless of occupancy. You transfer tenant and vacancy risk to us.",
+      "One master lease covers the entire building. We pay you every month, regardless of occupancy. You transfer tenant and vacancy risk to us.",
   },
   {
     icon: <Clock size={20} />,
@@ -48,7 +48,7 @@ const benefits = [
     icon: <Zap size={20} />,
     title: "Short + Long under one brand",
     text:
-      "We run both formats — often in the same city. Higher blended occupancy, optimal pricing per season, and a much more resilient cashflow than pure-play competitors.",
+      "We run both formats, often in the same city. Higher blended occupancy, optimal pricing per season, and a much more resilient cashflow than pure-play competitors.",
   },
   {
     icon: <TrendingUp size={20} />,
@@ -60,7 +60,7 @@ const benefits = [
     icon: <Users size={20} />,
     title: "Hands-off operations",
     text:
-      "Marketing, leasing, onboarding, cleaning, maintenance, community — all on us. No more tenant complaints or move-out inspections on your side.",
+      "Marketing, leasing, onboarding, cleaning, maintenance, community, all on us. No more tenant complaints or move-out inspections on your side.",
   },
   {
     icon: <CheckCircle2 size={20} />,
@@ -89,7 +89,7 @@ const featuredProjects = [
     format: "Long-stay",
     heroImage: "/images/locations/berlin-mitte/community/13-berlin.webp",
     story:
-      "On Fischerinsel between Alexanderplatz and Museumsinsel. The most central coliving address in Berlin — studios and shared flats with mostly 1:1 roommate ratios. Filled within weeks of opening.",
+      "On Fischerinsel between Alexanderplatz and Museumsinsel. The most central coliving address in Berlin, studios and shared flats with mostly 1:1 roommate ratios. Filled within weeks of opening.",
   },
   {
     name: "Alster",
@@ -99,7 +99,7 @@ const featuredProjects = [
     format: "Short-stay",
     heroImage: "/images/locations/alster/community/01-community-al.webp",
     story:
-      "A converted office in St. Georg, run purely as short-stay. Demonstrates our dual-format capability — same brand, same standards, different revenue profile.",
+      "A converted office in St. Georg, run purely as short-stay. Demonstrates our dual-format capability, same brand, same standards, different revenue profile.",
   },
 ];
 
@@ -107,7 +107,7 @@ const propertyFit = [
   {
     icon: <Building2 size={20} />,
     title: "Size",
-    text: "Entire buildings or self-contained wings with 20+ bedrooms. Sweet spot: 40–120 suites.",
+    text: "Entire buildings or self-contained wings with 20+ bedrooms. Sweet spot: 40-120 suites.",
   },
   {
     icon: <Users size={20} />,
@@ -122,7 +122,7 @@ const propertyFit = [
   {
     icon: <Shield size={20} />,
     title: "Markets",
-    text: "Hamburg, Berlin, Vallendar — plus selected Tier-1 and Tier-2 German and European cities.",
+    text: "Hamburg, Berlin, Vallendar, plus selected Tier-1 and Tier-2 German and European cities.",
   },
 ];
 
@@ -181,7 +181,7 @@ export default function PartnersPage() {
           </div>
         </div>
 
-        {/* KPI Bar — Boarding Pass style */}
+        {/* KPI Bar, Boarding Pass style */}
         <div className="relative mx-auto max-w-5xl px-4 pb-16 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4 sm:gap-4">
             {kpis.map((k) => (
@@ -257,8 +257,8 @@ export default function PartnersPage() {
                   STACEY sits at the intersection of{" "}
                   <strong className="text-black">serviced apartments</strong>{" "}
                   (short-stay) and{" "}
-                  <strong className="text-black">coliving</strong> (long-stay)
-                  — and we run both, since 2019.
+                  <strong className="text-black">coliving</strong> (long-stay).
+                  We run both, since 2019.
                 </p>
               </div>
             </div>
@@ -280,7 +280,7 @@ export default function PartnersPage() {
               </h2>
               <p className="mx-auto mt-4 max-w-xl text-sm leading-relaxed text-gray">
                 Pure-play operators can only optimize for one revenue curve.
-                We blend both — stabilising income across cycles.
+                We blend both, stabilising income across cycles.
               </p>
             </div>
 
@@ -358,7 +358,7 @@ export default function PartnersPage() {
               </h2>
               <p className="mt-4 text-sm leading-relaxed text-gray">
                 Our entire business model is designed so that your building
-                performs better with us than without us — structurally, not
+                performs better with us than without us, structurally, not
                 just on a good month.
               </p>
             </div>

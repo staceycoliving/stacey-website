@@ -20,12 +20,12 @@ interface DangerZoneProps {
 /**
  * Two destructive actions, ordered from least to most permanent:
  *
- *   1. Archive (soft-delete) — tenant stays in DB, filtered from default
+ *   1. Archive (soft-delete), tenant stays in DB, filtered from default
  *      lists, all historical data preserved. Recoverable with one click.
  *      This is the default for "we don't actively work with this tenant
  *      anymore" (alumni, test accounts, etc.).
  *
- *   2. Hard-delete — permanent cleanup. Only for DSGVO requests, real
+ *   2. Hard-delete, permanent cleanup. Only for DSGVO requests, real
  *      duplicates, or test data. Cascade-deletes all rent payments,
  *      notes, defects, documents, communications, etc. Type-to-confirm.
  */
@@ -99,7 +99,7 @@ export default function DangerZone({
             </p>
             <p className="text-xs text-gray mt-1 max-w-md">
               {isArchived
-                ? `Tenant was archived on ${new Date(archivedAt!).toLocaleDateString("de-DE")}. Restore to default view — nothing else changes.`
+                ? `Tenant was archived on ${new Date(archivedAt!).toLocaleDateString("de-DE")}. Restore to default view, nothing else changes.`
                 : "Hide from default tenant list without deleting any data. All history (payments, notes, documents) is preserved. Reversible."}
             </p>
           </div>
@@ -117,7 +117,7 @@ export default function DangerZone({
       <div className="p-4 space-y-3">
         <div className="text-sm">
           <p className="text-black">
-            <strong>Permanent hard-delete</strong> — only for data cleanup.
+            <strong>Permanent hard-delete</strong>, only for data cleanup.
           </p>
           <p className="text-xs text-gray mt-1">
             For real tenants use <strong>Terminate</strong> (3-month notice),{" "}

@@ -100,7 +100,7 @@ type SortColumn =
 type SortDirection = "asc" | "desc";
 
 function formatDate(d: string | null) {
-  if (!d) return "—";
+  if (!d) return ",";
   return new Date(d).toLocaleDateString("de-DE", {
     day: "2-digit",
     month: "2-digit",
@@ -117,10 +117,10 @@ function fmtPrice(cents: number) {
  *  - location.address often looks like "Fischerinsel 13-15, 10179 Berlin"
  *    (range + zip/city). We want the street name only.
  *  - apartment.houseNumber is a Stacey-internal apartment identifier
- *    like "F13", "D3a" — the letter is a building prefix, the rest is
+ *    like "F13", "D3a", the letter is a building prefix, the rest is
  *    the actual house number we want to combine with the street.
  *  room.buildingAddress beats both when an admin set an explicit override.
- *  Zip + city are dropped here — they belong in the folio, not the list. */
+ *  Zip + city are dropped here, they belong in the folio, not the list. */
 function buildFullAddress(t: Tenant): string {
   if (t.room.buildingAddress) return t.room.buildingAddress;
   const full = t.room.apartment.location.address.trim();
@@ -145,7 +145,7 @@ function extractHouseNumber(id: string | null | undefined): string {
   return m ? m[0] : id;
 }
 
-/** Floor column — now seeded directly from the CSV "Zusatz" column into
+/** Floor column, now seeded directly from the CSV "Zusatz" column into
  *  apartment.floor (e.g. "EG rechts", "VH 1.OG"). No heuristics needed. */
 function floorLabel(t: Tenant): string {
   return t.room.floorDescription ?? t.room.apartment.floor ?? "";
@@ -175,7 +175,7 @@ function paymentStatus(t: Tenant): {
 }
 
 function withdrawAvailable(t: Tenant): boolean {
-  // Always show the action when there's a linked booking with a paid deposit —
+  // Always show the action when there's a linked booking with a paid deposit ,
   // expired window is handled by an extra warning step in the modal.
   return Boolean(t.booking?.depositPaidAt);
 }
@@ -264,7 +264,7 @@ export default function TenantsPage({
   const moveOutFrom = searchParams.get("moveOutFrom") ?? "";
   const moveOutTo = searchParams.get("moveOutTo") ?? "";
 
-  // Per-column filters — local state (kept out of URL for simplicity,
+  // Per-column filters, local state (kept out of URL for simplicity,
   // the global filters above cover the persistent use case).
   const [colFilters, setColFilters] = useState<Record<string, string>>({});
   function setColFilter(col: string, value: string) {
@@ -318,7 +318,7 @@ export default function TenantsPage({
     return () => document.removeEventListener("mousedown", onClick);
   }, [openMenuId]);
 
-  // Per-tenant issue list — recomputed once per render from nowTs
+  // Per-tenant issue list, recomputed once per render from nowTs
   const issuesByTenant = useMemo(() => {
     const map = new Map<string, TenantIssue[]>();
     for (const t of tenants) map.set(t.id, detectIssues(t, nowTs));
@@ -500,7 +500,7 @@ export default function TenantsPage({
   return (
     <div className="space-y-4">
       <Breadcrumbs items={[{ label: "Tenants" }]} />
-      {/* KPIs — 6 action-focused cards */}
+      {/* KPIs, 6 action-focused cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         <KpiCard
           label="Active"
@@ -561,7 +561,7 @@ export default function TenantsPage({
         />
       </div>
 
-      {/* Filters row 1 — search + selects + date ranges */}
+      {/* Filters row 1, search + selects + date ranges */}
       <div className="space-y-2 mb-4">
         <div className="flex flex-wrap items-center gap-2">
           <div className="relative flex-1 min-w-[220px]">
@@ -691,7 +691,7 @@ export default function TenantsPage({
 
       </div>
 
-      {/* Recently changed — sits above the view so admins notice activity */}
+      {/* Recently changed, sits above the view so admins notice activity */}
       {recentlyChanged.length > 0 && (
         <div className="bg-white rounded-[5px] border border-lightgray p-3 mb-4">
           <div className="text-[11px] uppercase tracking-wider text-gray font-semibold mb-2 flex items-center gap-1.5">
@@ -721,7 +721,7 @@ export default function TenantsPage({
         </div>
       )}
 
-      {/* Calendar view — ticks for move-ins (green) + move-outs (orange) */}
+      {/* Calendar view, ticks for move-ins (green) + move-outs (orange) */}
       {view === "calendar" && (
         <TenantsCalendarView
           tenants={filtered}
@@ -873,7 +873,7 @@ export default function TenantsPage({
       </div>
       )}
 
-      {/* Detail sidepanel — quick peek without leaving the list */}
+      {/* Detail sidepanel, quick peek without leaving the list */}
       {detailId && (() => {
         const t = tenants.find((x) => x.id === detailId);
         if (!t) return null;
@@ -933,7 +933,7 @@ function IssuesPill({ issues }: { issues: TenantIssue[] }) {
     return (
       <span
         className="inline-block w-2.5 h-2.5 rounded-full bg-green-500"
-        title="OK — no issues"
+        title="OK, no issues"
       />
     );
   }
@@ -1287,7 +1287,7 @@ function TenantDetailPanel({
                 className="inline-flex items-center gap-1 text-sm hover:underline"
               >
                 <MessageSquare className="w-3 h-3" />
-                {tenant.notesCount} note{tenant.notesCount === 1 ? "" : "s"} —
+                {tenant.notesCount} note{tenant.notesCount === 1 ? "" : "s"} ,
                 view in folio
               </Link>
             </div>

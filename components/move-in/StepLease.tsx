@@ -17,7 +17,7 @@ export default function StepLease({
   const [signed, setSigned] = useState(false);
   const [opened, setOpened] = useState(false);
 
-  // Derived from other state — no setState needed, which keeps the effect
+  // Derived from other state, no setState needed, which keeps the effect
   // below compliant with the react-hooks/set-state-in-effect rule.
   const polling = opened && Boolean(signatureRequestId) && !signed;
 
@@ -123,10 +123,10 @@ export default function StepLease({
       </h2>
       <p className="mt-2 text-sm text-gray">
         Review your personalized lease, then sign digitally. Takes about two
-        minutes — nothing to print, no wet ink.
+        minutes, nothing to print, no wet ink.
       </p>
 
-      {/* Main action card — document metadata + CTA + trust row. The doc
+      {/* Main action card, document metadata + CTA + trust row. The doc
           metadata line anchors the CTA as a real artefact, not a vague
           "click to proceed" link. */}
       <div className="mt-8 overflow-hidden rounded-[5px] border border-[#E8E6E0] bg-white shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
@@ -192,7 +192,7 @@ export default function StepLease({
           )}
         </div>
 
-        {/* Trust row — replaces the tiny gray line. Upgraded to 3 pillars,
+        {/* Trust row, replaces the tiny gray line. Upgraded to 3 pillars,
             same visual weight, so the signature feels backed by serious
             infra. */}
         <div className="grid grid-cols-3 gap-2 border-t border-[#F0F0F0] bg-[#FAFAFA] px-6 py-4 text-center">
@@ -202,7 +202,7 @@ export default function StepLease({
         </div>
       </div>
 
-      {/* What happens next — 3-step visual so users know there's no hidden
+      {/* What happens next, 3-step visual so users know there's no hidden
           step after signing. The current step pulses pink; completed ones
           are checkmarked; upcoming ones are dimmed. */}
       <div className="mt-10">
@@ -238,7 +238,7 @@ export default function StepLease({
         </ol>
       </div>
 
-      {/* Support footer — small but visible. Reduces legal-doc anxiety. */}
+      {/* Support footer, small but visible. Reduces legal-doc anxiety. */}
       <div className="mt-8 flex flex-col items-start gap-3 rounded-[5px] bg-[#FAFAFA] p-4 text-xs text-gray sm:flex-row sm:items-center sm:justify-between">
         <p>
           Questions before you sign? We&apos;re happy to walk you through anything.
@@ -264,7 +264,7 @@ export default function StepLease({
 
 // ─── Subcomponents ────────────────────────────────────────────
 
-// Progress rail — sits above the headline so the user always knows how
+// Progress rail, sits above the headline so the user always knows how
 // many steps are left. We count from the submit point: About you → Sign
 // lease → Pay deposit = 3 steps. The "signed" branch shows step 2 as
 // completed.
@@ -273,7 +273,7 @@ function Header({ step, signed }: { step: number; signed?: boolean }) {
   return (
     <div>
       <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-gray">
-        Step {signed ? step + 1 : step} of 3 — {labels[signed ? step : step - 1]}
+        Step {signed ? step + 1 : step} of 3, {labels[signed ? step : step - 1]}
       </p>
       <div className="mt-2 flex gap-1.5">
         {labels.map((_, i) => {

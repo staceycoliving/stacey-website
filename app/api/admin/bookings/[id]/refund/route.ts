@@ -11,10 +11,10 @@ import { reportError } from "@/lib/observability";
  * Refunds the booking fee (€195) via Stripe. Intended use: when WE
  * cancel a booking (cancellationKind = CANCELLED_BY_STACEY) and the
  * guest already paid the booking fee. For Widerruf / timeout / lead-
- * abandoned we keep the fee — the UI should only expose this button
+ * abandoned we keep the fee, the UI should only expose this button
  * when kind = CANCELLED_BY_STACEY.
  *
- * Body: {} — refunds the full recorded bookingFeeAmount (or 19500 fallback)
+ * Body: {}, refunds the full recorded bookingFeeAmount (or 19500 fallback)
  *         against the bookingFeeSessionId's underlying PaymentIntent.
  */
 const DEFAULT_BOOKING_FEE_CENTS = 19_500;
@@ -34,7 +34,7 @@ export async function POST(
   }
   if (!booking.bookingFeePaidAt) {
     return Response.json(
-      { error: "No booking fee was paid — nothing to refund" },
+      { error: "No booking fee was paid, nothing to refund" },
       { status: 400 }
     );
   }
@@ -48,7 +48,7 @@ export async function POST(
     return Response.json(
       {
         error:
-          "No Stripe session recorded for this booking fee — refund has to happen manually in Stripe Dashboard",
+          "No Stripe session recorded for this booking fee, refund has to happen manually in Stripe Dashboard",
       },
       { status: 400 }
     );
@@ -70,7 +70,7 @@ export async function POST(
     return Response.json(
       {
         error:
-          "Couldn't look up the Stripe session — refund manually in Stripe Dashboard and click 'Mark refunded manually' afterwards",
+          "Couldn't look up the Stripe session, refund manually in Stripe Dashboard and click 'Mark refunded manually' afterwards",
       },
       { status: 502 }
     );
@@ -80,7 +80,7 @@ export async function POST(
     return Response.json(
       {
         error:
-          "Session exists but no PaymentIntent — refund manually in Stripe Dashboard",
+          "Session exists but no PaymentIntent, refund manually in Stripe Dashboard",
       },
       { status: 500 }
     );

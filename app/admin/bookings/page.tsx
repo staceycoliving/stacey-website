@@ -7,12 +7,12 @@ export default async function AdminBookingsPage() {
   if (!(await isAuthenticated())) redirect("/admin/login");
 
   // Pipeline only shows what's operationally relevant:
-  //   - PENDING (Leads): last 60 days only — older leads are dead weight.
+  //   - PENDING (Leads): last 60 days only, older leads are dead weight.
   //     They stay in the DB for future retargeting, just not in the Kanban.
-  //   - DEPOSIT_PENDING: always — 48h lifespan, self-cleans via cron.
+  //   - DEPOSIT_PENDING: always, 48h lifespan, self-cleans via cron.
   //   - CONFIRMED: only if moveInDate >= today. Once moved in the tenant
   //     lives in /admin/tenants.
-  //   - CANCELLED: last 30 days — keep recent decisions, not a 5-year archive.
+  //   - CANCELLED: last 30 days, keep recent decisions, not a 5-year archive.
   //   - SIGNED / PAID (legacy enum values): always, in case old rows exist.
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -43,7 +43,7 @@ export default async function AdminBookingsPage() {
       orderBy: { name: "asc" },
     }),
     // Load all booking-scoped notes in a single query. We slice them per
-    // booking on the client — cheaper than N+1.
+    // booking on the client, cheaper than N+1.
     prisma.teamNote.findMany({
       where: { bookingId: { not: null } },
       orderBy: [{ sticky: "desc" }, { createdAt: "desc" }],
@@ -105,7 +105,7 @@ export default async function AdminBookingsPage() {
 
   // KPIs are computed on the server to keep the client component pure
   // (React Compiler in Next.js 16 rejects impure calls like Date.now() in
-  // useMemo). Date.now() here is fine — this is a Server Component.
+  // useMemo). Date.now() here is fine, this is a Server Component.
   // eslint-disable-next-line react-hooks/purity
   const nowMs = Date.now();
   const day = 86_400_000;

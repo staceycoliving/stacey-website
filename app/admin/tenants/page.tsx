@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 export default async function AdminTenantsPage() {
   if (!(await isAuthenticated())) redirect("/admin/login");
 
-  // Date.now() is fine in a Server Component — the React Compiler rule
+  // Date.now() is fine in a Server Component, the React Compiler rule
   // fires by default; skip it here.
   // eslint-disable-next-line react-hooks/purity
   const sevenDaysAgo = new Date(Date.now() - 7 * 86_400_000);
@@ -55,7 +55,7 @@ export default async function AdminTenantsPage() {
       where: { tenantId: { not: null } },
       select: { tenantId: true },
     }),
-    // Audit entries about tenant changes in the last 7 days — for the
+    // Audit entries about tenant changes in the last 7 days, for the
     // "Recently changed" section. Distinct tenant IDs then ordered by
     // most-recent activity.
     prisma.auditLog.findMany({
@@ -64,7 +64,7 @@ export default async function AdminTenantsPage() {
         at: { gte: sevenDaysAgo },
       },
       orderBy: { at: "desc" },
-      take: 100, // plenty — we distinct by tenantId on the server below
+      take: 100, // plenty, we distinct by tenantId on the server below
     }),
   ]);
 

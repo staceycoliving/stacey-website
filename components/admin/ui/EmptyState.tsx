@@ -2,7 +2,7 @@ import { type ReactNode } from "react";
 
 /**
  * Consistent empty-state for lists / tables / sections that have no data.
- * Use inside a container — this adds its own padding but no outer border.
+ * Use inside a container, this adds its own padding but no outer border.
  *
  * <EmptyState
  *   icon={<Mail className="w-6 h-6" />}

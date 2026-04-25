@@ -76,7 +76,7 @@ select,
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* Map-marker pulse — wraps each active LocationMap marker. Same vibe
+/* Map-marker pulse, wraps each active LocationMap marker. Same vibe
    as Tailwind's animate-ping but slightly slower and tighter so it
    reads as a brand pulse rather than a panicked siren. */
 @keyframes stacey-marker-ping {

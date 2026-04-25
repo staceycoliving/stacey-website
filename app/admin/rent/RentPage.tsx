@@ -108,7 +108,7 @@ export default function RentPage({ rentPayments }: { rentPayments: RentPayment[]
     if (rp.mahnung2SentAt) return "2. Mahnung";
     if (rp.mahnung1SentAt) return "1. Mahnung";
     if (rp.reminder1SentAt) return "Reminded";
-    return "—";
+    return ",";
   }
 
   return (

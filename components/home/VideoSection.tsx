@@ -12,7 +12,7 @@ import { clsx } from "clsx";
 // crew and a highlight ring on the currently quoted member.
 //
 // Sound-toggle pill bottom-right unmutes the background loop without
-// opening the modal — modal opens via the "Watch the film" CTA which
+// opening the modal, modal opens via the "Watch the film" CTA which
 // plays the full video with controls.
 //
 // Section is min-h-[70vh] so it still reads as a destination moment
@@ -131,7 +131,7 @@ export default function VideoSection() {
         }}
       />
 
-      {/* Floating sound toggle — equalizer-bar visualiser. Bars
+      {/* Floating sound toggle, equalizer-bar visualiser. Bars
           animate (eqBar1/2/3 keyframes in globals.css) while audio is
           on; static + dimmed when muted. The visual itself tells the
           state without relying on the icon alone. */}
@@ -210,7 +210,7 @@ export default function VideoSection() {
             {q.text}
           </p>
 
-          {/* Multi-avatar strip — quoted member highlighted, rest dimmed */}
+          {/* Multi-avatar strip, quoted member highlighted, rest dimmed */}
           <div className="mt-5 flex items-center justify-center gap-3">
             <div className="flex -space-x-2">
               {QUOTES.map((other, i) => {
@@ -239,7 +239,7 @@ export default function VideoSection() {
           </div>
         </div>
 
-        {/* Pagination dots — user-controlled story browsing */}
+        {/* Pagination dots, user-controlled story browsing */}
         <div className="mt-8 flex justify-center gap-1.5">
           {QUOTES.map((_, i) => (
             <button

@@ -33,9 +33,9 @@ export default function LocationMap({
   /** Optional slug → display number map for the marker labels. Used
    *  when `markerVariant === "number"`. */
   numbers?: Record<string, number>;
-  /** "number" — black circle with digit (default).
-   *  "photo"  — small rounded-[5px] thumbnail of the location image.
-   *  "expand" — small black "S" dot that expands into a photo+name
+  /** "number", black circle with digit (default).
+   *  "photo" , small rounded-[5px] thumbnail of the location image.
+   *  "expand", small black "S" dot that expands into a photo+name
    *             pill on hover (Airbnb-style). */
   markerVariant?: MarkerVariant;
 }) {
@@ -60,7 +60,7 @@ export default function LocationMap({
     });
     // Default Mapbox NavigationControl looks utilitarian and clashes
     // with the premium pill+map composition. Discovery on the homepage
-    // doesn't need manual zoom — fitBounds + flyTo do the work.
+    // doesn't need manual zoom, fitBounds + flyTo do the work.
 
     locations.forEach((loc) => {
       if (!loc.coords) return;
@@ -93,7 +93,7 @@ export default function LocationMap({
           </div>`;
       } else if (markerVariant === "expand") {
         // Small dot that morphs into a photo + name badge on hover.
-        // Pink for LONG, black for SHORT — same color logic as the
+        // Pink for LONG, black for SHORT, same color logic as the
         // SHORT/LONG badges in the side-panel list and on the cards.
         const bg = loc.stayType === "SHORT" ? "#1A1A1A" : "#FCB0C0";
         const txt = loc.stayType === "SHORT" ? "white" : "#1A1A1A";
@@ -125,7 +125,7 @@ export default function LocationMap({
             ">${loc.name}</span>
           </div>`;
       } else {
-        // "number" — original numbered/S badge.
+        // "number", original numbered/S badge.
         el.innerHTML = `
           <div class="stacey-marker__inner" style="
             position:relative;
@@ -194,7 +194,7 @@ export default function LocationMap({
     });
   }, [numbers]);
 
-  // City filter — pan/zoom the map to fit the filtered set, dim markers
+  // City filter, pan/zoom the map to fit the filtered set, dim markers
   // outside the filter so the user's eye lands on what's selected.
   useEffect(() => {
     if (!map.current) return;
@@ -233,7 +233,7 @@ export default function LocationMap({
     });
   }, [cityFilter]);
 
-  // Active marker — fly to it + apply variant-specific active state.
+  // Active marker, fly to it + apply variant-specific active state.
   // Other markers calm down. When activeSlug becomes null, the calm
   // state stays so the map doesn't snap back unexpectedly.
   useEffect(() => {
@@ -282,7 +282,7 @@ export default function LocationMap({
           name.style.paddingRight = isActive ? "6px" : "0";
         }
       } else {
-        // "number" — original behaviour
+        // "number", original behaviour
         inner.style.background = isActive ? "#FCB0C0" : "#1A1A1A";
         inner.style.transform = isActive ? "scale(1.25)" : "scale(1)";
         if (pulse) {

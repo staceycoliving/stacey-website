@@ -5,7 +5,7 @@ import type { BookingStatus } from "./generated/prisma/client";
  *
  * Policy: a room is reserved the moment the booking fee is paid. Earlier
  * statuses (PENDING = form submitted, SIGNED = Yousign contract signed)
- * do **not** lock the room — this prevents zombie reservations from
+ * do **not** lock the room, this prevents zombie reservations from
  * abandoned flows.
  *
  * CONFIRMED rooms are also locked, but that is handled via the

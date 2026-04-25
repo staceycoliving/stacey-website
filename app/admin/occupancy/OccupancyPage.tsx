@@ -137,7 +137,7 @@ export default function OccupancyPage({
           <Breadcrumbs items={[{ label: "Occupancy" }]} />
                     <h1 className="text-2xl font-bold text-black">Occupancy plan</h1>
           <p className="text-sm text-gray mt-1">
-            {fmtFullDate(viewStart)} – {fmtFullDate(addDays(viewEnd, -1))}
+            {fmtFullDate(viewStart)} to {fmtFullDate(addDays(viewEnd, -1))}
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
@@ -227,7 +227,7 @@ export default function OccupancyPage({
                     style={{ height: 28 }}
                   >
                     {apt.houseNumber}
-                    {apt.label && ` · ${apt.label}`} — {apt.floor}
+                    {apt.label && ` · ${apt.label}`}, {apt.floor}
                   </div>
                   {apt.rooms.map((r) => (
                     <div
@@ -421,7 +421,7 @@ function RoomRow({
           onClick={onBookingClick}
           className="absolute top-1 bottom-1 rounded-[4px] border bg-green-200 border-green-400 text-green-900 text-xs px-2 truncate text-left hover:brightness-95"
           style={{ left: b.startPx, width: b.widthPx }}
-          title={`${b.booking.firstName} ${b.booking.lastName}\nStatus: ${b.booking.status}\nMove-in: ${b.booking.moveInDate ? fmtFullDate(b.booking.moveInDate) : "—"}`}
+          title={`${b.booking.firstName} ${b.booking.lastName}\nStatus: ${b.booking.status}\nMove-in: ${b.booking.moveInDate ? fmtFullDate(b.booking.moveInDate) : ","}`}
         >
           📋 {b.booking.firstName} {b.booking.lastName[0]}.
         </button>

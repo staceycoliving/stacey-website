@@ -14,7 +14,7 @@ import {
  * Setters that the hook needs to write into. Pass them as a bundle so the
  * hook can mutate the page's form state without becoming a callback maze.
  *
- * Only the fields written by the URL/Stripe-redirect logic are listed here —
+ * Only the fields written by the URL/Stripe-redirect logic are listed here ,
  * if a state field never gets touched by this effect, don't add it.
  */
 export type MoveInStateSetters = {
@@ -49,7 +49,7 @@ type Result = {
 };
 
 /**
- * usePaymentConfirmation — handles three URL-driven entry points to /move-in:
+ * usePaymentConfirmation, handles three URL-driven entry points to /move-in:
  *
  *   1. Fresh visit (no params) → reset every form field exactly once.
  *   2. Stripe redirect (?payment=success) → confirm via /api/booking (LONG)

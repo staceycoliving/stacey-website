@@ -21,10 +21,10 @@ import MapSection from "@/components/home/MapSection";
 import { locations, formatMoveInLabel } from "@/lib/data";
 import { expandMoveInDates } from "@/lib/availability";
 
-// Faces hand-picked for the hero strip — frontal, well-lit, work at
+// Faces hand-picked for the hero strip, frontal, well-lit, work at
 // 40px. These five can also appear on location cards (a member living
 // somewhere AND showing up in the hero "+ 295 more" intro is logical
-// — they really do live in one of these homes). The constraint that
+//, they really do live in one of these homes). The constraint that
 // matters is that no member appears in two LOCATIONS at once.
 const HERO_AVATARS: readonly string[] = [
   "/images/members/member-2.jpeg",
@@ -59,7 +59,7 @@ function deterministicShuffle<T>(pool: readonly T[], seed: number): T[] {
 }
 
 // Build the global "this slug → these N faces" map. Each location gets
-// a CONSECUTIVE non-overlapping slice of the shuffled pool — so the
+// a CONSECUTIVE non-overlapping slice of the shuffled pool, so the
 // same person never appears under two homes. Falls back to wrapping if
 // we ever exceed the pool size (won't happen with 26 photos / 24 slots,
 // but defensive).
@@ -90,7 +90,7 @@ export default function HomePage() {
   const router = useRouter();
 
   // Filter state for the hero SearchFields. On submit we router.push to
-  // /move-in with these as query params — the homepage never shows results
+  // /move-in with these as query params, the homepage never shows results
   // itself, that's entirely /move-in's job.
   const [stayType, setStayType] = useState<StayType | null>(null);
   const [persons, setPersons] = useState<1 | 2>(1);
@@ -102,7 +102,7 @@ export default function HomePage() {
   const [loadingDates, setLoadingDates] = useState(false);
   const [carouselIndex, setCarouselIndex] = useState(0);
 
-  // Hydrate filter state from URL on mount — supports deep-links, refresh,
+  // Hydrate filter state from URL on mount, supports deep-links, refresh,
   // and browser-back from /move-in back to /.
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -123,7 +123,7 @@ export default function HomePage() {
 
   // Mirror filter state back into the URL as the user fills fields. Uses
   // history.replaceState directly so there's no Next.js re-render and no
-  // flash — just a quiet URL rewrite. Shareable + refresh-safe.
+  // flash, just a quiet URL rewrite. Shareable + refresh-safe.
   //
   // IMPORTANT: skip the initial mount so the mirror doesn't strip the
   // inbound query params before the hydrate effect has read them.
@@ -226,7 +226,7 @@ export default function HomePage() {
   // Per-location card stats (available rooms · new residents this month
   // · next-availability date for fully booked homes). Lives in /api/
   // locations/stats which combines DB query (LONG) and apaleo (SHORT),
-  // edge-cached 10 min. Failure is non-fatal — cards just hide the
+  // edge-cached 10 min. Failure is non-fatal, cards just hide the
   // social-proof / availability rows when we don't have the data.
   type LocationStat = {
     available: number;
@@ -284,12 +284,12 @@ export default function HomePage() {
     <>
       <Navbar transparent />
 
-      {/* ── HERO — brand headline + progressive SearchFields.
+      {/* ── HERO, brand headline + progressive SearchFields.
            min-h-[82vh] (was 88vh) leaves more of the next section
            visible on first load and doesn't dominate big screens.
            600px floor prevents squashing on very short laptops.
            Growing content (expanded SearchFields) pushes the hero
-           taller naturally — no fixed height clash. */}
+           taller naturally, no fixed height clash. */}
       <section className="relative flex min-h-[max(82vh,600px)] items-center justify-center overflow-hidden pb-36 pt-28 sm:pt-32">
         <Image
           src="/images/website-hero.webp"
@@ -301,11 +301,11 @@ export default function HomePage() {
         <div className="absolute inset-0 bg-gradient-to-b from-black/35 via-black/15 to-black/55" />
 
         <div className="relative z-30 w-full px-5 text-center sm:px-6">
-          {/* Cinematic word-by-word reveal — brand moment, fully
+          {/* Cinematic word-by-word reveal, brand moment, fully
               reduced-motion compliant. */}
           <HeroHeadline />
 
-          {/* Sub-headline — one warm line that turns the claim into a
+          {/* Sub-headline, one warm line that turns the claim into a
               full thought and sets the brand voice before the booking
               flow starts. */}
           <motion.p
@@ -317,7 +317,7 @@ export default function HomePage() {
             Rooms come furnished. Friends come included.
           </motion.p>
 
-          {/* Member portraits — five real STACEY faces (interview thumbs
+          {/* Member portraits, five real STACEY faces (interview thumbs
               + community photos as launch placeholders) overlapping in
               a strip + "+ X more members" tag. Human-first signal sits
               above the booking flow on purpose: see the people, then
@@ -372,12 +372,12 @@ export default function HomePage() {
         <div className="absolute bottom-0 left-0 right-0 z-10 h-24 bg-gradient-to-t from-[#FAFAFA] to-transparent" />
       </section>
 
-      {/* ── LOCATIONS — low pt on every breakpoint so card tops peek
+      {/* ── LOCATIONS, low pt on every breakpoint so card tops peek
            under the 82vh hero (mobile + desktop). Bottom padding scales
            normally for rhythm with the next section. bg-[#FAFAFA] gives
            the cards a subtle plinth so the white-on-photo content pops. */}
       <section className="bg-[#FAFAFA] pb-12 pt-4 sm:pb-16 sm:pt-6 md:pb-20 md:pt-8">
-        {/* No FadeIn here — this section peeks under the hero on first
+        {/* No FadeIn here, this section peeks under the hero on first
             paint; triggering a scroll-in animation delays the cards
             and defeats the whole peek-to-tease pattern. */}
         <div className="mx-auto max-w-screen-2xl px-4 sm:px-6 lg:px-8">
@@ -415,7 +415,7 @@ export default function HomePage() {
                             />
                             <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/10 to-transparent" />
 
-                            {/* SHORT/LONG badge — top-left anchor */}
+                            {/* SHORT/LONG badge, top-left anchor */}
                             <div className="absolute left-3 top-3">
                               <span className={`rounded-[5px] px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.15em] ${
                                 loc.stayType === "SHORT"
@@ -426,7 +426,7 @@ export default function HomePage() {
                               </span>
                             </div>
 
-                            {/* Price chip — top-right, frosted glass.
+                            {/* Price chip, top-right, frosted glass.
                                 Flips to solid black on card hover for a
                                 clearer "click me" affordance. */}
                             <div className="absolute right-3 top-3">
@@ -541,7 +541,7 @@ export default function HomePage() {
                     <ChevronDown size={18} className="-rotate-90" />
                   </button>
 
-                  {/* Mobile-only pagination dots — clicks scroll to that card */}
+                  {/* Mobile-only pagination dots, clicks scroll to that card */}
                   <div className="mt-3 flex items-center justify-center gap-1.5 sm:hidden">
                     {Array.from({ length: orderedLocations.length + 1 }).map((_, i) => (
                       <button
@@ -573,17 +573,17 @@ export default function HomePage() {
            Testimonials→ "can I trust this?"
            About       → "who's behind it?" */}
 
-      {/* VIDEO — placed between Locations and Map as a vibe-check.
+      {/* VIDEO, placed between Locations and Map as a vibe-check.
            Locations cards are visually dense; the cinematic Video
            gives the eye a break before the equally-dense Map. */}
       <VideoSection />
 
-      {/* MAP — interactive geographic discovery, lands after the
+      {/* MAP, interactive geographic discovery, lands after the
            emotional warm-up so the "is there one in my neighbourhood?"
            question reads in colour, not as a cold lookup. */}
       <MapSection />
 
-      {/* HOWITWORKS — pulled up as a transition between Map (where) and
+      {/* HOWITWORKS, pulled up as a transition between Map (where) and
            Receipts (cost). The "boarding-pass / journey home" framing
            is literally a transition concept: after the user finds a
            home on the map, this softens them into "okay, what would
@@ -591,18 +591,18 @@ export default function HomePage() {
            value-case punch. */}
       <HowItWorksSection />
 
-      {/* RECEIPTS — math/value case. Lands after HowItWorks so the
+      {/* RECEIPTS, math/value case. Lands after HowItWorks so the
            reader has already imagined the journey before being shown
            what it actually costs. */}
       <FeaturesSection />
 
-      {/* FAQ — answers the five most common conversion-blocking
+      {/* FAQ, answers the five most common conversion-blocking
            questions (notice period, what's included, couples, pets,
            why cheaper). Sits after Receipts because that's where most
            "but..." objections fire. SEO + objection-handling beat. */}
       <FAQSection />
 
-      {/* CLOSING TEASERS — one section with two 50:50 cards. Left:
+      {/* CLOSING TEASERS, one section with two 50:50 cards. Left:
            about teaser → /why-stacey. Right: member-stories teaser →
            /why-stacey#stories. The full content (long team story +
            all 3 interview videos) lives on /why-stacey. */}

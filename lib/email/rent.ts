@@ -2,7 +2,7 @@ import { sendTrackedEmail, FROM, layout, detailRow, detailTable, ctaButton, warn
 
 type Meta = Omit<SendMeta, "templateKey"> | undefined;
 
-// ─── Rent Reminder (Day 3 — friendly) ─────────────────────────
+// ─── Rent Reminder (Day 3, friendly) ─────────────────────────
 
 interface RentReminderData {
   firstName: string;
@@ -33,7 +33,7 @@ export async function sendRentReminder(data: RentReminderData, meta?: Meta) {
     ${ctaButton("Update payment method", data.paymentUpdateUrl)}
     <p style="font-size:14px;color:#555;line-height:1.6;">
       Please update your payment method so we can retry the charge.
-      If you think this is an error, just get in touch — we're happy to help.
+      If you think this is an error, just get in touch, we're happy to help.
     </p>
   `);
 
@@ -41,7 +41,7 @@ export async function sendRentReminder(data: RentReminderData, meta?: Meta) {
     {
       from: FROM,
       to: data.email,
-      subject: `Outstanding rent — €${totalEur}`,
+      subject: `Outstanding rent, €${totalEur}`,
       html,
     },
     { templateKey: "rent_reminder", ...meta }
@@ -68,7 +68,7 @@ export async function sendMahnung1(data: MahnungData, meta?: Meta) {
 
   const html = layout(`
     ${badge("First notice", "orange")}
-    <h2 style="margin:0 0 8px;font-size:22px;font-weight:700;">Outstanding rent — first notice</h2>
+    <h2 style="margin:0 0 8px;font-size:22px;font-weight:700;">Outstanding rent, first notice</h2>
     <p style="margin:0 0 24px;color:#555;font-size:15px;line-height:1.5;">
       Hi ${data.firstName},
     </p>
@@ -91,7 +91,7 @@ export async function sendMahnung1(data: MahnungData, meta?: Meta) {
     {
       from: FROM,
       to: data.email,
-      subject: `Outstanding rent — first notice (€${totalEur})`,
+      subject: `Outstanding rent, first notice (€${totalEur})`,
       html,
     },
     { templateKey: "mahnung1", ...meta }
@@ -108,7 +108,7 @@ export async function sendMahnung2(data: MahnungData, meta?: Meta) {
 
   const html = layout(`
     ${badge("Second notice", "red")}
-    <h2 style="margin:0 0 8px;font-size:22px;font-weight:700;">Outstanding rent — second notice</h2>
+    <h2 style="margin:0 0 8px;font-size:22px;font-weight:700;">Outstanding rent, second notice</h2>
     <p style="margin:0 0 24px;color:#555;font-size:15px;line-height:1.5;">
       Dear ${data.firstName} ${data.lastName},
     </p>
@@ -122,7 +122,7 @@ export async function sendMahnung2(data: MahnungData, meta?: Meta) {
       detailRow("<strong>Total outstanding</strong>", `<strong>€${totalEur}</strong>`, { highlight: "red" })
     )}
     ${warningBox("Continued non-payment may result in termination of your lease.")}
-    ${ctaButton(`Pay now — €${totalEur}`, data.paymentUpdateUrl, "red")}
+    ${ctaButton(`Pay now, €${totalEur}`, data.paymentUpdateUrl, "red")}
     <p style="font-size:14px;color:#555;line-height:1.6;">
       If you are facing financial difficulties, please contact us immediately.
       We want to find a solution together.
@@ -133,7 +133,7 @@ export async function sendMahnung2(data: MahnungData, meta?: Meta) {
     {
       from: FROM,
       to: data.email,
-      subject: `Outstanding rent — second notice (€${totalEur})`,
+      subject: `Outstanding rent, second notice (€${totalEur})`,
       html,
     },
     { templateKey: "mahnung2", ...meta }

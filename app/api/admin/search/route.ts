@@ -114,7 +114,7 @@ export async function GET(request: NextRequest) {
       ]
         .filter(Boolean)
         .join(" · "),
-      href: `/admin/bookings`, // bookings list — anchoring/filtering comes later
+      href: `/admin/bookings`, // bookings list, anchoring/filtering comes later
     })),
     ...rooms.map((r) => ({
       kind: "room" as const,

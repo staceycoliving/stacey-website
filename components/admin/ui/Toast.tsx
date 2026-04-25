@@ -12,7 +12,7 @@ import {
 import { CheckCircle2, XCircle, AlertTriangle, Info, X } from "lucide-react";
 
 /**
- * Global toast notifications — replaces browser `alert()` across the
+ * Global toast notifications, replaces browser `alert()` across the
  * admin panel. Auto-dismiss after `duration` ms (default 4s). Rendered
  * at the bottom-right, stacked from newest on top.
  *
@@ -49,7 +49,7 @@ const ToastContext = createContext<ToastContextValue | null>(null);
 // Module-level ref set by the active <ToastProvider>. Lets us export a
 // simple `toast` object that any code can import without needing the
 // useToast() hook (and thus without needing a component context).
-// Falls back to window.alert() when no provider is mounted — useful for
+// Falls back to window.alert() when no provider is mounted, useful for
 // unit tests and rendering outside the admin shell.
 let activeToast: ToastContextValue | null = null;
 
@@ -63,7 +63,7 @@ function alertFallback(prefix: string, title: string, opts?: ToastOpts) {
   );
 }
 
-/** Singleton toast API — import and call from anywhere:
+/** Singleton toast API, import and call from anywhere:
  *    import { toast } from "@/components/admin/ui";
  *    toast.success("Saved");
  *    toast.error("Failed", { description: err });
@@ -171,7 +171,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 export function useToast(): ToastContextValue {
   const ctx = useContext(ToastContext);
   if (!ctx) {
-    // Graceful fallback to console + alert if no provider — keeps old code
+    // Graceful fallback to console + alert if no provider, keeps old code
     // running during the migration phase.
     return {
       push: (kind, title, opts) => {

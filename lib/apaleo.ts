@@ -1,6 +1,6 @@
 // ─── apaleo API Client ──────────────────────────────────────
 // Handles OAuth token management and API calls for SHORT stay properties.
-// Our API routes use this as a backend — the frontend never talks to apaleo directly.
+// Our API routes use this as a backend, the frontend never talks to apaleo directly.
 
 const IDENTITY_URL = "https://identity.apaleo.com/connect/token";
 const API_URL = "https://api.apaleo.com";
@@ -58,7 +58,7 @@ async function apiFetch(path: string, options?: RequestInit) {
     throw new Error(`apaleo API ${res.status} ${path}: ${text.slice(0, 300)}`);
   }
   if (!text) {
-    // Empty body on 200/204 is valid — means no results.
+    // Empty body on 200/204 is valid, means no results.
     return { reservations: [] };
   }
   try {
@@ -109,7 +109,7 @@ const COUPLE_CATEGORIES = new Set(["JUMBO", "JUMBO_BALCONY", "STUDIO", "PREMIUM_
 // ─── Hamburg Kultur- und Tourismustaxe ──────────────────────
 // Staffelung nach Brutto-Übernachtungspreis pro Zimmer pro Nacht.
 // Gilt nur für Aufenthalte unter 2 Monaten (60 Nächte).
-// Personenanzahl irrelevant — pro Zimmer gerechnet.
+// Personenanzahl irrelevant, pro Zimmer gerechnet.
 function calculateCityTaxPerNight(grossPerNight: number): number {
   if (grossPerNight <= 10) return 0;
   if (grossPerNight <= 25) return 0.60;
@@ -145,7 +145,7 @@ const RATE_PLAN_CODES: Record<string, Record<string, string>> = {
 // ─── Rate-plan booking restrictions (cutoff / minAdvance) ────
 // Each rate plan in apaleo can specify how close to arrival a booking is
 // still allowed via `restrictions.minAdvance` (hours/days/months). The
-// property admin changes this in apaleo — we pull it live so the calendar
+// property admin changes this in apaleo, we pull it live so the calendar
 // stays in sync with whatever Matteo configures there.
 //
 // Cached for 10 min because restrictions change rarely. On cache miss the
@@ -207,7 +207,7 @@ function earliestBookableFromNow(
 // /rateplan/v1/rate-plans/{id}/rates. We fetch one representative rate
 // plan per property (all of ours currently share the same values) and
 // use it portfolio-wide. If the property admin later sets different
-// values per rate plan, we'd need to fetch each code — trivial extension.
+// values per rate plan, we'd need to fetch each code, trivial extension.
 
 type DateRestrictions = {
   minLengthOfStay?: number;
@@ -292,7 +292,7 @@ export async function getShortStayAvailability(
 
   // Fetch availability and offers in parallel.
   // apaleo sometimes returns an empty body for /booking/v1/offers when no rate plan
-  // is configured for the requested date range — treat that as "no offers" instead
+  // is configured for the requested date range, treat that as "no offers" instead
   // of an error (otherwise the whole availability call fails and the frontend has
   // to fall back to stale 1-person base prices).
   const [availData, offersData] = await Promise.all([
@@ -351,10 +351,10 @@ export async function getShortStayAvailability(
     priceMap.set(category, extractPricing(offer, nights));
   }
 
-  // A room must be available for ALL nights — take the minimum sellable
+  // A room must be available for ALL nights, take the minimum sellable
   // count across the stay's nights. apaleo returns a timeSlice for every
   // day in [from, to] inclusive, so the LAST slice (from=checkOut) is the
-  // departure day — the guest already left before that night starts, so
+  // departure day, the guest already left before that night starts, so
   // its inventory is irrelevant to whether a 24→29 stay is bookable. We
   // slice it off to match the true stay window (otherwise a unit that's
   // booked out on the checkout night wrongly kills availability).
@@ -409,7 +409,7 @@ export async function getShortStayAvailability(
 
 /**
  * Per-day, per-(property, category) availability across the SHORT
- * portfolio. Used by the Airbnb-style calendar — the frontend needs
+ * portfolio. Used by the Airbnb-style calendar, the frontend needs
  * enough raw data to compute both
  *   (a) "can this day start a 5-night stay?" (pre-check-in grey-out)
  *   (b) "is this day a valid check-out given the selected check-in?"
@@ -422,7 +422,7 @@ export async function getShortStayAvailability(
  *  range at all.
  *
  * The frontend checks whether the INTERSECTION of a range's daily sets
- * is non-empty — that is, whether at least one specific
+ * is non-empty, that is, whether at least one specific
  * (property, category) pair stays free across every night. Booking the
  * same category in different properties isn't a valid stay; booking
  * different categories across a range isn't a valid stay either.
@@ -513,7 +513,7 @@ export async function getShortStayCalendarAvailability(
     // Per-category earliest check-in date-time allowed by the rate plan's
     // minAdvance. Computed once per property, then compared against each
     // candidate arrival day's 16:00 check-in. A slot is dropped if its
-    // arrival day's check-in is before the cutoff — apaleo would reject
+    // arrival day's check-in is before the cutoff, apaleo would reject
     // the booking anyway, so the calendar shouldn't pretend it's bookable.
     const cutoffByCategory: Record<string, Date> = {};
     for (const [category, code] of Object.entries(ratePlanCodes)) {
@@ -531,7 +531,7 @@ export async function getShortStayCalendarAvailability(
       if (!date) continue;
       if (!availableSlotsPerDate[date]) availableSlotsPerDate[date] = [];
       // If this date is fully closed (e.g., bulk "closed" restriction),
-      // skip adding any slots — nobody can arrive or stay here.
+      // skip adding any slots, nobody can arrive or stay here.
       if (dateRestrictions[date]?.closed) continue;
       for (const g of slice.unitGroups ?? []) {
         const category = APALEO_NAME_TO_CATEGORY[g.unitGroup?.name ?? ""];
@@ -705,7 +705,7 @@ export async function createPaidShortStayBooking(params: {
   // 2. Find the folio + post city tax + record payment
   const reservationId = booking.reservationIds?.[0]?.id || booking.reservationIds?.[0];
   if (reservationId) {
-    // Folio might not be ready immediately — retry up to 3 times
+    // Folio might not be ready immediately, retry up to 3 times
     let folio = null;
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
@@ -773,11 +773,11 @@ export async function createPaidShortStayBooking(params: {
 export async function getReservations(params: {
   dateFilter: "arrival" | "departure";
   from: string; // YYYY-MM-DD
-  to: string;   // YYYY-MM-DD (exclusive — will be converted to end-of-day datetime)
+  to: string;   // YYYY-MM-DD (exclusive, will be converted to end-of-day datetime)
   status?: string; // e.g. "Confirmed", "InHouse", "CheckedOut"
 }) {
   const propertyIds = Object.values(PROPERTY_MAP).join(",");
-  // apaleo requires full ISO 8601 datetime — bare YYYY-MM-DD returns 422.
+  // apaleo requires full ISO 8601 datetime, bare YYYY-MM-DD returns 422.
   // For a single-day query: from = start of day, to = start of next day.
   const fromDt = `${params.from}T00:00:00Z`;
   const toDate = new Date(params.to + "T12:00:00Z");

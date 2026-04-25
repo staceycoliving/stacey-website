@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
   const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
 
   // Find all active tenants who live here this month.
-  // Include tenants who moved in during this month (anteilig) — even if
+  // Include tenants who moved in during this month (anteilig), even if
   // their move-in is later this month, we create the record now and the
   // daily cron will charge it on the actual move-in day.
   //

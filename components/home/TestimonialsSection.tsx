@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, Play, X } from "lucide-react";
 
-// Compact testimonial — single hero interview (Jihane) with the pull-
+// Compact testimonial, single hero interview (Jihane) with the pull-
 // quote overlaid, plus a "More member stories →" link out to
 // /why-stacey where all three interviews live in full. Cuts the
 // homepage testimonial block to ~50% of its previous height.

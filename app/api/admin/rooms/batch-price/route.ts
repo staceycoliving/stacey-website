@@ -23,7 +23,7 @@ const CATEGORIES = new Set<RoomCategory>([
  * Body: { locationId, category, monthlyRent }
  *
  * Updates Room.monthlyRent for every room matching locationId + category.
- * Does NOT touch Tenant.monthlyRent — that's a snapshot at lease signing,
+ * Does NOT touch Tenant.monthlyRent, that's a snapshot at lease signing,
  * existing contracts stay on their agreed price.
  */
 export async function POST(request: NextRequest) {

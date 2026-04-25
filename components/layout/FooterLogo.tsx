@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-// Footer logo — behaves like the navbar logo: on home, smooth-scrolls to
+// Footer logo, behaves like the navbar logo: on home, smooth-scrolls to
 // top; on any other page, navigates to home. Kept as a small client leaf
 // so the Footer itself can stay a Server Component.
 export default function FooterLogo() {

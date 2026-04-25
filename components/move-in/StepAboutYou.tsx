@@ -8,7 +8,7 @@ import type { StayType } from "@/lib/data";
 // ─── Country data ─────────────────────────────────────────────
 // Full ISO 3166-1 list so guests from anywhere find their country.
 // "Popular" (German + neighbours + main EU + US/UK) surface first when the
-// search box is empty; everything else falls in A–Z.
+// search box is empty; everything else falls in A-Z.
 
 const COUNTRIES: Array<{ code: string; name: string }> = [
   { code: "AF", name: "Afghanistan" },
@@ -211,7 +211,7 @@ const COUNTRIES: Array<{ code: string; name: string }> = [
   { code: "ZW", name: "Zimbabwe" },
 ];
 
-// Ordered — Germany first since most stays are booked from there, then
+// Ordered, Germany first since most stays are booked from there, then
 // neighbours, then the big EU markets + UK/US that drive our inbound.
 const POPULAR_ORDER = ["DE", "AT", "CH", "NL", "FR", "IT", "ES", "GB", "US"];
 const POPULAR_SET = new Set(POPULAR_ORDER);
@@ -241,7 +241,7 @@ function isValidDOB(v: string) {
 
 // ─── Small primitives ─────────────────────────────────────────
 
-// Section header — short uppercase label, sits directly above a group of
+// Section header, short uppercase label, sits directly above a group of
 // fields. Subtle but gives the form a clear scan pattern.
 function Section({
   title,
@@ -366,7 +366,7 @@ function FloatingField({
 // Cleaner than <input type="date"> which ships with a format placeholder
 // (e.g., "tt.mm.jjjj") and a dated popup calendar. Native selects look
 // consistent across browsers, open the OS wheel picker on mobile, and
-// let us cap the year range at 16 years ago — the minimum booking age.
+// let us cap the year range at 16 years ago, the minimum booking age.
 function DateOfBirthField({
   value,
   onChange,
@@ -378,7 +378,7 @@ function DateOfBirthField({
 }) {
   const [touched, setTouched] = useState(false);
 
-  // Own the three dimensions locally — otherwise picking one dropdown
+  // Own the three dimensions locally, otherwise picking one dropdown
   // at a time would push an empty-string back to the parent before the
   // other two are filled, wiping the select UI on the next render.
   const [local, setLocal] = useState<{ day: string; month: string; year: string }>(
@@ -731,7 +731,7 @@ export default function StepAboutYou({
   setAddressCity?: (v: string) => void;
   country?: string;
   setCountry?: (v: string) => void;
-  // Accepted for backward compat but not rendered here — reason/message
+  // Accepted for backward compat but not rendered here, reason/message
   // collection, if we want it, should be its own step.
   moveInReason?: string;
   setMoveInReason?: (v: string) => void;
@@ -747,8 +747,8 @@ export default function StepAboutYou({
       </h2>
       <p className="mt-2 text-sm text-gray">
         {isLong
-          ? "Almost there — a few details and we'll prepare your lease."
-          : "Almost there — just the essentials so we can confirm your stay."}
+          ? "Almost there, a few details and we'll prepare your lease."
+          : "Almost there, just the essentials so we can confirm your stay."}
       </p>
 
       <div className="mt-8 space-y-8">
@@ -853,7 +853,7 @@ export default function StepAboutYou({
           <CountryCombobox value={country || ""} onChange={(v) => setCountry?.(v)} />
         </Section>
 
-        {/* Reassurance — sets context at the bottom so users submitting
+        {/* Reassurance, sets context at the bottom so users submitting
             personal data see the privacy promise before the CTA. */}
         <p className="pt-2 text-xs text-gray">
           We only use these details to confirm your booking. Never shared, never sold.

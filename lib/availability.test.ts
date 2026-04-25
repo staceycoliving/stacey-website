@@ -207,7 +207,7 @@ describe("isMoveInDateBookable", () => {
     expect(isMoveInDateBookable("2026-08-01", earliest)).toBe(false);
   });
 
-  it("any earliest matching is enough — first hit wins", () => {
+  it("any earliest matching is enough, first hit wins", () => {
     const earliest = ["2026-04-10", "2026-05-01"];
     // 2026-05-01 is matched by the out-of-window exact match, even though
     // 2026-04-10 in-window also covers the date 2026-04-15.

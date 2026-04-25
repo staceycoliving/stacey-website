@@ -18,7 +18,7 @@ const VALID_CATEGORIES: TenantDocumentCategory[] = [
  * POST /api/admin/tenants/[id]/documents
  *   body: { filename, url, category, description? }
  *   → create a document metadata row. We don't handle binary upload
- *   here — caller is responsible for putting the PDF somewhere
+ *   here, caller is responsible for putting the PDF somewhere
  *   publicly fetchable (typically Google Drive) and passing the URL.
  */
 export async function GET(

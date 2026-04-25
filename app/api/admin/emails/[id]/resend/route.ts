@@ -29,7 +29,7 @@ export async function POST(
   // (pre-deposit bookings) or team notifications have no tenantId to
   // re-run the template against.
   if (logEntry.entityType !== "tenant" || !logEntry.entityId) {
-    // Fall back to trying to match by recipient email — for legacy rows
+    // Fall back to trying to match by recipient email, for legacy rows
     // without entityId linkage.
     const tenant = await prisma.tenant.findFirst({
       where: { email: logEntry.recipient },
@@ -38,7 +38,7 @@ export async function POST(
       return Response.json(
         {
           error:
-            "This email is not linked to a tenant and no tenant matches the recipient — resend from the tenant folio or Quick Send.",
+            "This email is not linked to a tenant and no tenant matches the recipient, resend from the tenant folio or Quick Send.",
         },
         { status: 400 }
       );

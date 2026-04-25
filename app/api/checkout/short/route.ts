@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
     const cityTaxCents = Math.round((cat.cityTaxTotal || 0) * 100);
 
     const origin = request.nextUrl.origin;
-    const dateRange = `${new Date(checkIn).toLocaleDateString("en-GB")} – ${new Date(checkOut).toLocaleDateString("en-GB")}`;
+    const dateRange = `${new Date(checkIn).toLocaleDateString("en-GB")} to ${new Date(checkOut).toLocaleDateString("en-GB")}`;
 
     // Build Stripe line items: room + city tax (if applicable)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

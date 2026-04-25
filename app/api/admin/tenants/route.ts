@@ -32,7 +32,7 @@ export async function PATCH(request: NextRequest) {
 
   // If the tenant has a moveOut set, run reconcile. It's idempotent: if
   // RentPayment.amount already matches the pro-rata for the current
-  // moveOut, it does nothing. We do NOT refund here — the helper just
+  // moveOut, it does nothing. We do NOT refund here, the helper just
   // lowers RentPayment.amount so the overpayment surfaces as a credit in
   // the deposit settlement. Surfaces a warning if the tenant is
   // underpaid (needs manual charge).
@@ -48,7 +48,7 @@ export async function PATCH(request: NextRequest) {
     entityId: tenantId,
     summary: `Updated ${tenant.firstName} ${tenant.lastName}${
       reconcile?.adjusted
-        ? ` — €${(reconcile.overpaymentCents / 100).toFixed(2)} Mietüberzahlung gemerkt für Endabrechnung`
+        ? `, €${(reconcile.overpaymentCents / 100).toFixed(2)} Mietüberzahlung gemerkt für Endabrechnung`
         : ""
     }`,
     metadata: {
@@ -89,7 +89,7 @@ export async function DELETE(request: NextRequest) {
 
   await prisma.tenant.delete({ where: { id: tenantId } });
 
-  const fullReason = reasonNote ? `${reason} — ${reasonNote.trim()}` : reason;
+  const fullReason = reasonNote ? `${reason}, ${reasonNote.trim()}` : reason;
 
   await audit(request, {
     module: "tenant",

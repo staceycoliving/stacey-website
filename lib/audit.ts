@@ -13,7 +13,7 @@ interface AuditEntry {
 }
 
 /**
- * Append an audit-log row. Fire-and-forget by design — failures are reported
+ * Append an audit-log row. Fire-and-forget by design, failures are reported
  * via Sentry but never block the calling request.
  *
  * Pass `request` so the helper can capture path + IP.

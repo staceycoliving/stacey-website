@@ -37,7 +37,7 @@ export async function sendTerminationNotice(data: TerminationData, meta?: Meta) 
     {
       from: FROM,
       to: data.email,
-      subject: `Termination notice — STACEY ${data.locationName}`,
+      subject: `Termination notice, STACEY ${data.locationName}`,
       html,
     },
     { templateKey: "termination", ...meta }

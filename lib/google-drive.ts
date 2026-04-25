@@ -1,7 +1,7 @@
 import { createSign } from "crypto";
 
 // Zero-dependency Google Drive integration.
-// Uses direct JWT signing + REST API calls — no googleapis or google-auth-library
+// Uses direct JWT signing + REST API calls, no googleapis or google-auth-library
 // (those crash Turbopack due to their massive size).
 
 const DRIVE_API = "https://www.googleapis.com/drive/v3";

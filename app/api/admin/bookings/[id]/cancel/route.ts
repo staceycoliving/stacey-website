@@ -19,7 +19,7 @@ const VALID_KINDS: CancellationKind[] = [
  *
  * Structured cancellation replacing the old free-text approach. Sets
  * status=CANCELLED, kind=<enum>, reason=<optional detail>, auto-disables
- * retargeting. Refund (if any) is a SEPARATE endpoint (/refund) — we
+ * retargeting. Refund (if any) is a SEPARATE endpoint (/refund), we
  * don't auto-refund, admin must explicitly confirm even when kind=
  * CANCELLED_BY_STACEY.
  */
@@ -55,7 +55,7 @@ export async function POST(
       status: "CANCELLED",
       cancellationKind: kind as CancellationKind,
       cancellationReason: cleanReason,
-      // Stop retargeting on cancel — don't nudge a lost lead forever
+      // Stop retargeting on cancel, don't nudge a lost lead forever
       retargetingEligible: false,
     },
   });

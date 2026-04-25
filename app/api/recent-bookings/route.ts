@@ -5,7 +5,7 @@ import { reportError } from "@/lib/observability";
 
 // Last-24h committed bookings, anonymised (location name + minutes ago).
 // Powers the navbar's "Just booked · {city} · {ago}" rotating badge.
-// Empty array signals the navbar to fall back to its heritage line —
+// Empty array signals the navbar to fall back to its heritage line ,
 // same response shape on hard failure too, so the navbar treats them
 // identically.
 //
@@ -44,7 +44,7 @@ export async function GET() {
   } catch (err) {
     reportError(err, { scope: "recent-bookings" });
     // Same shape as success-empty so the consumer doesn't need a
-    // separate error branch — falls through to the heritage line.
+    // separate error branch, falls through to the heritage line.
     return NextResponse.json({ ok: true, data: [] });
   }
 }

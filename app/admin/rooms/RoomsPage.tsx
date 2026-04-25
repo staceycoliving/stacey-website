@@ -86,7 +86,7 @@ const CATEGORIES = [
 const STATUSES = ["ACTIVE", "BLOCKED", "DEACTIVATED"] as const;
 
 function formatDate(d: string | null) {
-  if (!d) return "—";
+  if (!d) return ",";
   return new Date(d).toLocaleDateString("de-DE", {
     day: "2-digit",
     month: "2-digit",
@@ -112,7 +112,7 @@ function formatCategory(cat: string) {
     .join(" ");
 }
 
-// A tenant whose moveOut has passed is not occupying anymore — same rule
+// A tenant whose moveOut has passed is not occupying anymore, same rule
 // as the public booking tool (lib/availability.ts).
 function isCurrentlyOccupied(r: Room): boolean {
   if (!r.tenants[0]) return false;
@@ -466,7 +466,7 @@ export default function RoomsPage({
                   >
                     <td className="px-3 py-2 font-medium">{r.roomNumber}</td>
                     <td className="px-3 py-2 text-gray truncate">{r.apartment.floor}</td>
-                    <td className="px-3 py-2 tabular-nums text-center">{r.apartment.number ?? "—"}</td>
+                    <td className="px-3 py-2 tabular-nums text-center">{r.apartment.number ?? ","}</td>
                     <td className="px-3 py-2 truncate">{formatCategory(r.category)}</td>
                     <td className="px-3 py-2 text-right tabular-nums">€{(r.monthlyRent / 100).toLocaleString("de-DE")}</td>
                     <td className="px-3 py-2">
@@ -487,16 +487,16 @@ export default function RoomsPage({
                       ) : r.bookings[0] ? (
                         <span className="text-orange-600">{r.bookings[0].firstName} {r.bookings[0].lastName}</span>
                       ) : (
-                        <span className="text-gray">—</span>
+                        <span className="text-gray">,</span>
                       )}
                     </td>
-                    <td className="px-3 py-2 tabular-nums text-gray">{r.tenants[0] ? formatDate(r.tenants[0].moveIn) : r.bookings[0]?.moveInDate ? formatDate(r.bookings[0].moveInDate) : "—"}</td>
+                    <td className="px-3 py-2 tabular-nums text-gray">{r.tenants[0] ? formatDate(r.tenants[0].moveIn) : r.bookings[0]?.moveInDate ? formatDate(r.bookings[0].moveInDate) : ","}</td>
                     <td className="px-3 py-2 tabular-nums">
                       {r.tenants[0]?.moveOut ? (
                         <span className="text-orange-600 font-medium">{formatDate(r.tenants[0].moveOut)}</span>
                       ) : r.tenants[0] ? (
                         <span className="text-gray">open-end</span>
-                      ) : "—"}
+                      ) : ","}
                     </td>
                     <td className="px-3 py-2 text-center">
                       <button
@@ -542,7 +542,7 @@ export default function RoomsPage({
         </div>
       )}
 
-      {/* Modals — kept intact */}
+      {/* Modals, kept intact */}
       {modal.kind === "addLocation" && <LocationModal onSaved={refresh} onClose={close} />}
       {modal.kind === "editLocation" && <LocationModal location={modal.location} onSaved={refresh} onClose={close} />}
       {modal.kind === "addApartment" && <ApartmentModal locationId={modal.locationId} locationName={modal.locationName} onSaved={refresh} onClose={close} />}
@@ -597,8 +597,8 @@ function ApartmentBlock({
       <div className="px-4 py-3 bg-background-alt border-b border-lightgray flex items-center justify-between flex-wrap gap-2">
         <div>
           <h3 className="font-semibold text-sm">
-            {locationName} — {apartment.houseNumber}
-            {apartment.label ? ` (${apartment.label})` : ""} — {apartment.floor}
+            {locationName}, {apartment.houseNumber}
+            {apartment.label ? ` (${apartment.label})` : ""}, {apartment.floor}
           </h3>
           <p className="text-xs text-gray mt-0.5">
             {apartment.rooms.length} rooms,{" "}
@@ -727,7 +727,7 @@ function RoomCard({
             {activeBooking.firstName} {activeBooking.lastName}
           </p>
           <p className="text-xs text-orange-600 font-medium">
-            Reserved — {activeBooking.status.replace(/_/g, " ")}
+            Reserved, {activeBooking.status.replace(/_/g, " ")}
           </p>
           {activeBooking.moveInDate && (
             <span className="text-xs text-gray">

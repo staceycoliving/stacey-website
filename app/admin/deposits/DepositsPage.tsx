@@ -86,7 +86,7 @@ function fmtEur(cents: number) {
 }
 
 function fmtDate(d: string | null) {
-  if (!d) return "—";
+  if (!d) return ",";
   return new Date(d).toLocaleDateString("de-DE", {
     day: "2-digit",
     month: "2-digit",
@@ -625,7 +625,7 @@ export default function DepositsPage({
                         <td className="px-3 py-3 text-right tabular-nums text-red-600">
                           {breakdown.defects > 0
                             ? `−${fmtEur(breakdown.defects)}`
-                            : "—"}
+                            : ","}
                           {t.defects.length > 0 && (
                             <span className="block text-[10px] text-gray">
                               {t.defects.length} item
@@ -636,7 +636,7 @@ export default function DepositsPage({
                         <td className="px-3 py-3 text-right tabular-nums text-red-600">
                           {breakdown.openRent + breakdown.openCharges > 0
                             ? `−${fmtEur(breakdown.openRent + breakdown.openCharges)}`
-                            : "—"}
+                            : ","}
                         </td>
                         <td
                           className={`px-3 py-3 text-right tabular-nums font-semibold ${
@@ -875,7 +875,7 @@ function BulkActionModal({
                     <td className="px-3 py-1.5 text-gray font-mono text-[10px]">
                       {t.depositRefundIban
                         ? `${t.depositRefundIban.slice(0, 8)}…`
-                        : "—"}
+                        : ","}
                     </td>
                   </tr>
                 ))}
@@ -1105,7 +1105,7 @@ function SettlementPanel({
                         month: "short",
                         year: "numeric",
                       })}{" "}
-                      — credit
+                     , credit
                     </span>
                     <span className="tabular-nums text-green-700">
                       +{fmtEur(r.paidAmount - r.amount)}
@@ -1259,7 +1259,7 @@ function DeadlineBadge({
   status: ReturnType<typeof deadlineStatus>;
 }) {
   if (status.status === "returned") {
-    return <span className="text-gray text-xs">—</span>;
+    return <span className="text-gray text-xs">,</span>;
   }
   if (status.status === "no_moveout") {
     return <span className="text-gray text-xs italic">{status.label}</span>;

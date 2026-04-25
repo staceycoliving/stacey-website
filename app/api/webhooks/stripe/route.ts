@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
   // Stripe occasionally retries the same webhook (network blip, our 5xx, etc.).
   // Replaying creates double tenants, double Stripe sessions and double emails,
   // so we record every event ID and refuse to process it twice. The unique
-  // index on (provider, eventId) is the source of truth — if the insert
+  // index on (provider, eventId) is the source of truth, if the insert
   // raises P2002, the event has already been seen and we acknowledge it
   // with 200 so Stripe stops retrying.
   try {
@@ -49,14 +49,14 @@ export async function POST(request: NextRequest) {
     });
   } catch (err: any) {
     if (err?.code === "P2002") {
-      // Already processed — acknowledge silently so Stripe stops retrying
+      // Already processed, acknowledge silently so Stripe stops retrying
       return Response.json({ received: true, duplicate: true });
     }
     reportError(err, {
       scope: "stripe-webhook",
       tags: { stage: "idempotency-insert", eventType: event.type, eventId: event.id },
     });
-    // Don't fail — try to process the event anyway. Worse to drop a real
+    // Don't fail, try to process the event anyway. Worse to drop a real
     // payment event than to risk a double-process if the dedup table is down.
   }
 
@@ -216,7 +216,7 @@ async function handleBookingFeePaid(bookingId: string, sessionId: string) {
   deadline.setHours(deadline.getHours() + DEPOSIT_DEADLINE_HOURS);
 
   // Update booking: PAID → DEPOSIT_PENDING.
-  // Auto-disable retargeting — booking fee paid = guest is engaged, stop
+  // Auto-disable retargeting, booking fee paid = guest is engaged, stop
   // nudging them (would be embarrassing to keep asking "still interested?").
   await prisma.booking.update({
     where: { id: bookingId },
@@ -347,10 +347,10 @@ async function handleRoomRaceLoss(
   const subject = `Your booking at STACEY ${booking.location.name} could not be completed`;
   const html = `
     <p>Hi ${booking.firstName},</p>
-    <p>We're very sorry — while you were completing your booking, this room was reserved by another guest.</p>
-    <p>We've <strong>refunded your €195 booking fee</strong> automatically (it should appear within 3–5 business days).</p>
-    <p>Please visit <a href="${env.NEXT_PUBLIC_BASE_URL}">our site</a> to pick another room — we'd love to still have you.</p>
-    <p>— STACEY Team</p>
+    <p>We're very sorry, while you were completing your booking, this room was reserved by another guest.</p>
+    <p>We've <strong>refunded your €195 booking fee</strong> automatically (it should appear within 3-5 business days).</p>
+    <p>Please visit <a href="${env.NEXT_PUBLIC_BASE_URL}">our site</a> to pick another room, we'd love to still have you.</p>
+    <p>, STACEY Team</p>
   `;
   try {
     const { resend, FROM } = await import("@/lib/email/_shared");
@@ -368,7 +368,7 @@ async function handleRoomRaceLoss(
       from: FROM,
       to: TEAM_EMAIL,
       subject: `⚠️ Race refund: ${booking.firstName} @ ${booking.location.name}`,
-      html: `<p>Booking <code>${booking.id}</code> got a room race conflict and was auto-refunded.</p><p>Reason: ${reason}</p><p>Guest: ${booking.firstName} — ${booking.email}</p>`,
+      html: `<p>Booking <code>${booking.id}</code> got a room race conflict and was auto-refunded.</p><p>Reason: ${reason}</p><p>Guest: ${booking.firstName}, ${booking.email}</p>`,
     });
   } catch {
     /* best effort */
@@ -388,7 +388,7 @@ async function handleDepositPaid(bookingId: string) {
   if (!booking || booking.status !== "DEPOSIT_PENDING") {
     logWarn(
       { scope: "stripe-webhook", tags: { bookingId, status: booking?.status ?? "missing" } },
-      "booking not found or not in DEPOSIT_PENDING — skipping (likely replay)",
+      "booking not found or not in DEPOSIT_PENDING, skipping (likely replay)",
     );
     return;
   }
@@ -448,7 +448,7 @@ async function handleDepositPaid(bookingId: string) {
 
     // Create the first RentPayment for the move-in month right away. The
     // monthly cron only runs on the 1st, so a tenant confirmed mid-month
-    // would otherwise never get a record for that month. Status PENDING —
+    // would otherwise never get a record for that month. Status PENDING ,
     // we don't charge here; the daily cron picks it up on the move-in day.
     const moveIn = new Date(booking.moveInDate!);
     moveIn.setHours(0, 0, 0, 0);
@@ -630,7 +630,7 @@ async function handlePaymentSetupCompleted(tenantId: string, session: any) {
   }
 
   // Defensive idempotency: if this exact payment method is already set on
-  // the tenant, the webhook is a replay — skip the update + the email so
+  // the tenant, the webhook is a replay, skip the update + the email so
   // the customer doesn't get a second "method confirmed" notification.
   if (tenant.sepaMandateId === paymentMethodId) {
     logWarn(
@@ -727,7 +727,7 @@ async function handlePaymentSetupCompleted(tenantId: string, session: any) {
   }
 
   // Auto-charge any outstanding rent now that a payment method is available.
-  // BUT: never charge before the tenant's move-in date — even if the rent
+  // BUT: never charge before the tenant's move-in date, even if the rent
   // record exists. The first month is created the moment the deposit hits
   // (handleDepositPaid) and waits until move-in day to charge.
   try {

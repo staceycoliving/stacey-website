@@ -164,7 +164,7 @@ function CheckinPage() {
           <h1 className="text-2xl font-bold text-[#1A1A1A] mb-3">You're all set!</h1>
           <p className="text-[#555] text-base leading-relaxed">
             Thank you for completing your registration.
-            Your digital access to {locationName} will be activated shortly —
+            Your digital access to {locationName} will be activated shortly ,
             you'll receive an email with your access details.
           </p>
         </div>

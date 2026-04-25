@@ -221,7 +221,7 @@ export default async function AdminAuditPage({
       year: "numeric",
     });
     entityRefs[`rentPayment:${rp.id}`] = {
-      label: `${name ?? "—"} · ${monthLabel}`,
+      label: `${name ?? ","} · ${monthLabel}`,
       tenantId: rp.tenant?.id ?? null,
     };
   }
@@ -230,7 +230,7 @@ export default async function AdminAuditPage({
       ? `${d.tenant.firstName} ${d.tenant.lastName}`
       : null;
     entityRefs[`defect:${d.id}`] = {
-      label: `${name ?? "—"} · ${d.description.slice(0, 40)}`,
+      label: `${name ?? ","} · ${d.description.slice(0, 40)}`,
       tenantId: d.tenant?.id ?? null,
     };
   }
@@ -239,7 +239,7 @@ export default async function AdminAuditPage({
       ? `${n.tenant.firstName} ${n.tenant.lastName}`
       : null;
     entityRefs[`note:${n.id}`] = {
-      label: name ?? "—",
+      label: name ?? ",",
       tenantId: n.tenant?.id ?? null,
     };
   }
@@ -248,7 +248,7 @@ export default async function AdminAuditPage({
       ? `${e.tenant.firstName} ${e.tenant.lastName}`
       : null;
     entityRefs[`extraCharge:${e.id}`] = {
-      label: `${name ?? "—"} · ${e.description.slice(0, 40)}`,
+      label: `${name ?? ","} · ${e.description.slice(0, 40)}`,
       tenantId: e.tenant?.id ?? null,
     };
   }

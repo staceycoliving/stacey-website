@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     return Response.json({ ok: true, alreadyCompleted: true });
   }
 
-  // Generate Meldeschein PDF (dynamic import — pdfkit is heavy)
+  // Generate Meldeschein PDF (dynamic import, pdfkit is heavy)
   let pdfData: Buffer | null = null;
   try {
     const { generateMeldescheinPdf } = await import("@/lib/meldeschein-pdf");

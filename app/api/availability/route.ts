@@ -81,7 +81,7 @@ async function getLongStayAvailability(
     const tenant = room.tenants[0];
 
     // If the tenant has a SCHEDULED outbound transfer, the room frees
-    // up on the transfer date (not moveOut) — the tenant is moving to
+    // up on the transfer date (not moveOut), the tenant is moving to
     // another room, not leaving the property.
     const outboundTransfer = room.transfersFrom[0];
 
@@ -106,7 +106,7 @@ async function getLongStayAvailability(
       moveOutDate.setHours(0, 0, 0, 0);
 
       if (moveOutDate <= today) {
-        // Tenant should have moved out already — treat as free
+        // Tenant should have moved out already, treat as free
         entry.freeNow++;
         entry.moveInDates.push(localDate(today));
       } else {
@@ -145,7 +145,7 @@ export async function GET(request: NextRequest) {
 
   if (!slug) return apiBadRequest("location parameter required");
 
-  // SHORT stay (apaleo) — these slugs are NOT in the DB, they live only in apaleo
+  // SHORT stay (apaleo), these slugs are NOT in the DB, they live only in apaleo
   if (isApaleoProperty(slug)) {
     const checkInStr = params.get("checkIn");
     const checkOutStr = params.get("checkOut");
@@ -188,7 +188,7 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  // LONG stay — lookup in DB
+  // LONG stay, lookup in DB
   const location = await prisma.location.findUnique({ where: { slug } });
   if (!location) return apiNotFound(`Location "${slug}" not found`);
 

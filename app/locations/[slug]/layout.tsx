@@ -19,7 +19,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     };
   }
 
-  const title = `STACEY ${loc.name} — ${loc.tagline}`;
+  const title = `STACEY ${loc.name}, ${loc.tagline}`;
   const description = loc.description;
   const image = loc.images[0] ?? "/images/website-hero.webp";
   const url = `${env.NEXT_PUBLIC_BASE_URL.replace(/\/$/, "")}/locations/${loc.slug}`;
@@ -50,7 +50,7 @@ export default async function LocationLayout({ params, children }: Props) {
   const { slug } = await params;
   const loc = getLocationBySlug(slug);
 
-  // schema.org/LodgingBusiness structured data — gets rendered into the
+  // schema.org/LodgingBusiness structured data, gets rendered into the
   // page's HTML so Google can pick it up for rich results.
   const jsonLd = loc
     ? {

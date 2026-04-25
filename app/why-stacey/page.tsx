@@ -120,21 +120,21 @@ export default function WhyStaceyPage() {
           </h2>
           <p className="mt-4 leading-relaxed text-gray">
             STACEY members often spend significantly less than they would on a
-            comparable studio apartment in the same city — and gain a real
+            comparable studio apartment in the same city, and gain a real
             community in return. For us it is not primarily about the money. It
             is about creating an international community of young professionals
             who share a home, a philosophy, and plenty of good evenings.
           </p>
           <p className="mt-4 leading-relaxed text-gray">
             Living at STACEY means you&apos;re always invited and never
-            obligated. Join the community dinner or close your door — both are
+            obligated. Join the community dinner or close your door, both are
             perfectly fine. The move-in process is fast and paperless; just
             bring your personal belongings.
           </p>
         </div>
       </section>
 
-      {/* Team story — moved from the homepage AboutSection. Editorial
+      {/* Team story, moved from the homepage AboutSection. Editorial
           treatment with stat tiles + the long-form team copy. */}
       <section className="bg-[#FAFAFA] px-4 py-20 sm:px-6 sm:py-24 lg:px-8">
         <div className="mx-auto max-w-6xl">
@@ -158,8 +158,8 @@ export default function WhyStaceyPage() {
               </h2>
               <p className="mt-4 text-base leading-relaxed text-gray">
                 Founded in Hamburg in 2019 with a simple mission: make city
-                living better. We believe that home is more than four walls —
-                it&rsquo;s the people you share it with.
+                living better. We believe that home is more than four walls.
+                It&rsquo;s the people you share it with.
               </p>
               <p className="mt-3 text-base leading-relaxed text-gray">
                 From our first apartment in Winterhude to locations across
@@ -203,7 +203,7 @@ export default function WhyStaceyPage() {
             {[
               {
                 title: "Private & Shared Spaces",
-                text: "Your own furnished bedroom — bedding included — plus generous common areas: living rooms, work zones and kitchens stocked with essentials. Move-in ready from day one.",
+                text: "Your own furnished bedroom, bedding included, plus generous common areas: living rooms, work zones and kitchens stocked with essentials. Move-in ready from day one.",
               },
               {
                 title: "Most Services Included",
@@ -211,7 +211,7 @@ export default function WhyStaceyPage() {
               },
               {
                 title: "A Real Community",
-                text: "Every location has a Community Manager who helps you settle in and organises community get-togethers — from shared dinners to casual evenings. Members stay connected across our cities, and you can apply to transfer between STACEY locations whenever availability allows.",
+                text: "Every location has a Community Manager who helps you settle in and organises community get-togethers, from shared dinners to casual evenings. Members stay connected across our cities, and you can apply to transfer between STACEY locations whenever availability allows.",
               },
             ].map((value) => (
               <div key={value.title} className="rounded-[5px] bg-white p-6 shadow-sm">
@@ -244,7 +244,7 @@ export default function WhyStaceyPage() {
         </div>
       </section>
 
-      {/* Member stories — moved from the homepage TestimonialsSection.
+      {/* Member stories, moved from the homepage TestimonialsSection.
           All three interviews shown in a grid; click a card → modal. */}
       <section id="stories" className="bg-[#FAFAFA] px-4 py-20 sm:px-6 sm:py-24 lg:px-8">
         <div className="mx-auto max-w-6xl">

@@ -47,7 +47,7 @@ export async function GET() {
     },
   });
 
-  // Existing RentPayments for this month — so we show who's already been
+  // Existing RentPayments for this month, so we show who's already been
   // created/charged.
   const existing = await prisma.rentPayment.findMany({
     where: { month: { gte: monthStart, lt: nextMonthStart } },
@@ -118,11 +118,11 @@ export async function GET() {
         reason = "läuft gerade";
       } else if (e.status === "FAILED") {
         status = "already_failed";
-        reason = "fehlgeschlagen — Retry nötig";
+        reason = "fehlgeschlagen, Retry nötig";
       } else if (t.paymentMethod === "BANK_TRANSFER") {
         // RentPayment exists, status PENDING, tenant pays by bank transfer
         status = "bank_transfer";
-        reason = "zahlt per Überweisung — manuell markieren";
+        reason = "zahlt per Überweisung, manuell markieren";
       } else {
         // SEPA, PENDING / PARTIAL
         status = !t.sepaMandateId
@@ -140,7 +140,7 @@ export async function GET() {
     } else {
       if (t.paymentMethod === "BANK_TRANSFER") {
         status = "bank_transfer";
-        reason = "zahlt per Überweisung — Record wird erstellt, manuell markieren";
+        reason = "zahlt per Überweisung, Record wird erstellt, manuell markieren";
       } else if (!t.sepaMandateId) {
         status = "skipped_no_sepa";
         reason = "keine Zahlungsmethode";
@@ -156,8 +156,8 @@ export async function GET() {
     return {
       tenantId: t.id,
       name: `${t.firstName} ${t.lastName}`,
-      location: t.room?.apartment.location.name ?? "—",
-      room: t.room?.roomNumber ?? "—",
+      location: t.room?.apartment.location.name ?? ",",
+      room: t.room?.roomNumber ?? ",",
       baseRent: base,
       adjustment: adj,
       total,

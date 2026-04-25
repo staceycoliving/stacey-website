@@ -51,7 +51,7 @@ export async function PATCH(request: NextRequest) {
       data: {
         status,
         paidAmount: paidAmountCents,
-        // Only set paidAt when fully paid — a partial payment is still
+        // Only set paidAt when fully paid, a partial payment is still
         // "open" from an accounting standpoint.
         paidAt: status === "PAID" ? paidAtDate : null,
       },

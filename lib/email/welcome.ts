@@ -86,14 +86,14 @@ export async function sendWelcomeEmail(data: WelcomeEmailData, meta?: Meta) {
     <div style="background:#FAFAFA;border-radius:8px;padding:20px;margin-bottom:16px;">
       <p style="margin:0 0 10px;font-size:15px;font-weight:600;">Good to know</p>
       <ul style="margin:0;padding-left:20px;font-size:14px;color:#555;line-height:1.8;">
-        <li>Your room is <strong>fully furnished</strong> — just bring your personal belongings</li>
+        <li>Your room is <strong>fully furnished</strong>, just bring your personal belongings</li>
         <li><strong>Towels and bed linen</strong> are provided</li>
         <li>You'll find a <strong>fully equipped kitchen</strong> in the common areas</li>
         <li>WiFi password: <strong>welcometostacey</strong></li>
       </ul>
     </div>
     <p style="font-size:14px;color:#555;line-height:1.6;">
-      Questions before your move-in? Just reply to this email — we're here to help.
+      Questions before your move-in? Just reply to this email, we're here to help.
     </p>
   `);
 

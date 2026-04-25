@@ -148,7 +148,7 @@ export async function GET(request: NextRequest) {
         belegNr: `EXTRA-${e.id.slice(-8)}`,
         amount: e.amount,
         account: accounts.extras,
-        text: `${e.description} — ${e.tenant.firstName} ${e.tenant.lastName} ${e.tenant.room!.apartment.location.name}`,
+        text: `${e.description}, ${e.tenant.firstName} ${e.tenant.lastName} ${e.tenant.room!.apartment.location.name}`,
       });
     }
   }
@@ -161,7 +161,7 @@ export async function GET(request: NextRequest) {
       fmtDateDE(r.date),
       csvEscape(r.belegNr),
       fmtAmount(r.amount),
-      "", // Steuerschlüssel (empty — coliving rent in DE is umsatzsteuerfrei)
+      "", // Steuerschlüssel (empty, coliving rent in DE is umsatzsteuerfrei)
       r.account,
       csvEscape(r.text),
     ].join(";")

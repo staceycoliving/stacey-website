@@ -40,7 +40,7 @@ export default function SearchFields({
   const setCalendarOpen = setCalendarOpenExternal ?? setCalendarOpenInternal;
 
   // Fetch per-date slot availability across all SHORT properties so the
-  // calendar can do Airbnb-style dynamic greying — check-in valid iff a
+  // calendar can do Airbnb-style dynamic greying, check-in valid iff a
   // 5-night run is possible from that date; after pick, check-out valid
   // iff every night in the candidate range has a consistent free slot.
   // Re-fetches when `persons` changes because availability differs for
@@ -48,7 +48,7 @@ export default function SearchFields({
   const [availableSlotsPerDate, setAvailableSlotsPerDate] = useState<
     Record<string, string[]> | undefined
   >(undefined);
-  // min/max stay come live from apaleo — changing them in apaleo reflects
+  // min/max stay come live from apaleo, changing them in apaleo reflects
   // here within the 30-min edge cache window.
   const [apaleoMinNights, setApaleoMinNights] = useState<number | undefined>(undefined);
   const [apaleoMaxNights, setApaleoMaxNights] = useState<number | undefined>(undefined);
@@ -65,7 +65,7 @@ export default function SearchFields({
         }
       })
       .catch(() => {
-        /* silently ignore — calendar falls back to accepting any date */
+        /* silently ignore, calendar falls back to accepting any date */
       });
     return () => {
       cancelled = true;
@@ -147,7 +147,7 @@ export default function SearchFields({
           </div>
         )}
 
-        {/* Date — standalone pill-button */}
+        {/* Date, standalone pill-button */}
         <div className="relative shrink-0">
           {stayType === "SHORT" ? (
             <>
@@ -488,7 +488,7 @@ export default function SearchFields({
         )}
       </AnimatePresence>
 
-      {/* Submit CTA — shared between homepage hero and /move-in intro so
+      {/* Submit CTA, shared between homepage hero and /move-in intro so
           behaviour is identical on both surfaces. Always visible once a
           stay-type is picked; disabled state shows a hint of what's still
           needed. Action-oriented label adapts to readiness. */}

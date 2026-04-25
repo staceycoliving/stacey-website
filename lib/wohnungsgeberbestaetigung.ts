@@ -212,7 +212,7 @@ export async function generateWohnungsgeberbestaetigung(
         PAD, doc.y, { lineGap: 1.5, width: contentWidth }
       );
 
-    // ─── Unterschrift Grid (2 Spalten) — fest unten auf der Seite ──
+    // ─── Unterschrift Grid (2 Spalten), fest unten auf der Seite ──
     const sigLineY = doc.page.height - 75;
 
     // Linke Spalte: Ort, Datum

@@ -42,7 +42,7 @@ export default function AdminShell({
       {/* Test mode banner */}
       {testMode?.enabled && (
         <div className="bg-yellow-100 border-b border-yellow-300 px-4 py-2 text-xs text-yellow-900 text-center">
-          <strong>⚠ TEST MODE active</strong> — emails are only sent to: <span className="font-mono">{testMode.whitelist.join(", ")}</span>. All other recipients are silently skipped.
+          <strong>⚠ TEST MODE active</strong>, emails are only sent to: <span className="font-mono">{testMode.whitelist.join(", ")}</span>. All other recipients are silently skipped.
         </div>
       )}
 
@@ -131,7 +131,7 @@ type SearchResult = {
   href: string;
 };
 
-/** Global quick-jump — Cmd/Ctrl+K or click. Hits /api/admin/search with a
+/** Global quick-jump, Cmd/Ctrl+K or click. Hits /api/admin/search with a
  *  debounced query; arrow keys navigate, Enter jumps. Closes on outside
  *  click or Escape. */
 function QuickSearch() {

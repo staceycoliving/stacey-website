@@ -7,7 +7,7 @@ import { audit } from "@/lib/audit";
  * PATCH /api/admin/tenants/[id]
  *
  * Update a tenant's contact details. Name + dateOfBirth are intentionally
- * read-only — they're set on the signed lease and must not drift.
+ * read-only, they're set on the signed lease and must not drift.
  */
 export async function PATCH(
   request: NextRequest,
@@ -23,7 +23,7 @@ export async function PATCH(
   const data: Record<string, unknown> = {};
   if (typeof body.email === "string") {
     const v = body.email.trim();
-    // Minimal email validation — full regex is overkill, this catches the
+    // Minimal email validation, full regex is overkill, this catches the
     // common mistakes (missing @, missing domain TLD).
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) {
       return Response.json({ error: "Invalid email format" }, { status: 400 });

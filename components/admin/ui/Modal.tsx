@@ -34,7 +34,7 @@ export function Modal({
   footer,
   onClose,
   size = "md",
-  /** Prevent close on backdrop click — use for destructive / data-entry modals where
+  /** Prevent close on backdrop click, use for destructive / data-entry modals where
    *  an accidental click shouldn't throw away input. */
   dismissOnBackdrop = true,
 }: {

@@ -29,7 +29,7 @@ export async function sendPaymentSetupLink(data: PaymentSetupEmail, meta?: Meta)
     {
       from: FROM,
       to: data.email,
-      subject: `Set up your monthly rent payment — STACEY ${data.locationName}`,
+      subject: `Set up your monthly rent payment, STACEY ${data.locationName}`,
       html,
     },
     { templateKey: "payment_setup", ...meta }
@@ -70,7 +70,7 @@ export async function sendPaymentSetupConfirmation(data: PaymentSetupConfirmatio
     {
       from: FROM,
       to: data.email,
-      subject: `Payment method confirmed — STACEY ${data.locationName}`,
+      subject: `Payment method confirmed, STACEY ${data.locationName}`,
       html,
     },
     { templateKey: "payment_setup_confirmation", ...meta }
@@ -104,7 +104,7 @@ export async function sendPaymentSetupReminder(data: PaymentSetupReminderEmail, 
     {
       from: FROM,
       to: data.email,
-      subject: `${isUrgent ? "Reminder: " : ""}Set up your monthly rent payment — STACEY ${data.locationName}`,
+      subject: `${isUrgent ? "Reminder: " : ""}Set up your monthly rent payment, STACEY ${data.locationName}`,
       html,
     },
     { templateKey: "payment_setup_reminder", ...meta }
@@ -143,7 +143,7 @@ export async function sendPaymentFinalWarning(data: PaymentFinalWarningEmail, me
     {
       from: FROM,
       to: data.email,
-      subject: `Action required — Set up payment for STACEY ${data.locationName}`,
+      subject: `Action required, Set up payment for STACEY ${data.locationName}`,
       html,
     },
     { templateKey: "payment_final_warning", ...meta }

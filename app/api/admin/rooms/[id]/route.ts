@@ -67,13 +67,13 @@ export async function DELETE(
 
   if (room.tenants.length > 0) {
     return Response.json(
-      { error: "Room has an active tenant — remove tenant first or deactivate the room." },
+      { error: "Room has an active tenant, remove tenant first or deactivate the room." },
       { status: 409 }
     );
   }
   if (room.bookings.length > 0) {
     return Response.json(
-      { error: `Room has ${room.bookings.length} booking(s) — remove those first.` },
+      { error: `Room has ${room.bookings.length} booking(s), remove those first.` },
       { status: 409 }
     );
   }

@@ -11,9 +11,9 @@ const montserrat = Montserrat({
   variable: "--font-montserrat",
 });
 
-const TITLE = "STACEY — Coliving. Just Better.";
+const TITLE = "STACEY, Coliving. Just Better.";
 const DESCRIPTION =
-  "STACEY offers furnished coliving apartments in Hamburg, Berlin, and Vallendar. Almost everything included — community built-in. Short stays from 5 nights, long stays from 3 months.";
+  "STACEY offers furnished coliving apartments in Hamburg, Berlin, and Vallendar. Almost everything included, community built-in. Short stays from 5 nights, long stays from 3 months.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(env.NEXT_PUBLIC_BASE_URL),
@@ -78,7 +78,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`h-full antialiased ${montserrat.variable}`}>
       <body className="min-h-full flex flex-col">
-        {/* next/script with beforeInteractive self-injects into <head>; do not wrap manually — that clashes with Next.js head management and causes hydration errors. */}
+        {/* next/script with beforeInteractive self-injects into <head>; do not wrap manually, that clashes with Next.js head management and causes hydration errors. */}
         <ConsentScripts />
         {children}
       </body>

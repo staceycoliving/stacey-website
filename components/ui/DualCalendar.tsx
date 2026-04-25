@@ -87,7 +87,7 @@ function CalendarMonth({
             <button
               key={day}
               disabled={disabled}
-              aria-label={disabled ? `${dateStr} — not available` : dateStr}
+              aria-label={disabled ? `${dateStr}, not available` : dateStr}
               onClick={() => onSelect(dateStr)}
               className={`rounded-[3px] py-1.5 text-xs transition-colors ${
                 isPast
@@ -132,11 +132,11 @@ export default function DualCalendar({
    *  check-in greying + dynamic check-out greying from the selected
    *  check-in onward. */
   availableSlotsPerDate?: Record<string, string[]>;
-  /** Minimum stay length in nights — check-outs closer than this to the
+  /** Minimum stay length in nights, check-outs closer than this to the
    *  selected check-in are disabled. Defaults to 5 for SHORT stays, but
    *  callers should override with the apaleo-sourced value. */
   minNights?: number;
-  /** Maximum stay length in nights — check-outs further away than this
+  /** Maximum stay length in nights, check-outs further away than this
    *  are disabled. Undefined = unlimited. */
   maxNights?: number;
 }) {
@@ -190,7 +190,7 @@ export default function DualCalendar({
       const E = addDaysISO(checkIn, n);
       if (n >= minNights) validSet.add(E);
       cursor = E;
-      // If the next day's data isn't in the map, stop — beyond our
+      // If the next day's data isn't in the map, stop, beyond our
       // knowledge window.
       if (availableSlotsPerDate[cursor] === undefined) break;
     }
@@ -210,7 +210,7 @@ export default function DualCalendar({
         const next = addDaysISO(D, n);
         const nextSlots = availableSlotsPerDate[next];
         if (nextSlots === undefined) {
-          // Beyond data horizon — treat as blocked for safety.
+          // Beyond data horizon, treat as blocked for safety.
           ok = false;
           break;
         }

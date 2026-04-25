@@ -86,7 +86,7 @@ export const privacy: PrivacySection[] = [
   {
     heading: "2. General Information on Data Processing",
     paragraphs: [
-      "[PLACEHOLDER — replace with vetted generator output.] We process personal data of our users only as necessary to provide a functional website and our content and services. Processing of personal data generally takes place only with the user's consent or where the processing is authorised by legal provisions (Art. 6 (1) GDPR).",
+      "[PLACEHOLDER, replace with vetted generator output.] We process personal data of our users only as necessary to provide a functional website and our content and services. Processing of personal data generally takes place only with the user's consent or where the processing is authorised by legal provisions (Art. 6 (1) GDPR).",
     ],
   },
   {
@@ -141,7 +141,7 @@ export const privacy: PrivacySection[] = [
         provider:
           "apaleo GmbH, Rosental 10, 80331 Munich, Germany",
         purpose:
-          "Management of short stays — reservations, check-in/check-out, billing.",
+          "Management of short stays, reservations, check-in/check-out, billing.",
         legalBasis: "Art. 6 (1) (b) GDPR",
       },
       {
@@ -164,7 +164,7 @@ export const privacy: PrivacySection[] = [
         provider:
           "Google Ireland Limited, Gordon House, Barrow Street, Dublin 4, Ireland",
         purpose:
-          "Embedding of the 'Montserrat' typeface. Loaded locally via next/font — NO connection to Google servers on page load.",
+          "Embedding of the 'Montserrat' typeface. Loaded locally via next/font, NO connection to Google servers on page load.",
         legalBasis: "Art. 6 (1) (f) GDPR",
       },
       {
@@ -197,7 +197,7 @@ export const privacy: PrivacySection[] = [
   {
     heading: "4. Cookies and Consent",
     paragraphs: [
-      "When you first visit our website, a cookie banner (Cookiebot) asks you to choose which categories of cookies to accept: Necessary, Preferences, Statistics and Marketing. Necessary cookies are set by default — they are required for the website to function (session, security, consent storage).",
+      "When you first visit our website, a cookie banner (Cookiebot) asks you to choose which categories of cookies to accept: Necessary, Preferences, Statistics and Marketing. Necessary cookies are set by default, they are required for the website to function (session, security, consent storage).",
       "Statistics and Marketing cookies (Google Analytics, Google Ads) are only set AFTER you actively consent. If you decline, no tracking scripts are loaded. You can change or withdraw your consent at any time via the 'Cookie settings' link in the footer.",
       "We implement Google Consent Mode v2: while you have not consented, no personal identifiers are transmitted to Google. Upon consent, tracking begins.",
     ],
@@ -348,7 +348,7 @@ export const termsOfService: TermsSection[] = [
       "The contract is concluded in the English language.",
       "These terms and conditions also include compliance with our house rules, which are available in their respective current version via our homepage.",
       "Amendments or additions to the contract, the acceptance of STACEY's contractual offer, or to these terms and conditions for the rental of Suites shall be made in writing. Unilateral changes or additions by the guest are void.",
-      "Place of performance and payment is the registered office of STACEY. Exclusive place of jurisdiction — also for cheque and exchange disputes — is the registered office of STACEY, provided that the guest is a businessman (Kaufmann) in the sense of the German Commercial Code (HGB). If a contractual party meets the requirements of section 38 paragraph 2 of the German Code of Civil Procedure (ZPO) and has no general place of jurisdiction in Germany, the place of jurisdiction shall be the registered office of STACEY.",
+      "Place of performance and payment is the registered office of STACEY. Exclusive place of jurisdiction, also for cheque and exchange disputes, is the registered office of STACEY, provided that the guest is a businessman (Kaufmann) in the sense of the German Commercial Code (HGB). If a contractual party meets the requirements of section 38 paragraph 2 of the German Code of Civil Procedure (ZPO) and has no general place of jurisdiction in Germany, the place of jurisdiction shall be the registered office of STACEY.",
       "This contract shall be governed by the laws of the Federal Republic of Germany. The application of the UN Convention on Contracts for the International Sale of Goods (CISG) and provisions regarding the conflict of laws shall be excluded.",
       "Should any provision of these general terms and conditions and/or the contract regarding the rental of Suites be or become invalid or void, the validity of the remaining provisions shall not be affected. In this case the statutory provisions shall apply.",
     ],

@@ -103,7 +103,7 @@ export default function MapSection() {
   return (
     <section className="bg-[#FAFAFA] px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
       <div className="mx-auto max-w-6xl">
-        {/* Editorial header — subtitle morphs to the active city */}
+        {/* Editorial header, subtitle morphs to the active city */}
         <div className="mb-8 text-center sm:mb-10">
           <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-pink">
             8 homes · 3 cities
@@ -117,9 +117,9 @@ export default function MapSection() {
           </h2>
           <p className="mx-auto mt-3 max-w-xl text-xs text-gray sm:text-sm">
             {city === "all" &&
-              "Hover a marker, scroll the list — click any home to check live availability."}
+              "Hover a marker, scroll the list. Click any home to check live availability."}
             {city === "hamburg" &&
-              "Across the most-walkable neighbourhoods — canals, corner cafés, late-night ferment."}
+              "Across the most-walkable neighbourhoods: canals, corner cafés, late-night ferment."}
             {city === "berlin" &&
               "Mitte. Two minutes from Museum Island, U2 and U8 at your door."}
             {city === "vallendar" &&
@@ -127,7 +127,7 @@ export default function MapSection() {
           </p>
         </div>
 
-        {/* City tabs — sit close under the header so they read as
+        {/* City tabs, sit close under the header so they read as
             part of the same heading block rather than a detached row. */}
         <div className="mb-6 flex justify-center sm:mb-8">
           <div className="inline-flex gap-1 rounded-[5px] border border-black/10 bg-white p-1 shadow-sm">
@@ -159,10 +159,10 @@ export default function MapSection() {
 
         {/* Two-column: side-panel list + map. Mobile shows map FIRST
             (the visual hook), then the list scrolls in below. Desktop:
-            list left (340px — narrower since numbers are gone), map
+            list left (340px, narrower since numbers are gone), map
             right. */}
         <div className="grid gap-4 lg:grid-cols-[340px_1fr] lg:gap-6">
-          {/* Side-panel — Mobile renders the carousel OVERLAID on the
+          {/* Side-panel, Mobile renders the carousel OVERLAID on the
               map (Airbnb-style), see below. This column only renders
               the desktop sticky-header list. */}
           <div className="order-2 hidden min-w-0 lg:order-1 lg:block">

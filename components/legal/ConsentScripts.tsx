@@ -26,7 +26,7 @@ export default function ConsentScripts() {
 
   return (
     <>
-      {/* 1. Consent Mode v2 defaults — must run BEFORE gtag.js loads. */}
+      {/* 1. Consent Mode v2 defaults, must run BEFORE gtag.js loads. */}
       {/* eslint-disable-next-line @next/next/no-before-interactive-script-outside-document -- App Router: beforeInteractive must live in root layout per Next.js docs */}
       <Script
         id="consent-default"
@@ -51,7 +51,7 @@ export default function ConsentScripts() {
         }}
       />
 
-      {/* 2. Cookiebot CMP — auto-blocks all non-essential scripts. */}
+      {/* 2. Cookiebot CMP, auto-blocks all non-essential scripts. */}
       {/* eslint-disable-next-line @next/next/no-before-interactive-script-outside-document -- App Router: beforeInteractive must live in root layout per Next.js docs */}
       <Script
         id="Cookiebot"
@@ -61,7 +61,7 @@ export default function ConsentScripts() {
         strategy="beforeInteractive"
       />
 
-      {/* 3. GA4 / Google Ads — blocked by Cookiebot until consent. */}
+      {/* 3. GA4 / Google Ads, blocked by Cookiebot until consent. */}
       {trackingEnabled && (
         <>
           <Script

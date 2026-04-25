@@ -29,7 +29,7 @@ function parseLocalDate(input: Date | string): { year: number; month: number; da
 function makeLocalMonthStart(year: number, month: number): Date {
   // Try midnight at +02:00 first (CEST); fall back to +01:00 (CET) if
   // the resulting wall time isn't in DST. For simplicity in this codebase
-  // (Germany is on CEST April–October, which covers all our move-in
+  // (Germany is on CEST April-October, which covers all our move-in
   // scenarios in scope), use +02:00. The 1-day range query accommodates
   // the half-hour edge cases anyway.
   return new Date(Date.UTC(year, month, 1) - 2 * 60 * 60 * 1000);
@@ -175,7 +175,7 @@ export async function ensureRentPayment(
  *  payout instead of a refund + a deposit return + a separate offset.
  *
  *  Underpayment (e.g. moveOut shifted later) is surfaced as a warning
- *  for manual handling — auto-charging extra would need a fresh SEPA
+ *  for manual handling, auto-charging extra would need a fresh SEPA
  *  pull. */
 export async function reconcileMoveOutPayment(
   prisma: PrismaClient,
@@ -212,7 +212,7 @@ export async function reconcileMoveOutPayment(
 
   // Read date components in CET (Europe/Berlin) so the calculation is
   // independent of the server's process timezone (Vercel Node runs in
-  // UTC, local macOS in CET — same code, different `.getMonth()` outputs
+  // UTC, local macOS in CET, same code, different `.getMonth()` outputs
   // without a fixed reference).
   const moveOutLocal = parseLocalDate(tenant.moveOut);
   const moveInLocal = parseLocalDate(tenant.moveIn);
@@ -258,7 +258,7 @@ export async function reconcileMoveOutPayment(
       oldAmountCents: rent.amount,
       newAmountCents: correctAmount,
       warnings: [
-        `Tenant underpaid by ${(correctAmount - rent.paidAmount) / 100}€ for ${monthStart.toISOString().slice(0, 7)} — needs manual charge`,
+        `Tenant underpaid by ${(correctAmount - rent.paidAmount) / 100}€ for ${monthStart.toISOString().slice(0, 7)}, needs manual charge`,
       ],
     };
   }
@@ -338,7 +338,7 @@ export async function chargeRentPayment(
   | "failed"
 > {
   const { rentPayment, tenant, triggerLabel } = args;
-  // Bank-transfer tenants are collected manually — never auto-charge.
+  // Bank-transfer tenants are collected manually, never auto-charge.
   if (tenant.paymentMethod === "BANK_TRANSFER") return "skipped_bank_transfer";
   if (!tenant.stripeCustomerId || !tenant.sepaMandateId) return "skipped_no_sepa";
   if (!isChargeableNow({
@@ -377,7 +377,7 @@ export async function chargeRentPayment(
     ...appliedDiscounts.map((d) => d.id),
   ];
 
-  // Edge case: net 0 (full discount). No Stripe PI needed — mark rent
+  // Edge case: net 0 (full discount). No Stripe PI needed, mark rent
   // and bundled adjustments as settled in DB directly.
   if (finalAmount <= 0) {
     await prisma.$transaction([
@@ -407,7 +407,7 @@ export async function chargeRentPayment(
           zeroAmount: true,
         },
       },
-      `rent fully offset by discounts (${triggerLabel}) — no Stripe charge`,
+      `rent fully offset by discounts (${triggerLabel}), no Stripe charge`,
     );
     return "charged";
   }

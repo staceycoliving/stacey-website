@@ -80,7 +80,7 @@ export default async function AdminHousekeepingPage({
     guestName: string;
     source: "LONG" | "SHORT";
     time: string | null; // HH:MM (scheduled in/out time)
-    tenantId: string | null; // LONG only — for deep-link to folio
+    tenantId: string | null; // LONG only, for deep-link to folio
     apaleoReservationId: string | null; // SHORT only
     roomId: string | null; // for turnaround grouping (LONG only)
   };
@@ -128,7 +128,7 @@ export default async function AdminHousekeepingPage({
       taskKey: `apaleo-${r.id}-in`,
       taskType: "MOVE_IN",
       date: arrival ? dayOf(arrival) : dateStr,
-      locationName: r.propertyName || r.locationSlug || "—",
+      locationName: r.propertyName || r.locationSlug || ",",
       locationSlug: r.locationSlug || null,
       roomLabel: r.unitName ? `#${r.unitName}` : `(${r.unitGroupName})`,
       guestName: `${r.guestFirstName} ${r.guestLastName}`,
@@ -149,7 +149,7 @@ export default async function AdminHousekeepingPage({
       taskKey: `apaleo-${r.id}-out`,
       taskType: "MOVE_OUT",
       date: departure ? dayOf(departure) : dateStr,
-      locationName: r.propertyName || r.locationSlug || "—",
+      locationName: r.propertyName || r.locationSlug || ",",
       locationSlug: r.locationSlug || null,
       roomLabel: r.unitName ? `#${r.unitName}` : `(${r.unitGroupName})`,
       guestName: `${r.guestFirstName} ${r.guestLastName}`,

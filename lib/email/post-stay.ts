@@ -36,7 +36,7 @@ export async function sendPostStayFeedback(data: PostStayEmailData, meta?: Meta)
           </td>
           <td style="padding:0;vertical-align:middle;">
             <p style="margin:0;font-size:14px;font-weight:600;">Your invoice is attached</p>
-            <p style="margin:2px 0 0;font-size:13px;color:#888;">Invoice ${data.invoiceNumber} — please save for your records.</p>
+            <p style="margin:2px 0 0;font-size:13px;color:#888;">Invoice ${data.invoiceNumber}, please save for your records.</p>
           </td>
         </tr></table>
       </div>`
@@ -54,7 +54,7 @@ export async function sendPostStayFeedback(data: PostStayEmailData, meta?: Meta)
     <h2 style="margin:0 0 8px;font-size:22px;font-weight:700;">Thanks for being part of STACEY, ${data.firstName}!</h2>
     <p style="margin:0 0 24px;color:#555;font-size:15px;line-height:1.5;">
       We hope you enjoyed your ${stayLabel} at STACEY ${data.locationName}.
-      It was great having you — our members make STACEY what it is.
+      It was great having you, our members make STACEY what it is.
     </p>
     ${stayDetails}
     ${invoiceSection}
@@ -68,7 +68,7 @@ export async function sendPostStayFeedback(data: PostStayEmailData, meta?: Meta)
     ${ctaButton("Rate your stay", feedbackUrl)}
     <p style="font-size:14px;color:#555;line-height:1.6;">
       ${data.stayType === "SHORT"
-        ? "Thinking about a longer stay? Check out our <a href=\"https://stacey.de\" style=\"color:#1A1A1A;font-weight:600;\">long-term options</a> — many of our members started with a short stay."
+        ? "Thinking about a longer stay? Check out our <a href=\"https://stacey.de\" style=\"color:#1A1A1A;font-weight:600;\">long-term options</a>, many of our members started with a short stay."
         : "You'll always be part of the STACEY family. If you ever need a room again, you know where to find us."}
     </p>
   `);

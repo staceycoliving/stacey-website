@@ -28,7 +28,7 @@ export async function createSignatureRequest(name: string) {
     method: "POST",
     body: JSON.stringify({
       name,
-      delivery_mode: "none", // No emails from Yousign — we send the signed doc ourselves
+      delivery_mode: "none", // No emails from Yousign, we send the signed doc ourselves
       timezone: "Europe/Berlin",
     }),
   });
@@ -140,7 +140,7 @@ export async function createLeaseSigningSession(
 ) {
   // 1. Create request
   const sigReq = await createSignatureRequest(
-    `Lease Agreement – ${signer.firstName} ${signer.lastName}`
+    `Lease Agreement to ${signer.firstName} ${signer.lastName}`
   );
 
   // 2. Upload document
@@ -153,7 +153,7 @@ export async function createLeaseSigningSession(
     signer,
     LEASE_SIGNATURE_FIELDS
   );
-  // 4. Activate — signing URL is in the activated response
+  // 4. Activate, signing URL is in the activated response
   const activated = await activateSignatureRequest(sigReq.id);
 
   const signingUrl =

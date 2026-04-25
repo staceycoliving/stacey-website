@@ -73,7 +73,7 @@ export async function GET(request: NextRequest) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // Run each task isolated — one failing task should never block the others
+  // Run each task isolated, one failing task should never block the others
   // and every failure must end up in Sentry tagged with which step broke.
   const runStep = async <T>(name: string, fn: () => Promise<T>) => {
     try {
@@ -92,7 +92,7 @@ export async function GET(request: NextRequest) {
     rentReminders: await runStep("rentReminders", handleRentReminders),
     postStayFeedback: await runStep("postStayFeedback", handlePostStayFeedback),
     retargeting: await runStep("retargeting", handleBookingRetargeting),
-    // SHORT stay (apaleo) — disabled until Matteo enables it
+    // SHORT stay (apaleo), disabled until Matteo enables it
     // Enable by setting ENABLE_SHORT_STAY_EMAILS=true in env
     ...(process.env.ENABLE_SHORT_STAY_EMAILS === "true" ? {
       shortStayPreArrival: await runStep("shortStayPreArrival", handleShortStayPreArrival),
@@ -355,7 +355,7 @@ async function handleWelcomeEmails() {
           category: tenant.room!.category,
           persons: 1,
           moveInDate: tenant.moveIn.toISOString().split("T")[0],
-          bookingId: `Final warning sent — payment not set up`,
+          bookingId: `Final warning sent, payment not set up`,
         }).catch((err) => console.error("Team notif error:", err));
 
         finalWarningSent++;
@@ -407,13 +407,13 @@ async function handleRentReminders() {
     reportError(err, { scope: "cron-daily", tags: { stage: "room-transfers" } });
   }
 
-  // Find all unpaid rent payments — past months AND current month if the
+  // Find all unpaid rent payments, past months AND current month if the
   // tenant has already moved in. The chargeRentPayment helper will skip
   // anything not yet chargeable (today < moveIn) or bank-transfer tenants.
   const unpaidRents = await prisma.rentPayment.findMany({
     where: {
       status: { in: ["PENDING", "FAILED"] },
-      tenant: { paymentMethod: "SEPA" }, // Only auto-retry SEPA — bank-transfer is manual
+      tenant: { paymentMethod: "SEPA" }, // Only auto-retry SEPA, bank-transfer is manual
     },
     include: {
       tenant: {
@@ -451,7 +451,7 @@ async function handleRentReminders() {
     });
     if (result === "charged") retriedSuccess++;
     if (result === "skipped_too_early") {
-      // First-month rent before the move-in date — leave it for the next
+      // First-month rent before the move-in date, leave it for the next
       // daily run (the throttle uses lastRetryAt so we re-evaluate freely).
       continue;
     }
@@ -467,7 +467,7 @@ async function handleRentReminders() {
   // Re-fetch after retries (some may have moved to PROCESSING).
   // The follow-up reminder/Mahnung logic only applies to *past* months.
   // Bank-transfer tenants are dunned manually by the admin from
-  // /admin/finance — skip them in the auto-emails (the templates are
+  // /admin/finance, skip them in the auto-emails (the templates are
   // SEPA-specific wording).
   const stillUnpaid = await prisma.rentPayment.findMany({
     where: {
@@ -600,7 +600,7 @@ async function handleRentReminders() {
   }
 
   // ── Step 3c: Auto-Kündigung: 2+ months of unpaid rent ──
-  // NEVER auto-terminate in test mode — this is an irreversible DB mutation
+  // NEVER auto-terminate in test mode, this is an irreversible DB mutation
   if (isTestMode()) {
     return { retried, retriedSuccess, reminders, mahnungen1, mahnungen2, terminations, testModeSkippedAutoTermination: true };
   }
@@ -637,7 +637,7 @@ async function handleRentReminders() {
       });
       terminations++;
 
-      // No automatic termination email — this is handled manually by the team
+      // No automatic termination email, this is handled manually by the team
       console.log(`Auto-terminated tenant ${tenant.id} (${tenant.firstName} ${tenant.lastName}): ${unpaidMonths} months unpaid`);
     }
   }
@@ -756,7 +756,7 @@ async function handleShortStayPreArrival() {
         checkIn: res.arrival,
         checkOut: res.departure,
         nights: Math.round((new Date(res.departure).getTime() - new Date(res.arrival).getTime()) / 86400000),
-        bookingId: `⚠️ No guest email — Pre-Arrival not sent! Room ${res.unitName}`,
+        bookingId: `⚠️ No guest email, Pre-Arrival not sent! Room ${res.unitName}`,
       }).catch((err) => console.error("Missing email team notif error:", err));
       missingEmail++;
       continue;
@@ -880,7 +880,7 @@ async function handleShortStayPostStayFeedback() {
     }
 
     try {
-      // Try to get invoice from apaleo (non-blocking — send email even if invoice fails)
+      // Try to get invoice from apaleo (non-blocking, send email even if invoice fails)
       let invoicePdf: Buffer | undefined;
       let invoiceNumber: string | undefined;
       try {
@@ -929,7 +929,7 @@ async function handleShortStayPostStayFeedback() {
  *   - Day 14 (second nudge): "your room is still waiting"
  *
  * Conditions for eligibility:
- *   - status === "PENDING" (has NOT paid booking fee — that auto-disables
+ *   - status === "PENDING" (has NOT paid booking fee, that auto-disables
  *     retargeting via the webhook)
  *   - retargetingEligible === true
  *   - retargetingSentCount < 2

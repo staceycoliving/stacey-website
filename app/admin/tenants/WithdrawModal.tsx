@@ -6,15 +6,15 @@ import { toast } from "@/components/admin/ui";
 interface WithdrawModalProps {
   tenantId: string;
   tenantName: string;
-  /** ISO timestamp when the deposit was paid — null if no deposit on file. */
+  /** ISO timestamp when the deposit was paid, null if no deposit on file. */
   depositPaidAt: string | null;
   /** ISO timestamp when the tenant moved in. Used for pro-rata calc. */
   moveIn: string;
-  /** Monthly rent in cents — for pro-rata calculation. */
+  /** Monthly rent in cents, for pro-rata calculation. */
   monthlyRent: number;
-  /** Deposit amount in cents — what was actually paid as deposit. */
+  /** Deposit amount in cents, what was actually paid as deposit. */
   depositAmount: number;
-  /** Sum of all PAID RentPayments in cents — already collected from the tenant. */
+  /** Sum of all PAID RentPayments in cents, already collected from the tenant. */
   paidRentsCents: number;
   onClose: () => void;
   /** Called after a successful withdraw so caller can refresh / navigate. */
@@ -46,7 +46,7 @@ function daysLeftAt(depositPaidAt: string | null, atDate: Date): number | null {
 }
 
 /** Pro-rata rent retained for the days actually occupied. Days INCLUSIVE
- *  on both ends — move-in day AND cancellation day count as full days
+ *  on both ends, move-in day AND cancellation day count as full days
  *  (matches the monthly-rent cron's startDay/endDay logic). */
 function calcProRata(args: {
   moveIn: string;
@@ -135,7 +135,7 @@ export default function WithdrawModal({
               `Refund: ${fmtEur(data.actuallyRefundedCents)} across ${data.refunds?.length ?? 0} Stripe payment(s).`,
               days > 0
                 ? `Pro-rata retained for ${days} day${days === 1 ? "" : "s"}: ${fmtEur(data.proRataRentRetainedCents)}.`
-                : "Tenant had not moved in — no rent retained.",
+                : "Tenant had not moved in, no rent retained.",
               "Booking Fee €195 retained (non-refundable).",
             ].join("\n"),
             duration: 8000,
@@ -164,7 +164,7 @@ export default function WithdrawModal({
         <h3 className="font-bold text-black">Kein Widerruf möglich</h3>
         <p className="text-sm text-gray mt-2">
           Es liegt keine Kautionszahlung für{" "}
-          <strong className="text-black">{tenantName}</strong> vor — Widerruf
+          <strong className="text-black">{tenantName}</strong> vor, Widerruf
           nicht anwendbar.
         </p>
         <div className="flex justify-end mt-6">
@@ -235,7 +235,7 @@ export default function WithdrawModal({
       <h3 className="font-bold text-black">Widerruf bestätigen</h3>
       {expiredAcknowledged && (
         <div className="mt-2 px-3 py-2 bg-red-50 border border-red-200 rounded-[5px] text-xs text-red-700">
-          ⚠️ Außerhalb der Widerrufsfrist — Admin-Override
+          ⚠️ Außerhalb der Widerrufsfrist, Admin-Override
         </div>
       )}
 
@@ -248,7 +248,7 @@ export default function WithdrawModal({
 
         {!expiredAcknowledged && daysLeft !== null && (
           <p className="text-xs text-gray">
-            Innerhalb der 14-Tage-Frist —{" "}
+            Innerhalb der 14-Tage-Frist ,{" "}
             <strong className="text-black">
               {daysLeft} Tag{daysLeft === 1 ? "" : "e"} verbleibend
             </strong>{" "}
@@ -273,7 +273,7 @@ export default function WithdrawModal({
               muted
             />
           ) : (
-            <Row label="Mieter noch nicht eingezogen — keine Miete einbehalten" value="—" muted />
+            <Row label="Mieter noch nicht eingezogen, keine Miete einbehalten" value="," muted />
           )}
           <Row label="Refund an Kunde" value={fmtEur(refundCents)} highlight />
         </div>

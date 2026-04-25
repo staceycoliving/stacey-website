@@ -83,7 +83,7 @@ function LocationDetail({ location }: { location: Location }) {
   // Map
   const neighborhoodMapRef = useRef<HTMLDivElement>(null);
   const neighborhoodMapInstance = useRef<any>(null);
-  // Coordinates live on Location in lib/data.ts — single source of truth.
+  // Coordinates live on Location in lib/data.ts, single source of truth.
 
   useEffect(() => {
     if (!neighborhoodMapRef.current || neighborhoodMapInstance.current) return;
@@ -190,7 +190,7 @@ function LocationDetail({ location }: { location: Location }) {
   useEffect(() => {
     // SHORT stays need checkIn+checkOut for a meaningful availability query
     // (apaleo requires them to return dynamic pricing). Without them, skip
-    // the fetch — keep `availFetched` false so room cards display the
+    // the fetch, keep `availFetched` false so room cards display the
     // "from …/night" base price instead of falsely reporting "Sold out".
     if (isShort && (!checkIn || !checkOut)) {
       setAvailability({});
@@ -354,7 +354,7 @@ function LocationDetail({ location }: { location: Location }) {
             ))}
           </div>
 
-          {/* Desktop: Airbnb-style — 1 large left + 2x2 right */}
+          {/* Desktop: Airbnb-style, 1 large left + 2x2 right */}
           <div className="hidden sm:grid sm:grid-cols-4 sm:grid-rows-2 sm:gap-3">
             <button
               onClick={() => { setLightboxImages(location.images); setLightboxIndex(0); }}
@@ -517,7 +517,7 @@ function LocationDetail({ location }: { location: Location }) {
                                       if (livePrice != null) return <>&euro;{livePrice}/night</>;
                                       return <>Sold out</>;
                                     }
-                                    // No dates selected yet — show the cheapest known nightly rate
+                                    // No dates selected yet, show the cheapest known nightly rate
                                     // as "from €X" so guests know prices are dynamic.
                                     if (basePrice != null) return <>from &euro;{basePrice}/night</>;
                                     return <>Select dates</>;
@@ -567,7 +567,7 @@ function LocationDetail({ location }: { location: Location }) {
                           </div>
                         ) : (
                           <>
-                            {/* Persons toggle — only for couple-friendly rooms */}
+                            {/* Persons toggle, only for couple-friendly rooms */}
                             {room.forCouples ? (
                               <div className="mb-3">
                                 <div className="flex gap-2">
@@ -686,7 +686,7 @@ function LocationDetail({ location }: { location: Location }) {
                   <div className="rounded-[5px] rounded-tl-none bg-[#FAFAFA] p-4 sm:p-5">
                     <p className="text-base font-bold sm:text-lg">{location.communityManager.name}</p>
                     <p className="mt-2 text-sm leading-relaxed text-gray">
-                      Hey! I&apos;m {location.communityManager.name.split(" ")[0]}, your community manager at STACEY {location.name}. Need anything? Events, questions, maintenance — just reach out. I&apos;m here to make sure you feel at home!
+                      Hey! I&apos;m {location.communityManager.name.split(" ")[0]}, your community manager at STACEY {location.name}. Need anything? Events, questions, maintenance, just reach out. I&apos;m here to make sure you feel at home!
                     </p>
                   </div>
                   <a
@@ -743,7 +743,7 @@ function LocationDetail({ location }: { location: Location }) {
 
           </div>{/* end LEFT COLUMN */}
 
-          {/* ── RIGHT COLUMN — Sticky Booking Widget (1/3) ── */}
+          {/* ── RIGHT COLUMN, Sticky Booking Widget (1/3) ── */}
           <div className="hidden lg:block">
             <div className="sticky top-24 space-y-3">
               <BookingCard {...bookingProps} variant="desktop" />
@@ -1021,7 +1021,7 @@ function LocationDetail({ location }: { location: Location }) {
         </div>
       )}
 
-      {/* Sticky mobile booking bar — always visible on mobile, desktop uses right-column sticky */}
+      {/* Sticky mobile booking bar, always visible on mobile, desktop uses right-column sticky */}
       <div className="fixed inset-x-0 bottom-0 z-40 border-t border-lightgray bg-white/95 px-4 py-3 backdrop-blur-lg lg:hidden">
         <div className="mx-auto flex max-w-md items-center justify-between gap-3">
           <div className="min-w-0">
@@ -1090,7 +1090,7 @@ function MatterportViewer({
           className="absolute inset-0 h-full w-full"
           allowFullScreen
           allow="xr-spatial-tracking"
-          title={`${locationName} 3D Tour${active.label ? ` — ${active.label}` : ""}`}
+          title={`${locationName} 3D Tour${active.label ? `, ${active.label}` : ""}`}
         />
       </div>
     </div>

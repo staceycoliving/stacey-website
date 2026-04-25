@@ -3,7 +3,7 @@ import Link from "next/link";
 import { ArrowRight, Play } from "lucide-react";
 import FadeIn from "@/components/ui/FadeIn";
 
-// Closing block — two side-by-side teaser cards in one light-grey
+// Closing block, two side-by-side teaser cards in one light-grey
 // section. Replaces the old separate AboutSection + TestimonialsSection
 // combo with a single 50:50 row that points readers to /why-stacey for
 // the full team story and to /why-stacey#stories for the full member
@@ -13,7 +13,7 @@ export default function AboutSection() {
     <section className="bg-white px-4 py-20 sm:px-6 sm:py-24 lg:px-8">
       <FadeIn>
         <div className="mx-auto grid max-w-6xl gap-4 sm:gap-6 lg:grid-cols-2">
-          {/* About teaser — Hamburg-since-2019 brand handshake */}
+          {/* About teaser, Hamburg-since-2019 brand handshake */}
           <Link
             href="/why-stacey"
             className="group grid items-center gap-5 rounded-[5px] bg-[#FAFAFA] p-5 shadow-sm ring-1 ring-black/5 transition-all hover:-translate-y-0.5 hover:shadow-md sm:grid-cols-[180px_1fr] sm:gap-6 sm:p-6 lg:p-7"
@@ -49,7 +49,7 @@ export default function AboutSection() {
             </div>
           </Link>
 
-          {/* Stories teaser — featured Jihane interview pointing to the
+          {/* Stories teaser, featured Jihane interview pointing to the
               full grid on /why-stacey#stories. Play badge on the photo
               signals it's a video without launching one inline. */}
           <Link

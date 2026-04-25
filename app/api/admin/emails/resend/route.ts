@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
       case "welcome":
         if (!tenant.room) {
           return Response.json(
-            { error: "Tenant has no room assigned — welcome email needs a room" },
+            { error: "Tenant has no room assigned, welcome email needs a room" },
             { status: 400 }
           );
         }
@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
       case "payment_setup":
         if (!tenant.stripeCustomerId) {
           return Response.json(
-            { error: "Tenant has no Stripe customer — payment setup link needs Stripe account first" },
+            { error: "Tenant has no Stripe customer, payment setup link needs Stripe account first" },
             { status: 400 }
           );
         }
@@ -160,7 +160,7 @@ export async function POST(request: NextRequest) {
       case "deposit_return": {
         if (!tenant.depositRefundIban) {
           return Response.json(
-            { error: "IBAN not set — open Deposits page to enter IBAN first" },
+            { error: "IBAN not set, open Deposits page to enter IBAN first" },
             { status: 400 }
           );
         }
@@ -184,7 +184,7 @@ export async function POST(request: NextRequest) {
       case "payment_setup_reminder":
         if (!tenant.stripeCustomerId) {
           return Response.json(
-            { error: "Tenant has no Stripe customer — payment setup link needs Stripe account first" },
+            { error: "Tenant has no Stripe customer, payment setup link needs Stripe account first" },
             { status: 400 }
           );
         }
@@ -227,7 +227,7 @@ export async function POST(request: NextRequest) {
       case "post_stay_feedback":
         if (!tenant.room) {
           return Response.json(
-            { error: "Tenant has no room assigned — post-stay feedback needs a location" },
+            { error: "Tenant has no room assigned, post-stay feedback needs a location" },
             { status: 400 }
           );
         }

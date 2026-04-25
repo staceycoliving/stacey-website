@@ -4,7 +4,7 @@ import { PrismaClient } from "./generated/prisma/client";
 import { env } from "./env";
 
 /**
- * Two-pool architecture — officially recommended by both Supabase and
+ * Two-pool architecture, officially recommended by both Supabase and
  * Prisma for this stack.
  *
  *  - `prisma` uses **DATABASE_URL** (Supavisor transaction pooler, port
@@ -33,7 +33,7 @@ const globalForPrisma = globalThis as unknown as {
 };
 
 function createPrismaPooled() {
-  // Transaction-mode pooler — scales horizontally, low connection footprint.
+  // Transaction-mode pooler, scales horizontally, low connection footprint.
   const pool = new pg.Pool({
     connectionString: env.DATABASE_URL,
     max: 10,
@@ -45,7 +45,7 @@ function createPrismaPooled() {
 }
 
 function createPrismaSession() {
-  // Session-mode pooler — dedicated connections, needed for interactive
+  // Session-mode pooler, dedicated connections, needed for interactive
   // `$transaction(async tx => …)` calls. Kept deliberately small so it
   // doesn't exhaust the session pool's strict pool_size (default ~15 on
   // Nano compute).

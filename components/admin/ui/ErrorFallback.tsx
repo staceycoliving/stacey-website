@@ -7,7 +7,7 @@ import Link from "next/link";
 /**
  * Page-level error fallback. Next.js 16 App Router invokes this when a
  * route segment's `error.tsx` file exports it as default. Keeps the
- * admin shell intact — the user sees the navbar + a friendly in-content
+ * admin shell intact, the user sees the navbar + a friendly in-content
  * panel instead of a blank page.
  */
 export function ErrorFallback({
@@ -35,7 +35,7 @@ export function ErrorFallback({
             {context
               ? `The ${context} page couldn't render.`
               : "This page couldn't render."}{" "}
-            It&apos;s been logged — you can try again or go back to the dashboard.
+            It&apos;s been logged, you can try again or go back to the dashboard.
           </p>
           {error.message && (
             <pre className="mt-3 p-2 bg-background-alt rounded-[5px] text-xs overflow-x-auto text-red-700 whitespace-pre-wrap">

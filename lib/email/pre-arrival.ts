@@ -59,7 +59,7 @@ export async function sendPreArrival(data: PreArrivalData, meta?: Meta) {
       </ul>
     </div>
     <p style="font-size:14px;color:#555;line-height:1.6;">
-      Questions? Just reply to this email — we're here to help.
+      Questions? Just reply to this email, we're here to help.
     </p>
   `);
 
@@ -67,7 +67,7 @@ export async function sendPreArrival(data: PreArrivalData, meta?: Meta) {
     {
       from: FROM,
       to: data.email,
-      subject: `Your stay at STACEY ${data.locationName} starts tomorrow — complete your registration`,
+      subject: `Your stay at STACEY ${data.locationName} starts tomorrow, complete your registration`,
       html,
     },
     { templateKey: "pre_arrival", ...meta }

@@ -6,7 +6,7 @@ import { motion, useReducedMotion } from "framer-motion";
 // line and slides up from below the baseline, so the reveal feels like
 // the letters rise out of a mask rather than fading in. The "HOME."
 // closer keeps the brand's italic-font-light contrast against the
-// uppercase wall — no extra decoration, the type change is the moment.
+// uppercase wall, no extra decoration, the type change is the moment.
 //
 // Timing is intentionally tight (full reveal under ~1.1s) so return
 // visits never feel slow. Full respect for prefers-reduced-motion: in

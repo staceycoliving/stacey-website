@@ -1,6 +1,6 @@
 "use client";
 
-// Dev-only preview — Testimonials (T1/T2/T3) + About (A1/A2/A3/A4)
+// Dev-only preview, Testimonials (T1/T2/T3) + About (A1/A2/A3/A4)
 // variants for the homepage closing block. Open /preview manually.
 
 import Image from "next/image";
@@ -84,7 +84,7 @@ function VideoModal({ src, onClose }: { src: string; onClose: () => void }) {
 }
 
 /* ================================================================== */
-/* T1 — Editorial Story Strip
+/* T1, Editorial Story Strip
    Three horizontal bands stacked, alternating polaroid-left / quote-
    right. Click polaroid → modal video. Pink quote-marks bracket each
    pull-quote. Magazine-spread vibe.
@@ -181,7 +181,7 @@ function T1() {
 }
 
 /* ================================================================== */
-/* T2 — Single Hero Interview + Link-Out
+/* T2, Single Hero Interview + Link-Out
    One big cinematic interview (Jihane), full-bleed thumbnail with
    gradient + pull-quote overlaid. Single play button. Below: a tiny
    "See all member stories →" link to a dedicated /members page.
@@ -256,7 +256,7 @@ function T2() {
 }
 
 /* ================================================================== */
-/* T3 — Quote-First, Video Secondary
+/* T3, Quote-First, Video Secondary
    The pull-quote is the star: huge italic centred text bracketed by
    pink quote-marks. Underneath, a horizontal strip of three small
    video thumbnails. Click a thumb → quote + featured member rotates
@@ -287,7 +287,7 @@ function T3() {
             {active.quote}
           </p>
           <p className="mt-6 font-mono text-xs font-bold uppercase tracking-[0.2em] text-black">
-            — {active.name}, {active.age}
+           , {active.name}, {active.age}
           </p>
           <p className="mt-1 text-xs italic text-gray">{active.desc}</p>
         </div>
@@ -339,7 +339,7 @@ function T3() {
 }
 
 /* ================================================================== */
-/* A1 — Editorial Manifesto + Stat Tiles
+/* A1, Editorial Manifesto + Stat Tiles
    Pink eyebrow, italic-keyword headline, 4 stat tiles in a row,
    1-line manifesto, small team-photo strip, "Meet the team" link.
    Replaces the soft "we believe home is more than four walls" copy.
@@ -409,7 +409,7 @@ function A1() {
 }
 
 /* ================================================================== */
-/* A2 — Postcard from Hamburg
+/* A2, Postcard from Hamburg
    Tilted polaroid-style postcard, centred, with team photo + handwritten-
    feel overlay text + a postage-stamp graphic. "Greetings from
    Hamburg" tonality. Pairs with the boarding-pass / journey DNA.
@@ -455,7 +455,7 @@ function A2() {
                 Postmarked Hamburg · 2019
               </p>
               <p className="mt-3 text-base leading-relaxed text-black sm:text-lg">
-                We started small in Winterhude — one apartment, eight friends,
+                We started small in Winterhude, one apartment, eight friends,
                 and the simple idea that city living should feel less like a
                 contract and more like coming home.
               </p>
@@ -463,7 +463,7 @@ function A2() {
                 Six years later, we&rsquo;re in three cities, with hundreds of
                 members. The mission hasn&rsquo;t changed.
               </p>
-              <p className="mt-4 italic text-sm text-pink">— Team STACEY</p>
+              <p className="mt-4 italic text-sm text-pink">, Team STACEY</p>
             </div>
           </div>
 
@@ -486,7 +486,7 @@ function A2() {
 }
 
 /* ================================================================== */
-/* A3 — Founder Quote Spread
+/* A3, Founder Quote Spread
    One big italic founder quote front-and-centre, small team photo as
    supporting visual, "Since 2019, Hamburg" tagline. Eliminates the
    soft community copy in favour of a punchier 1-line manifesto.
@@ -544,7 +544,7 @@ function A3() {
 }
 
 /* ================================================================== */
-/* A4 — Cut Entirely (Footer Liner Mock)
+/* A4, Cut Entirely (Footer Liner Mock)
    Show what the footer brand-statement line would look like if About
    moves to /about. The homepage section vanishes; only this remains.
 /* ================================================================== */
@@ -554,7 +554,7 @@ function A4() {
       <div className="mx-auto max-w-5xl">
         <div className="rounded-[5px] border border-dashed border-black/15 p-6 text-center sm:p-10">
           <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-gray">
-            Mock — appears in the Footer instead of as a section
+            Mock, appears in the Footer instead of as a section
           </p>
           <p className="mt-4 text-base font-semibold leading-relaxed text-black sm:text-lg">
             STACEY is Hamburg-based, founded 2019.{" "}
@@ -586,7 +586,7 @@ export default function PreviewPage() {
           Internal preview · take 3
         </p>
         <h1 className="mt-2 text-3xl font-black sm:text-4xl">
-          Closing block —{" "}
+          Closing block ,{" "}
           <span className="italic font-light">Testimonials + About</span>
         </h1>
         <p className="mt-3 text-sm text-gray">
@@ -598,7 +598,7 @@ export default function PreviewPage() {
 
       <VariantLabel
         n="T1"
-        title="Editorial Story Strip — three polaroid + pull-quote bands"
+        title="Editorial Story Strip, three polaroid + pull-quote bands"
         desc="Drei horizontale Bänder gestapelt, alternierend Polaroid links/rechts. Magazin-Spread. Klick aufs Polaroid öffnet das Interview-Video im Lightbox."
       />
       <T1 />
@@ -612,7 +612,7 @@ export default function PreviewPage() {
 
       <VariantLabel
         n="T3"
-        title="Quote-First — typography hero, video as evidence"
+        title="Quote-First, typography hero, video as evidence"
         desc="Riesiges italic Pull-Quote als Hero-Statement. Drei kleine Video-Thumbs als Strip darunter. Klick auf Thumb wechselt das Quote; nochmaliger Klick öffnet das Video. Maximale Lesbarkeit."
       />
       <T3 />
@@ -633,22 +633,22 @@ export default function PreviewPage() {
 
       <VariantLabel
         n="A3"
-        title="Founder Quote Spread — black + bold"
+        title="Founder Quote Spread, black + bold"
         desc="Eine große italic Quote als Manifest auf schwarzem Grund. Kleines Team-Foto rechts als visual anchor. Eliminiert weiches 'community' Copy zugunsten eines 1-Zeilen-Statements."
       />
       <A3 />
 
       <VariantLabel
         n="A4"
-        title="Cut entirely — fold into Footer"
+        title="Cut entirely, fold into Footer"
         desc="About-Sektion verschwindet komplett. Stattdessen ein 1-Zeilen Brand-Statement im Footer + eigene /why-stacey Seite für die volle Story. Macht die Homepage 1 Sektion kürzer."
       />
       <A4 />
 
       <div className="mx-auto max-w-3xl px-6 py-16 text-center">
         <p className="text-sm text-gray">
-          — Pick eine Testimonial-Variante (T1/T2/T3) und eine About-Variante
-          (A1/A2/A3) oder A4 cut. Sag mir die Kombi. —
+         , Pick eine Testimonial-Variante (T1/T2/T3) und eine About-Variante
+          (A1/A2/A3) oder A4 cut. Sag mir die Kombi. ,
         </p>
       </div>
     </main>

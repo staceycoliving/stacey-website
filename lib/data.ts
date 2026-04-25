@@ -22,7 +22,7 @@ export type Location = {
   city: "hamburg" | "berlin" | "vallendar";
   name: string;
   address: string;
-  coords: [number, number]; // [lng, lat] — precise building location (Mapbox-geocoded)
+  coords: [number, number]; // [lng, lat], precise building location (Mapbox-geocoded)
   stayType: StayType;
   priceFrom: number;
   tagline: string;
@@ -36,7 +36,7 @@ export type Location = {
   nearbyLocationSlugs: string[];
   communityManager: { name: string; email: string; image: string };
   matterportTours?: MatterportTour[];
-  youtubeVideoId?: string; // fallback/alternative to matterport — embed via youtube-nocookie
+  youtubeVideoId?: string; // fallback/alternative to matterport, embed via youtube-nocookie
 };
 
 export type Feature = {
@@ -63,11 +63,11 @@ export const locations: Location[] = [
     priceFrom: 795,
     tagline: "The Cradle of Coliving",
     description:
-      "Since 2019, STACEY welcomes tenants from all over the world at Hamburg's #1 address for coliving, directly next to the beautiful lake Alster. Our oldest and largest coliving property features private suites ranging from 8 to 25 square meters within shared apartments, surrounded by restaurants, bars and cafés — and wrapped around a quiet inner courtyard.",
+      "Since 2019, STACEY welcomes tenants from all over the world at Hamburg's #1 address for coliving, directly next to the beautiful lake Alster. Our oldest and largest coliving property features private suites ranging from 8 to 25 square meters within shared apartments, surrounded by restaurants, bars and cafés, and wrapped around a quiet inner courtyard.",
     neighborhoodDescription:
-      "Winterhude offers a unique blend of serene central living and vibrant social opportunities. Our coliving is tucked away on a quiet street between the well-known Mühlenkamp and the green heart of Hamburg — the Alster. A bus station within 100 meters connects you to downtown in 10 minutes, and the Alster is just around the corner for running or paddleboarding.",
+      "Winterhude offers a unique blend of serene central living and vibrant social opportunities. Our coliving is tucked away on a quiet street between the well-known Mühlenkamp and the green heart of Hamburg, the Alster. A bus station within 100 meters connects you to downtown in 10 minutes, and the Alster is just around the corner for running or paddleboarding.",
     communitySpaceDescription:
-      "A former electrician's office converted into over 150 m² of community space. Lounge seating with Netflix TV, two fully equipped kitchens, a coworking zone and WeWash laundry facilities — the main hub for community dinners and STACEY events throughout the city.",
+      "A former electrician's office converted into over 150 m² of community space. Lounge seating with Netflix TV, two fully equipped kitchens, a coworking zone and WeWash laundry facilities, the main hub for community dinners and STACEY events throughout the city.",
     neighborhood: "Winterhude",
     roomiesPerApartment: "1 - 3",
     images: [
@@ -204,9 +204,9 @@ export const locations: Location[] = [
     priceFrom: 895,
     tagline: "Coliving for Locals",
     description:
-      "Centrally located in Hamburg Eppendorf, our coliving offers suites ranging from 10 to 20 m² — some with optional balconies. A maximum of 4 suites per apartment strikes the balance between privacy and community living.",
+      "Centrally located in Hamburg Eppendorf, our coliving offers suites ranging from 10 to 20 m², some with optional balconies. A maximum of 4 suites per apartment strikes the balance between privacy and community living.",
     neighborhoodDescription:
-      "Eppendorf is the neighborhood every local wants to live in — green parks, boutique shops and some of Hamburg's most acclaimed brunch spots. The U-Bahn connects you to Sternschanze and the city center within 10 minutes.",
+      "Eppendorf is the neighborhood every local wants to live in, green parks, boutique shops and some of Hamburg's most acclaimed brunch spots. The U-Bahn connects you to Sternschanze and the city center within 10 minutes.",
     communitySpaceDescription:
       "A spacious community space on the ground floor, converted from a former restaurant. Shared kitchen, living areas and a coworking zone with ceiling heights up to 4 meters.",
     neighborhood: "Eppendorf",
@@ -246,7 +246,7 @@ export const locations: Location[] = [
         priceMonthly: 995,
         sizeSqm: 12,
         forCouples: false,
-        description: "More space, more style — our Premium suite in Eppendorf.",
+        description: "More space, more style, our Premium suite in Eppendorf.",
         interior: "Double bed, Nightstand, Desk, Chair, Armchair, Floor lamp, Wardrobe, Bedding",
         image: loc("eppendorf", "premium-balcony", "001-premium-ew.webp"),
         images: [
@@ -294,7 +294,7 @@ export const locations: Location[] = [
         priceMonthly: 1145,
         sizeSqm: 14,
         forCouples: false,
-        description: "Our Premium+ with a private balcony — the best of Eppendorf.",
+        description: "Our Premium+ with a private balcony, the best of Eppendorf.",
         interior: "Double bed, Nightstand, Desk, Chair, Armchair, Floor lamp, Wardrobe, Bedding",
         image: loc("eppendorf", "premium-plus-balcony", "001-premium-plus-ew.webp"),
         images: [
@@ -310,7 +310,7 @@ export const locations: Location[] = [
         priceMonthly: 1295,
         sizeSqm: 17,
         forCouples: true,
-        description: "Our largest suite in Eppendorf — perfect for singles and couples.",
+        description: "Our largest suite in Eppendorf, perfect for singles and couples.",
         interior: "Queen-size bed, Nightstand, Desk, Chair, Armchair, Floor lamp, Walk-in closet, Bedding",
         image: loc("eppendorf", "jumbo", "001-jumbo-ew.webp"),
         images: [
@@ -327,7 +327,7 @@ export const locations: Location[] = [
         priceMonthly: 1345,
         sizeSqm: 17,
         forCouples: true,
-        description: "The biggest suite with a balcony — the ultimate Eppendorf experience.",
+        description: "The biggest suite with a balcony, the ultimate Eppendorf experience.",
         interior: "Queen-size bed, Nightstand, Desk, Chair, Armchair, Floor lamp, Walk-in closet, Bedding",
         image: loc("eppendorf", "jumbo-balcony", "001-jumbo-balcony-ew.webp"),
         images: [
@@ -362,9 +362,9 @@ export const locations: Location[] = [
     description:
       "Directly between the city center and the UNESCO World Heritage Speicherstadt. Suites from 10 to 20 m² with 5-meter-high ceilings, set in a historic building voted Hamburg's most beautiful facade.",
     neighborhoodDescription:
-      "Sightseeing right on your doorstep. Restaurants, cafés and every major public transport line are just steps away — perfect for both leisure and business stays in Hamburg's liveable downtown.",
+      "Sightseeing right on your doorstep. Restaurants, cafés and every major public transport line are just steps away, perfect for both leisure and business stays in Hamburg's liveable downtown.",
     communitySpaceDescription:
-      "The community space sits directly within the shared apartment — fully equipped kitchen, washing machine, and a Netflix TV & lounge area in the hallway.",
+      "The community space sits directly within the shared apartment, fully equipped kitchen, washing machine, and a Netflix TV & lounge area in the hallway.",
     neighborhood: "Altstadt",
     roomiesPerApartment: "6",
     images: [
@@ -387,7 +387,7 @@ export const locations: Location[] = [
         priceMonthly: 995,
         sizeSqm: 10,
         forCouples: false,
-        description: "Compact and clever — everything you need in the heart of the city.",
+        description: "Compact and clever, everything you need in the heart of the city.",
         interior:
           "Double bed, Nightstand, Desk, Chair, Wardrobe, Bedding",
         image: loc("downtown", "mighty", "001-mighty-dt.webp"),
@@ -454,7 +454,7 @@ export const locations: Location[] = [
         priceMonthly: 1395,
         sizeSqm: 20,
         forCouples: true,
-        description: "Our largest downtown suite — perfect for singles and couples who want it all.",
+        description: "Our largest downtown suite, perfect for singles and couples who want it all.",
         interior:
           "Double bed, Nightstand, Desk, Chair, Armchair, Wardrobe, Mirror, Bedding",
         image: loc("downtown", "jumbo", "001-jumbo-dt.webp"),
@@ -488,9 +488,9 @@ export const locations: Location[] = [
     priceFrom: 48,
     tagline: "Coliving next door to Udo",
     description:
-      "Centrally located in Hamburg St. Georg. Our suites are spread over 4 floors, ranging from 14 to 18 m², some with optional balcony. A converted former office building dedicated exclusively to short-term coliving — with a community kitchen on the top floor and laundry facilities in the basement.",
+      "Centrally located in Hamburg St. Georg. Our suites are spread over 4 floors, ranging from 14 to 18 m², some with optional balcony. A converted former office building dedicated exclusively to short-term coliving, with a community kitchen on the top floor and laundry facilities in the basement.",
     neighborhoodDescription:
-      "We sit on Gurlittstraße between the Alster lake and the lively Lange Reihe restaurant street — roughly ten minutes on foot from central Hamburg's attractions. St. Georg is colorful, diverse and one of the city's most characterful neighborhoods.",
+      "We sit on Gurlittstraße between the Alster lake and the lively Lange Reihe restaurant street, roughly ten minutes on foot from central Hamburg's attractions. St. Georg is colorful, diverse and one of the city's most characterful neighborhoods.",
     communitySpaceDescription:
       "The common space is the heart of every STACEY location. Stainless steel coworking counters, lounge seating and a fully equipped kitchen where residents gather for dinners and community events.",
     neighborhood: "St. Georg",
@@ -551,7 +551,7 @@ export const locations: Location[] = [
         priceMonthly: 1095,
         sizeSqm: 17,
         forCouples: false,
-        description: "Extra space with a view — the Premium+ at our Alster location.",
+        description: "Extra space with a view, the Premium+ at our Alster location.",
         interior:
           "Double bed, Nightstand, Desk, Chair, Armchair, Wardrobe, Mirror, Bedding",
         image: loc("alster", "premium-plus", "01-premium-plus-al.webp"),
@@ -569,7 +569,7 @@ export const locations: Location[] = [
         priceMonthly: 1145,
         sizeSqm: 17,
         forCouples: true,
-        description: "Our largest balcony suite at the Alster — room for two with a view.",
+        description: "Our largest balcony suite at the Alster, room for two with a view.",
         interior:
           "Double bed, Nightstand, Desk, Chair, Armchair, Wardrobe, Mirror, Bedding",
         image: loc("alster", "premium-plus-balcony", "01-premium-plus-balcony-al.webp"),
@@ -586,7 +586,7 @@ export const locations: Location[] = [
         priceMonthly: 1295,
         sizeSqm: 19,
         forCouples: true,
-        description: "The biggest suite at our Alster location — ideal for singles and couples.",
+        description: "The biggest suite at our Alster location, ideal for singles and couples.",
         interior:
           "Double bed, Nightstand, Desk, Chair, Armchair, Wardrobe, Mirror, Bedding",
         image: loc("alster", "premium-plus", "01-premium-plus-al.webp"),
@@ -619,11 +619,11 @@ export const locations: Location[] = [
     priceFrom: 895,
     tagline: "Central, Colorful, Diverse",
     description:
-      "Cozy shared living next to the Millerntor stadium. Our 7-bedroom duplex coliving apartment has everything you need within its doors — living room, common kitchen and the old-building charm that (let's be honest) is unmatched by new developments.",
+      "Cozy shared living next to the Millerntor stadium. Our 7-bedroom duplex coliving apartment has everything you need within its doors, living room, common kitchen and the old-building charm that (let's be honest) is unmatched by new developments.",
     neighborhoodDescription:
-      "St. Pauli sits between Hamburg's nightlife area and Sternschanze — the best of both worlds. You can reach every major Hamburg hotspot within 15 minutes via public transport, and the Elbe river and city center are just around the corner.",
+      "St. Pauli sits between Hamburg's nightlife area and Sternschanze, the best of both worlds. You can reach every major Hamburg hotspot within 15 minutes via public transport, and the Elbe river and city center are just around the corner.",
     communitySpaceDescription:
-      "Spacious community spaces designed to fit your needs — the #1 reason members join STACEY. The duplex features a lounge and dining area, a fully equipped kitchen, a communal garden for summer afternoons, and laundry facilities in the basement.",
+      "Spacious community spaces designed to fit your needs, the #1 reason members join STACEY. The duplex features a lounge and dining area, a fully equipped kitchen, a communal garden for summer afternoons, and laundry facilities in the basement.",
     neighborhood: "St. Pauli",
     roomiesPerApartment: "6",
     images: [
@@ -693,7 +693,7 @@ export const locations: Location[] = [
         priceMonthly: 1295,
         sizeSqm: 20,
         forCouples: true,
-        description: "The biggest suite at St. Pauli — for singles and couples who want it all.",
+        description: "The biggest suite at St. Pauli, for singles and couples who want it all.",
         interior: "Double bed, Nightstand, Desk, Chair, Armchair, Wardrobe, Mirror, Bedding",
         image: loc("st-pauli", "jumbo", "001-jumbo-sp.webp"),
         images: [
@@ -725,9 +725,9 @@ export const locations: Location[] = [
     description:
       "Our smallest coliving location is in Hamburg-Eimsbüttel, a neighborhood of locals. The shared apartment offers a kitchen and a small inner yard. You can choose between private suites from 6 m² up to 15 m².",
     neighborhoodDescription:
-      "Eimsbüttel gives you an authentic Hamburg experience — a diverse community of families, students and long-time residents. Sternschanze and Osterstraße (the neighborhood's shopping and dining hub) are right next door, and downtown is about 20 minutes away.",
+      "Eimsbüttel gives you an authentic Hamburg experience, a diverse community of families, students and long-time residents. Sternschanze and Osterstraße (the neighborhood's shopping and dining hub) are right next door, and downtown is about 20 minutes away.",
     communitySpaceDescription:
-      "Spacious community spaces designed to fit your needs — the #1 reason members join STACEY. Common areas within the shared apartment, a fully equipped kitchen, a private inner yard/balcony and a WeWash self-service laundry facility.",
+      "Spacious community spaces designed to fit your needs, the #1 reason members join STACEY. Common areas within the shared apartment, a fully equipped kitchen, a private inner yard/balcony and a WeWash self-service laundry facility.",
     neighborhood: "Eimsbüttel",
     roomiesPerApartment: "3",
     images: [
@@ -826,9 +826,9 @@ export const locations: Location[] = [
     priceFrom: 795,
     tagline: "Most Central Coliving in Berlin",
     description:
-      "Fischerinsel 13-15, 10179 Berlin — directly in the mix. 5 minutes to the Berliner Dom, Gendarmenmarkt or Alexanderplatz. Suite sizes span roughly 8 to 36 m² across shared apartments and private studios, with most shared units featuring just one roommate.",
+      "Fischerinsel 13-15, 10179 Berlin, directly in the mix. 5 minutes to the Berliner Dom, Gendarmenmarkt or Alexanderplatz. Suite sizes span roughly 8 to 36 m² across shared apartments and private studios, with most shared units featuring just one roommate.",
     neighborhoodDescription:
-      "On the Fischerinsel, next to the Museumsinsel — a central, Berlin-style living experience between historic landmarks like Alexanderplatz and the Berliner Dom, while still only minutes away from the cool Kreuzberg area. The U-Bahn station Märkisches Museum is directly outside.",
+      "On the Fischerinsel, next to the Museumsinsel, a central, Berlin-style living experience between historic landmarks like Alexanderplatz and the Berliner Dom, while still only minutes away from the cool Kreuzberg area. The U-Bahn station Märkisches Museum is directly outside.",
     communitySpaceDescription:
       "This is where coliving truly comes to life. A cozy lounge area with sofa and a large TV, casual seating for group hangouts, plus a home office area with workstations and WiFi throughout.",
     neighborhood: "Mitte",
@@ -934,7 +934,7 @@ export const locations: Location[] = [
         priceMonthly: 1195,
         sizeSqm: 24,
         forCouples: true,
-        description: "The biggest suite in Berlin — for those who want it all.",
+        description: "The biggest suite in Berlin, for those who want it all.",
         interior: "Queen-size bed, Sofa, Nightstand, Desk, Chair, Armchair, Floor lamp, Wardrobe, Bedding",
         image: loc("berlin-mitte", "jumbo", "001-jumbo-fi.webp"),
         images: [
@@ -968,7 +968,7 @@ export const locations: Location[] = [
         priceMonthly: 1695,
         sizeSqm: 36,
         forCouples: true,
-        description: "Your own private studio — with private bathroom and kitchen.",
+        description: "Your own private studio, with private bathroom and kitchen.",
         interior: "Double bed, Sofa, Desk, Chair, Kitchen, Private bathroom, Wardrobe, Bedding",
         image: loc("berlin-mitte", "studio", "001-studio-mitte.webp"),
         images: [
@@ -1009,9 +1009,9 @@ export const locations: Location[] = [
     description:
       "Centrally located in Vallendar, less than 4 minutes on foot from all WHU university buildings. The property features spacious terraces and modern community spaces designed for studying and socializing in equal measure.",
     neighborhoodDescription:
-      "We sit on Löhrstraße, right in the heart of Vallendar. There's no need for a bike or car — everything you need is within walking distance. Restaurants on Hellenstraße, the WHU campus next door, and Koblenz just a few minutes away by train.",
+      "We sit on Löhrstraße, right in the heart of Vallendar. There's no need for a bike or car, everything you need is within walking distance. Restaurants on Hellenstraße, the WHU campus next door, and Koblenz just a few minutes away by train.",
     communitySpaceDescription:
-      "The heart of every STACEY location. Cosy working stations, lounge areas with dining, a fully equipped kitchen, an inner yard and a WeWash laundry service — where residents gather for community dinners and STACEY events.",
+      "The heart of every STACEY location. Cosy working stations, lounge areas with dining, a fully equipped kitchen, an inner yard and a WeWash laundry service, where residents gather for community dinners and STACEY events.",
     neighborhood: "Vallendar",
     roomiesPerApartment: "2 - 4",
     images: [
@@ -1056,7 +1056,7 @@ export const locations: Location[] = [
         priceMonthly: 695,
         sizeSqm: 12,
         forCouples: false,
-        description: "Extra space for studying and living — our Premium in Vallendar.",
+        description: "Extra space for studying and living, our Premium in Vallendar.",
         interior: "Double bed, Desk, Chair, Armchair, Wall lamp, Wardrobe, Mirror, Bedding",
         image: loc("vallendar", "premium", "001-premium-va.webp"),
         images: [
@@ -1072,7 +1072,7 @@ export const locations: Location[] = [
         priceMonthly: 795,
         sizeSqm: 14,
         forCouples: false,
-        description: "Our largest standard suite in Vallendar — room to study and relax.",
+        description: "Our largest standard suite in Vallendar, room to study and relax.",
         interior: "Double bed, Desk, Chair, Armchair, Wall lamp, Wardrobe, Mirror, Bedding",
         image: loc("vallendar", "premium-plus", "001-premium-plus-va.webp"),
         images: [
@@ -1091,7 +1091,7 @@ export const locations: Location[] = [
         priceMonthly: 895,
         sizeSqm: 18,
         forCouples: true,
-        description: "A two-level suite with sleeping loft — the premium Vallendar experience.",
+        description: "A two-level suite with sleeping loft, the premium Vallendar experience.",
         interior: "Double bed (loft), Desk, Chair, Armchair, Wardrobe, Mirror, Bedding",
         image: loc("vallendar", "premium-plus", "001-jumbo-va.webp"),
         images: [
@@ -1153,7 +1153,7 @@ export function formatMoveInLabel(dateStr: string): string {
   if (dateStr === todayStr) return "Today";
   const d = new Date(dateStr + "T12:00:00");
   const sameYear = d.getFullYear() === now.getFullYear();
-  // EU reading order (day → month → year), no weekday — long-stay users
+  // EU reading order (day → month → year), no weekday, long-stay users
   // care about which month + day, not which weekday. Drops the clutter.
   return d.toLocaleDateString("en-GB", {
     day: "numeric",
@@ -1201,7 +1201,7 @@ export const features: Feature[] = [
   {
     icon: "package",
     title: "Move-in Ready",
-    desc: "Pots, pans, dishes, towels — everything is already there.",
+    desc: "Pots, pans, dishes, towels, everything is already there.",
     image: loc("eimsbuettel", "community", "004-community-ei.webp"),
   },
   {
@@ -1225,7 +1225,7 @@ export const features: Feature[] = [
   {
     icon: "washingMachine",
     title: "On-site Laundry",
-    desc: "No trips to the laundromat — washing machines at every location.",
+    desc: "No trips to the laundromat, washing machines at every location.",
     image: loc("vallendar", "community", "010-community-va.webp"),
   },
   {
@@ -1257,12 +1257,12 @@ export const faqItems: FAQItem[] = [
   {
     question: "Are there member events?",
     answer:
-      "Yes — we organize events for our members on a monthly basis. It might be the opening party of a new location, an in-house concert exclusively for our members, or a community dinner at your location's common space.",
+      "Yes, we organize events for our members on a monthly basis. It might be the opening party of a new location, an in-house concert exclusively for our members, or a community dinner at your location's common space.",
   },
   {
     question: "What services are included?",
     answer:
-      "Almost everything you need for daily life — furniture and bedding, weekly cleaning of common areas, heating, electricity, water, WiFi, smart-locks, repair and maintenance, plus access to our community events. One bill covers the rental essentials. The few things members handle themselves are laundry (via our on-site WeWash service), the German broadcasting fee (GEZ / Rundfunkbeitrag, required by law for all residents in Germany) and personal expenses such as groceries or toiletries.",
+      "Almost everything you need for daily life, furniture and bedding, weekly cleaning of common areas, heating, electricity, water, WiFi, smart-locks, repair and maintenance, plus access to our community events. One bill covers the rental essentials. The few things members handle themselves are laundry (via our on-site WeWash service), the German broadcasting fee (GEZ / Rundfunkbeitrag, required by law for all residents in Germany) and personal expenses such as groceries or toiletries.",
   },
   {
     question: "How can I apply?",
@@ -1282,7 +1282,7 @@ export const faqItems: FAQItem[] = [
   {
     question: "What's included in my membership?",
     answer:
-      "A fully-furnished room, access to common spaces, smart-locks, WiFi, all utilities, weekly cleaning and monthly member events — no extras to worry about.",
+      "A fully-furnished room, access to common spaces, smart-locks, WiFi, all utilities, weekly cleaning and monthly member events, no extras to worry about.",
   },
   {
     question: "How does check-in and check-out work?",
@@ -1292,7 +1292,7 @@ export const faqItems: FAQItem[] = [
   {
     question: "Who is the Community Manager?",
     answer:
-      "Every location has its own Community Manager who maintains the spaces and is your point of contact for all issues — from broken appliances to lost keys to questions about the neighborhood.",
+      "Every location has its own Community Manager who maintains the spaces and is your point of contact for all issues, from broken appliances to lost keys to questions about the neighborhood.",
   },
   {
     question: "Is there a minimum or maximum rental period?",
@@ -1302,7 +1302,7 @@ export const faqItems: FAQItem[] = [
   {
     question: "Can I switch between different locations?",
     answer:
-      "Yes, as long as there's availability at the other location. Existing members get priority when transferring between STACEY locations — whether from Hamburg to Berlin or just across town.",
+      "Yes, as long as there's availability at the other location. Existing members get priority when transferring between STACEY locations, whether from Hamburg to Berlin or just across town.",
   },
   {
     question: "Can I change the furniture in my room?",
@@ -1317,22 +1317,22 @@ export const faqItems: FAQItem[] = [
   {
     question: "Can I invite a friend to stay with me?",
     answer:
-      "Yes — but keep your cohabitants in mind. For overnight guests, please coordinate with your Community Manager to make sure everyone in the apartment is comfortable.",
+      "Yes, but keep your cohabitants in mind. For overnight guests, please coordinate with your Community Manager to make sure everyone in the apartment is comfortable.",
   },
   {
     question: "What if something goes wrong during my stay?",
     answer:
-      "Please contact your Community Manager. They're your first point of contact for anything from maintenance to conflicts with roommates — we'll sort it out together.",
+      "Please contact your Community Manager. They're your first point of contact for anything from maintenance to conflicts with roommates, we'll sort it out together.",
   },
   {
     question: "Can we rent a suite as a couple?",
     answer:
-      "Yes — couples are welcome in our Jumbo, Jumbo Balcony, Studio and select Premium+ Balcony suites, which are designed with enough space for two.",
+      "Yes, couples are welcome in our Jumbo, Jumbo Balcony, Studio and select Premium+ Balcony suites, which are designed with enough space for two.",
   },
   {
     question: "Are pets allowed?",
     answer:
-      "Unfortunately not — out of consideration for our community, we cannot accept pets at any STACEY location.",
+      "Unfortunately not, out of consideration for our community, we cannot accept pets at any STACEY location.",
   },
   {
     question: "Do you offer private parking?",
@@ -1342,6 +1342,6 @@ export const faqItems: FAQItem[] = [
   {
     question: "Is there a curfew?",
     answer:
-      "STACEY does not impose any curfew — but we do expect our members to respect the neighborhood and their fellow residents, especially at night.",
+      "STACEY does not impose any curfew, but we do expect our members to respect the neighborhood and their fellow residents, especially at night.",
   },
 ];

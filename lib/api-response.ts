@@ -14,7 +14,7 @@
 // instead of the previous ad-hoc mix of `{ error: "..." }`, `{ details: "..." }`,
 // raw fields, plain strings, etc.
 //
-// Webhook / cron / admin routes are NOT migrated to this — they have their
+// Webhook / cron / admin routes are NOT migrated to this, they have their
 // own contracts with external systems (Stripe, Vercel cron, internal admin
 // frontend) and changing them would create churn without benefit.
 
@@ -27,7 +27,7 @@ export type ApiError = {
   code: string;
   /** Human-readable message safe to surface to end users. */
   message: string;
-  /** Optional debug info — never assume the frontend will render this. */
+  /** Optional debug info, never assume the frontend will render this. */
   detail?: unknown;
 };
 
@@ -103,7 +103,7 @@ export async function fetchJson<T>(
     };
   }
 
-  // The body should already be in ApiResult shape — if it is, return as-is.
+  // The body should already be in ApiResult shape, if it is, return as-is.
   if (
     body &&
     typeof body === "object" &&

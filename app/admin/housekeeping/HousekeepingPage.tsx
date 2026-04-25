@@ -128,7 +128,7 @@ export default function HousekeepingPage({
 
   return (
     <div>
-      {/* Header + controls — hidden in print */}
+      {/* Header + controls, hidden in print */}
       <div className="print:hidden">
         <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
           <div>
@@ -224,7 +224,7 @@ export default function HousekeepingPage({
       {/* Print-only header */}
       <div className="hidden print:block mb-4">
         <h1 className="text-xl font-bold">
-          Housekeeping —{" "}
+          Housekeeping ,{" "}
           {view === "day" ? fmtDateLong(date) : "Week of " + fmtDateLong(date)}
         </h1>
       </div>
@@ -258,7 +258,7 @@ function DayView({
 }) {
   const [working, setWorking] = useState<string | null>(null);
 
-  // Group into (location, roomLabel) — each group renders as either a
+  // Group into (location, roomLabel), each group renders as either a
   // Turnaround block (if same-day out+in on the same room) or single task.
   type Group = {
     key: string;
@@ -570,11 +570,11 @@ function TaskRow({
             href={guestHref}
             className="font-medium hover:underline flex items-center gap-1"
           >
-            {task.guestName || "—"}
+            {task.guestName || ","}
             <ExternalLink className="w-3 h-3 text-gray flex-shrink-0" />
           </Link>
         ) : (
-          <span className="font-medium">{task.guestName || "—"}</span>
+          <span className="font-medium">{task.guestName || ","}</span>
         )}
       </div>
 
@@ -829,7 +829,7 @@ function WeekView({
                         key={d}
                         className="p-2 border border-lightgray bg-white text-center text-xs text-gray"
                       >
-                        —
+                        ,
                       </td>
                     );
                   return (

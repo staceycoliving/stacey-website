@@ -250,7 +250,7 @@ type SentEmail = {
 };
 
 function fmtDate(d: string | null) {
-  if (!d) return "—";
+  if (!d) return ",";
   return new Date(d).toLocaleDateString("de-DE", {
     day: "2-digit",
     month: "2-digit",
@@ -266,7 +266,7 @@ function fmtMonth(d: string) {
 }
 
 function fmtEuro(cents: number | null, digits: 0 | 2 = 0) {
-  if (cents === null) return "—";
+  if (cents === null) return ",";
   return `€${(cents / 100).toFixed(digits)}`;
 }
 
@@ -320,7 +320,7 @@ export default function TenantFolioPage({
   // When switching tabs, make sure the top of the new content is visible.
   // If we scrolled down in the previous tab, the new tab's first block would
   // otherwise sit above the sticky tab bar (hidden behind the admin header +
-  // folio tabs). Scroll the tab bar into view — content starts directly below.
+  // folio tabs). Scroll the tab bar into view, content starts directly below.
   const isInitialMount = useRef(true);
   useEffect(() => {
     if (isInitialMount.current) {
@@ -348,7 +348,7 @@ export default function TenantFolioPage({
     .reduce((sum, c) => sum + c.amount, 0);
   const totalOpen = openBalance + extraChargesOpen;
 
-  // Multi-chip status — can be several at once
+  // Multi-chip status, can be several at once
   const statusChips = buildStatusChips({
     tenant,
     withdrawEligible,
@@ -477,7 +477,7 @@ export default function TenantFolioPage({
                 title={
                   withdrawEligible
                     ? "Innerhalb der 14-Tage-Frist seit Kautionszahlung"
-                    : "Frist abgelaufen — Override mit Warnung möglich"
+                    : "Frist abgelaufen, Override mit Warnung möglich"
                 }
               >
                 Widerruf bearbeiten
@@ -919,7 +919,7 @@ function buildNextActions({
     moveIn <= now
   ) {
     actions.push({
-      label: "No SEPA mandate — monthly charges will fail",
+      label: "No SEPA mandate, monthly charges will fail",
       icon: <CreditCard className="w-3.5 h-3.5 text-red-600 flex-shrink-0" />,
       tone: "bg-red-50 text-red-900",
     });
@@ -944,7 +944,7 @@ function buildNextActions({
             : null;
     if (stage) {
       actions.push({
-        label: `${stage} fällig — ${failedRents.length} offene Miete(n), €${(totalOpen / 100).toFixed(0)}`,
+        label: `${stage} fällig, ${failedRents.length} offene Miete(n), €${(totalOpen / 100).toFixed(0)}`,
         icon: <AlertCircle className="w-3.5 h-3.5 text-red-600 flex-shrink-0" />,
         tone: "bg-red-50 text-red-900",
       });
@@ -1131,7 +1131,7 @@ function ProfileTab({
           Contact
         </div>
         <InfoRow label="Email" value={tenant.email} />
-        <InfoRow label="Phone" value={tenant.phone ?? "—"} />
+        <InfoRow label="Phone" value={tenant.phone ?? ","} />
         <div className="flex items-start text-sm">
           <div className="w-40 text-gray flex-shrink-0">Address</div>
           <div className="flex-1 text-black">
@@ -1146,7 +1146,7 @@ function ProfileTab({
                 {tenant.country && <div>{tenant.country}</div>}
               </>
             ) : (
-              "—"
+              ","
             )}
           </div>
         </div>
@@ -1158,11 +1158,11 @@ function ProfileTab({
         </div>
         <InfoRow
           label="Name"
-          value={tenant.emergencyContactName ?? "—"}
+          value={tenant.emergencyContactName ?? ","}
         />
         <InfoRow
           label="Phone"
-          value={tenant.emergencyContactPhone ?? "—"}
+          value={tenant.emergencyContactPhone ?? ","}
         />
       </div>
 
@@ -1190,7 +1190,7 @@ function LeaseTab({
   const [changingPaymentMethod, setChangingPaymentMethod] = useState(false);
   const addr = tenant.room?.apartment.location.address ?? "";
 
-  // Pass all PAID/PARTIAL rents to the modal — it picks the right month
+  // Pass all PAID/PARTIAL rents to the modal, it picks the right month
   // based on whatever date the admin chooses.
   const paidRents = tenant.rentPayments
     .filter((r) => r.status === "PAID" || r.status === "PARTIAL")
@@ -1239,7 +1239,7 @@ function LeaseTab({
           label="Floor"
           value={tenant.room.floorDescription ?? tenant.room.apartment.floor}
         />
-        <InfoRow label="Suite" value={`#${tenant.room?.roomNumber ?? "—"}`} />
+        <InfoRow label="Suite" value={`#${tenant.room?.roomNumber ?? ","}`} />
         <InfoRow
           label="Category"
           value={formatCategory(tenant.room?.category ?? "")}
@@ -1326,7 +1326,7 @@ function LeaseTab({
             {tenant.booking?.signatureDocumentId ? (
               <span className="inline-flex items-center gap-1">
                 <FileText className="w-3.5 h-3.5 text-green-700" />
-                Signed via Yousign — archived to Google Drive
+                Signed via Yousign, archived to Google Drive
               </span>
             ) : (
               <span className="text-gray">Not signed yet</span>
@@ -1376,7 +1376,7 @@ function LeaseTab({
           tenantId={tenant.id}
           tenantName={`${tenant.firstName} ${tenant.lastName}`}
           currentRoomId={tenant.roomId}
-          currentRoomNumber={tenant.room?.roomNumber ?? "—"}
+          currentRoomNumber={tenant.room?.roomNumber ?? ","}
           currentRent={tenant.monthlyRent}
           locationId={tenant.room?.apartment.location.id ?? ""}
           onClose={() => setShowTransfer(false)}
@@ -1418,7 +1418,7 @@ function LeaseTab({
                   </span>
                 )}
                 {t.reason && (
-                  <span className="text-gray text-xs italic">— {t.reason}</span>
+                  <span className="text-gray text-xs italic">, {t.reason}</span>
                 )}
                 {t.status === "SCHEDULED" && (
                   <>
@@ -1475,7 +1475,7 @@ function LeaseTab({
                     {r.firstName} {r.lastName}
                   </span>
                   <span className="text-xs text-gray">
-                    #{r.room?.roomNumber ?? "—"} · {fmtDate(r.moveIn)}
+                    #{r.room?.roomNumber ?? ","} · {fmtDate(r.moveIn)}
                     {r.moveOut ? ` → ${fmtDate(r.moveOut)}` : " · active"}
                   </span>
                 </Link>
@@ -1667,7 +1667,7 @@ function PaymentsTab({ tenant }: { tenant: Tenant }) {
                       ? fmtEuro(delta)
                       : delta < 0
                         ? `+${fmtEuro(-delta)}`
-                        : "—";
+                        : ",";
                   const mLabel = mahnungLabel(p);
                   const canRetry =
                     tenant.paymentMethod === "SEPA" &&
@@ -1688,7 +1688,7 @@ function PaymentsTab({ tenant }: { tenant: Tenant }) {
                         className={`px-3 py-2 text-right tabular-nums ${deltaCls}`}
                         title={
                           delta < 0
-                            ? "Rent credit — rolled into deposit settlement at end of stay"
+                            ? "Rent credit, rolled into deposit settlement at end of stay"
                             : undefined
                         }
                       >
@@ -1719,7 +1719,7 @@ function PaymentsTab({ tenant }: { tenant: Tenant }) {
                             {mLabel}
                           </span>
                         ) : (
-                          <span className="text-gray/60">—</span>
+                          <span className="text-gray/60">,</span>
                         )}
                       </td>
                       <td className="px-3 py-2 text-right">
@@ -1771,7 +1771,7 @@ function PaymentsTab({ tenant }: { tenant: Tenant }) {
                       openRent > 0 ? "text-red-600" : "text-gray"
                     }`}
                   >
-                    {openRent > 0 ? fmtEuro(openRent) : "—"}
+                    {openRent > 0 ? fmtEuro(openRent) : ","}
                   </td>
                   <td colSpan={3}></td>
                 </tr>
@@ -1840,7 +1840,7 @@ function PaymentsTab({ tenant }: { tenant: Tenant }) {
                         {c.stripePaymentIntentId ? (
                           <span
                             className="inline-block px-2 py-0.5 rounded-[5px] text-xs font-semibold bg-green-100 text-green-700"
-                            title={`Mit Miete verrechnet via Stripe (PI ${c.stripePaymentIntentId.slice(-8)}) — nicht manuell änderbar`}
+                            title={`Mit Miete verrechnet via Stripe (PI ${c.stripePaymentIntentId.slice(-8)}), nicht manuell änderbar`}
                           >
                             Mit Miete ✓
                           </span>
@@ -2050,7 +2050,7 @@ function DepositTab({ tenant }: { tenant: Tenant }) {
                 }`}
               >
                 {deadlineOverdue
-                  ? `Kautionsrückzahlung überfällig — ${-deadlineDays!} Tag(e) über Deadline`
+                  ? `Kautionsrückzahlung überfällig, ${-deadlineDays!} Tag(e) über Deadline`
                   : deadlineDays! === 0
                     ? "Letzter Tag: Kaution heute auszahlen"
                     : `${deadlineDays} Tag(e) bis Deadline`}
@@ -2093,7 +2093,7 @@ function DepositTab({ tenant }: { tenant: Tenant }) {
         />
       </div>
 
-      {/* Settlement actions — inline, no need to hop to /admin/deposits */}
+      {/* Settlement actions, inline, no need to hop to /admin/deposits */}
       {moveOutDate &&
         moveOutDate < now &&
         tenant.depositStatus === "RECEIVED" && (
@@ -2738,7 +2738,7 @@ function NoteBubble({
               >
                 🔔 Follow-up{" "}
                 {new Date(note.followUpAt).toLocaleDateString("de-DE")}
-                {followUpDue && " — due"}
+                {followUpDue && ", due"}
               </div>
             )}
             <div className="flex items-center gap-2 mt-2 text-[10px] text-gray opacity-0 group-hover:opacity-100 transition-opacity">
@@ -2848,7 +2848,7 @@ function DocumentsTab({ tenant }: { tenant: Tenant }) {
             available={Boolean(tenant.booking?.signatureDocumentId)}
             detail={
               tenant.booking?.signatureDocumentId
-                ? "Signed via Yousign — archived to Google Drive"
+                ? "Signed via Yousign, archived to Google Drive"
                 : "Not signed yet"
             }
           />
@@ -3479,7 +3479,7 @@ function ResendEmailDropdown({ tenantId }: { tenantId: string }) {
   );
 }
 
-/** Room transfer modal — pick a target room in the same location, set
+/** Room transfer modal, pick a target room in the same location, set
  *  transfer date (past, today, or future), optionally change rent. */
 function RoomTransferModal({
   tenantId,
@@ -3618,7 +3618,7 @@ function RoomTransferModal({
               onChange={(e) => setToRoomId(e.target.value)}
               className="w-full px-3 py-2 border border-lightgray rounded-[5px] text-sm bg-white"
             >
-              <option value="">— Zimmer wählen —</option>
+              <option value="">, Zimmer wählen ,</option>
               {rooms.map((r) => (
                 <option key={r.id} value={r.id}>
                   #{r.roomNumber} · {r.category.replace(/_/g, " ")} · €
@@ -3665,7 +3665,7 @@ function RoomTransferModal({
         {changeRent && (
           <label className="block">
             <span className="block text-xs text-gray mb-1">
-              Neue Miete (€) — aktuell €{(currentRent / 100).toFixed(0)}
+              Neue Miete (€), aktuell €{(currentRent / 100).toFixed(0)}
               {selectedRoom &&
                 ` · Zimmerpreis €${(selectedRoom.monthlyRent / 100).toFixed(0)}`}
             </span>
@@ -3966,7 +3966,7 @@ function NoteModal({
       />
       <div className="mt-3">
         <label className="block text-xs text-gray mb-1">
-          Tags (comma-separated — e.g. complaint, follow-up, positive)
+          Tags (comma-separated, e.g. complaint, follow-up, positive)
         </label>
         <input
           type="text"
@@ -4044,7 +4044,7 @@ function RecordPaymentModal({
   const [saving, setSaving] = useState(false);
 
   const selected = options.find((r) => r.id === rentId);
-  // Auto-fill amount when selection changes — default to remaining open
+  // Auto-fill amount when selection changes, default to remaining open
   useEffect(() => {
     if (selected) {
       const remaining = Math.max(0, selected.amount - selected.paidAmount);
@@ -4137,8 +4137,8 @@ function RecordPaymentModal({
             if (cents < remaining)
               return `Under by ${fmtEuro(remaining - cents)} → status becomes PARTIAL`;
             if (cents > remaining)
-              return `Over by ${fmtEuro(cents - remaining)} — recorded as credit at settlement`;
-            return "Full amount — status becomes PAID";
+              return `Over by ${fmtEuro(cents - remaining)}, recorded as credit at settlement`;
+            return "Full amount, status becomes PAID";
           })()}
         </div>
       )}

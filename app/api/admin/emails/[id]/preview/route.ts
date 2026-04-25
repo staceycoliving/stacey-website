@@ -6,7 +6,7 @@ import { prisma } from "@/lib/db";
  * GET /api/admin/emails/[id]/preview
  *
  * Minimal metadata preview of a logged email. We don't store the rendered
- * HTML per email (would balloon DB size), so we return header info only —
+ * HTML per email (would balloon DB size), so we return header info only ,
  * enough for the admin to know what was sent without reconstructing.
  */
 export async function GET(

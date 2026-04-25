@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRef, useState } from "react";
 import { ArrowRight } from "lucide-react";
 
-// "Do the math" — receipt-vs-receipt section. Trimmed to Option B:
+// "Do the math", receipt-vs-receipt section. Trimmed to Option B:
 // rival line items have no sub-text, STACEY receipt drops the 7-bullet
 // inclusions list (replaced with one sentence), no hover-pair, no
 // fine-print footers, no "you bring" closer. Drama stays in the two
@@ -19,10 +19,10 @@ const RIVAL_ITEMS: { label: string; price: number }[] = [
   { label: "Maintenance buffer", price: 60 },
 ];
 const RIVAL_TOTAL = RIVAL_ITEMS.reduce((s, i) => s + i.price, 0); // 1580
-// Hamburg Mighty category — cheapest Mighty room across our Hamburg
+// Hamburg Mighty category, cheapest Mighty room across our Hamburg
 // LONG locations (Mühlenkamp, Eppendorf, St. Pauli all = 895). Source:
 // lib/data.ts priceMonthly. Move-in admin / booking-fee NOT included on
-// the rival side because STACEY also charges a one-time booking fee —
+// the rival side because STACEY also charges a one-time booking fee ,
 // keeping that line in would make the comparison unfair.
 const STACEY_TOTAL = 895;
 const SAVINGS_MONTH = RIVAL_TOTAL - STACEY_TOTAL; // 685
@@ -32,7 +32,7 @@ function fmt(n: number) {
   return n.toLocaleString("en-US");
 }
 
-// Animated count-up — triggers once the element enters the viewport.
+// Animated count-up, triggers once the element enters the viewport.
 function useCountUp(target: number, durationMs = 900): [number, (el: HTMLElement | null) => void] {
   const [value, setValue] = useState(0);
   const triggered = useRef(false);
@@ -91,7 +91,7 @@ export default function FeaturesSection() {
             vs
           </span>
 
-          {/* RIVAL — itemised solo-rent receipt, struck through */}
+          {/* RIVAL, itemised solo-rent receipt, struck through */}
           <div
             ref={rivalRef as (el: HTMLDivElement | null) => void}
             className="relative rounded-[5px] bg-white p-6 ring-1 ring-black/10 shadow-sm sm:p-8"
@@ -129,7 +129,7 @@ export default function FeaturesSection() {
             </div>
           </div>
 
-          {/* STACEY — single number, one suite. ALL-IN stamp + one
+          {/* STACEY, single number, one suite. ALL-IN stamp + one
               clean sentence describes the absorbed inclusions. */}
           <div
             ref={staceyRef as (el: HTMLDivElement | null) => void}
@@ -163,7 +163,7 @@ export default function FeaturesSection() {
               </p>
               <p className="mt-4 text-sm leading-relaxed text-white/70">
                 Suite, utilities, internet, cleaning, maintenance, community, and
-                free transfers between cities — all on the bill below.
+                free transfers between cities. All on the bill below.
               </p>
             </div>
 
@@ -181,7 +181,7 @@ export default function FeaturesSection() {
           </div>
         </div>
 
-        {/* Pink savings ribbon — the punch line */}
+        {/* Pink savings ribbon, the punch line */}
         <div
           ref={savingsRef as (el: HTMLDivElement | null) => void}
           className="mt-6 flex flex-col items-center gap-2 rounded-[5px] bg-pink px-6 py-5 text-center text-black shadow-[0_4px_18px_rgba(0,0,0,0.08)] sm:flex-row sm:justify-between sm:gap-6 sm:px-8 sm:text-left"
@@ -209,7 +209,7 @@ export default function FeaturesSection() {
           </Link>
         </div>
 
-        {/* Legal hedge — illustrative comparison only, not a binding
+        {/* Legal hedge, illustrative comparison only, not a binding
             quote. Solo-rent figures are typical Hamburg market values
             (Q1 2026); STACEY total is the cheapest Mighty room across
             our Hamburg LONG locations and excludes the one-time
@@ -220,7 +220,7 @@ export default function FeaturesSection() {
           Illustrative comparison · non-binding. Solo-rent values reflect typical
           Hamburg market averages; the STACEY total is the cheapest Mighty room
           in our Hamburg LONG portfolio. Final pricing depends on suite, dates,
-          and city — see <Link href="/move-in" className="underline decoration-pink underline-offset-2 hover:text-black">/move-in</Link> for binding offers. Booking fee and deposit
+          and city. See <Link href="/move-in" className="underline decoration-pink underline-offset-2 hover:text-black">/move-in</Link> for binding offers. Booking fee and deposit
           apply separately.
         </p>
       </div>

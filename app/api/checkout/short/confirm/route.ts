@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
       bookingId: booking.id,
     }).catch((err) => console.error("Email error (guest):", err));
 
-    // No team notification for SHORT stay — booking is visible in apaleo
+    // No team notification for SHORT stay, booking is visible in apaleo
 
     return apiOk({
       bookingId: booking.id,

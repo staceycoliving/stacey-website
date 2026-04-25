@@ -66,11 +66,11 @@ const TEMPLATES: TemplateDef[] = [
   { key: "payment_setup_reminder", label: "Payment setup reminder", description: "nudge to set up SEPA", group: "payment", canQuickSend: true },
   { key: "payment_final_warning", label: "Payment final warning", description: "3d before move-in, still no SEPA", group: "payment" },
   // Rent
-  { key: "rent_reminder", label: "Rent reminder", description: "Day 3 — friendly", group: "rent", canQuickSend: true },
-  { key: "mahnung1", label: "1. Mahnung", description: "Day 14 — formal", group: "rent", canQuickSend: true },
-  { key: "mahnung2", label: "2. Mahnung + Kündigung", description: "Day 30 — last notice", group: "rent", canQuickSend: true },
+  { key: "rent_reminder", label: "Rent reminder", description: "Day 3, friendly", group: "rent", canQuickSend: true },
+  { key: "mahnung1", label: "1. Mahnung", description: "Day 14, formal", group: "rent", canQuickSend: true },
+  { key: "mahnung2", label: "2. Mahnung + Kündigung", description: "Day 30, last notice", group: "rent", canQuickSend: true },
   // Move-out
-  { key: "termination", label: "Termination notice", description: "lease ended — requires reason + date", group: "move-out", canQuickSend: true },
+  { key: "termination", label: "Termination notice", description: "lease ended, requires reason + date", group: "move-out", canQuickSend: true },
   { key: "deposit_return", label: "Deposit settlement", description: "refund breakdown + IBAN", group: "move-out", canQuickSend: true },
   { key: "post_stay_feedback", label: "Post-stay feedback", description: "after move-out", group: "move-out", canQuickSend: true },
   { key: "checkout_reminder", label: "Checkout reminder (SHORT)", description: "1 day before departure", group: "short-stay" },
@@ -286,7 +286,7 @@ export default function EmailsPage({
         <Breadcrumbs items={[{ label: "Emails" }]} />
                 <h1 className="text-2xl font-bold text-black">Emails</h1>
         <p className="text-sm text-gray mt-1 max-w-2xl">
-          Central log of every email the system sends — automated and
+          Central log of every email the system sends, automated and
           manual. Failed sends can be retried here, and every template has
           a full history back to 500 rows.
         </p>
@@ -316,7 +316,7 @@ export default function EmailsPage({
         />
       </div>
 
-      {/* Failed alerts at top — most actionable */}
+      {/* Failed alerts at top, most actionable */}
       {failed.length > 0 && (
         <div className="mb-4 bg-red-50 border border-red-200 rounded-[5px] overflow-hidden">
           <div className="px-4 py-2 bg-red-100 border-b border-red-200 flex items-center gap-2">
@@ -400,10 +400,10 @@ export default function EmailsPage({
               onChange={(e) => setSelectedTemplate(e.target.value)}
               className="w-full px-3 py-2 border border-lightgray rounded-[5px] text-sm bg-white"
             >
-              <option value="">— pick template —</option>
+              <option value="">, pick template ,</option>
               {quickSendTemplates.map((t) => (
                 <option key={t.key} value={t.key}>
-                  {t.label} — {t.description}
+                  {t.label}, {t.description}
                 </option>
               ))}
             </select>
@@ -453,7 +453,7 @@ export default function EmailsPage({
 
         <p className="text-[11px] text-gray mt-2">
           Quick Send supports {quickSendTemplates.length} manual templates
-          for fresh sends. Others fire automatically from cron/webhooks —
+          for fresh sends. Others fire automatically from cron/webhooks ,
           to re-fire any past send exactly as it was, use the Resend
           button in the log below.
         </p>
@@ -710,7 +710,7 @@ function PreviewModal({
                 </code>
               </Field>
               <Field label="Recipient">{data.recipient}</Field>
-              <Field label="Subject">{data.subject ?? "—"}</Field>
+              <Field label="Subject">{data.subject ?? ","}</Field>
               <Field label="Status">
                 {data.status === "sent"
                   ? "✓ Sent"
@@ -885,7 +885,7 @@ function TenantCombobox({
               ))}
               {!query && tenants.length > 50 && (
                 <div className="px-3 py-2 text-[11px] text-gray border-t border-lightgray">
-                  Showing first 50 — type to search all {tenants.length}.
+                  Showing first 50, type to search all {tenants.length}.
                 </div>
               )}
             </>

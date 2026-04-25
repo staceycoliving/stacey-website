@@ -2,7 +2,7 @@
 
 // Opens the Cookiebot consent dialog so users can change their choice.
 // If Cookiebot isn't loaded (env var missing or script blocked), the
-// link simply does nothing — graceful degradation.
+// link simply does nothing, graceful degradation.
 
 declare global {
   interface Window {
