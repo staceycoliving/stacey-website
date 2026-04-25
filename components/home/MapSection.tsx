@@ -115,38 +115,15 @@ export default function MapSection() {
             </span>
             .
           </h2>
-          <p className="mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-gray sm:text-base">
-            {city === "all" && (
-              <>
-                Six homes in Hamburg — from the canal-side cafés of Mühlenkamp
-                to the corner bakeries of Eppendorf and the late-night ferment
-                of St. Pauli. One in Berlin Mitte, two minutes from Museum
-                Island. One quiet outpost in Vallendar on the Rhine. Pick the
-                neighbourhood that fits your week.
-              </>
-            )}
-            {city === "hamburg" && (
-              <>
-                Six Hamburg homes across the most-walkable neighbourhoods —
-                Mühlenkamp&rsquo;s canals, Eppendorf&rsquo;s corner cafés,
-                St. Pauli&rsquo;s late-night ferment, plus Eimsbüttel and the
-                Alster waterfront for short stays.
-              </>
-            )}
-            {city === "berlin" && (
-              <>
-                Berlin Mitte. Two minutes from Museum Island, ten from
-                Alexanderplatz, the U2 and U8 at your door. One STACEY home for
-                people who want to live where the city actually happens.
-              </>
-            )}
-            {city === "vallendar" && (
-              <>
-                Quiet outpost on the Rhine, ten minutes from Koblenz, next door
-                to WHU Otto Beisheim. Built for students, founders, and anyone
-                who&rsquo;d rather wake up to river fog than tram noise.
-              </>
-            )}
+          <p className="mx-auto mt-3 max-w-xl text-xs text-gray sm:text-sm">
+            {city === "all" &&
+              "Hover a marker, scroll the list — find the one that fits your week."}
+            {city === "hamburg" &&
+              "Across the most-walkable neighbourhoods — canals, corner cafés, late-night ferment."}
+            {city === "berlin" &&
+              "Mitte. Two minutes from Museum Island, U2 and U8 at your door."}
+            {city === "vallendar" &&
+              "Quiet outpost on the Rhine, next door to WHU Otto Beisheim."}
           </p>
         </div>
 
