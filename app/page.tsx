@@ -16,7 +16,6 @@ import FeaturesSection from "@/components/home/FeaturesSection";
 import VideoSection from "@/components/home/VideoSection";
 import HowItWorksSection from "@/components/home/HowItWorksSection";
 import TestimonialsSection from "@/components/home/TestimonialsSection";
-import AboutSection from "@/components/home/AboutSection";
 import MapSection from "@/components/home/MapSection";
 import { locations, formatMoveInLabel } from "@/lib/data";
 import { expandMoveInDates } from "@/lib/availability";
@@ -601,9 +600,9 @@ export default function HomePage() {
            "yes, real members agree the math works." */}
       <TestimonialsSection />
 
-      {/* BRAND — Who we are. Closing trust beat before the Footer. */}
-      <AboutSection />
-
+      {/* About-section was cut: a one-line brand statement now lives
+          in the Footer (top band), and the long-form team story lives
+          at /why-stacey. Reduces the homepage by one section. */}
       <Footer />
     </>
   );

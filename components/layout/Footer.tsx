@@ -10,7 +10,9 @@ const vallendar = locations.filter((l) => l.city === "vallendar");
 export default function Footer() {
   return (
     <footer className="bg-black text-white">
-      {/* Claim + CTA */}
+      {/* Claim + brand statement. Brand line replaces the standalone
+          AboutSection on the homepage (cut for length) — the long-form
+          team story now lives at /why-stacey. */}
       <div className="border-b border-white/5 py-12">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <p
@@ -23,6 +25,22 @@ export default function Footer() {
               animation: "claimFill 5s ease-in-out infinite",
             }}
           >OUR MEMBERS CALL US HOME.</p>
+          <p className="mt-4 max-w-3xl text-sm leading-relaxed text-white/70 sm:text-base">
+            <span className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-pink">
+              Hamburg, since 2019
+            </span>
+            <span className="ml-3 align-middle">
+              Coliving for people who&rsquo;d rather{" "}
+              <span className="italic font-light text-white">meet someone</span>{" "}
+              than scroll someone.
+            </span>{" "}
+            <Link
+              href="/why-stacey"
+              className="whitespace-nowrap underline decoration-pink underline-offset-4 transition-colors hover:text-white"
+            >
+              The full story →
+            </Link>
+          </p>
         </div>
       </div>
 
