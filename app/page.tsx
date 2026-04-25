@@ -563,22 +563,32 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ── VIDEO — promoted to position 3 (was below Features). The
-           video is the strongest emotional moment on the page; it
-           belongs right after the cards-driven browsing so users go
-           "see the homes" → "feel what living there is like" → "find
-           them on the map". ── */}
-      <VideoSection />
+      {/* Page is grouped into four intent clusters:
+           1) DISCOVER — Locations cards (above) + Map (geography)
+           2) EMOTION  — Video + Testimonials (lifestyle + member voices)
+           3) CONVERT  — Receipts (value/cost) + HowItWorks (process)
+           4) BRAND    — About
+         Mixing emotion and conversion sections (the previous order had
+         Map between Video and Features) broke the narrative arc. */}
 
-      {/* ── MAP — interactive 2-col discovery layout. List on the left
-           with sticky city headers + numbered cards, Mapbox on the
-           right with custom markers that sync hover/click to the list.
-           See components/home/MapSection.tsx. ── */}
+      {/* DISCOVER — Map directly after the location cards. Same task:
+           "where can I live". Geography concludes the discovery cluster
+           before we pivot to emotional content. */}
       <MapSection />
 
+      {/* EMOTION — Video first (cinematic, sets the vibe), then member
+           interview testimonials. Two beats of social proof in a row
+           build conviction before we ask for the credit card. */}
+      <VideoSection />
+      <TestimonialsSection />
+
+      {/* CONVERT — Once trust is earned, the receipt-vs-receipt section
+           makes the value case. HowItWorks then turns intent into
+           action with the booking flow walkthrough. */}
       <FeaturesSection />
       <HowItWorksSection />
-      <TestimonialsSection />
+
+      {/* BRAND — Who we are. Closing trust beat before the Footer. */}
       <AboutSection />
 
       <Footer />
