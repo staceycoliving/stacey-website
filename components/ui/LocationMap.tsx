@@ -1,27 +1,53 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { locations } from "@/lib/data";
 
-mapboxgl.accessToken = "pk.eyJ1Ijoic3RhY2V5MjAxOSIsImEiOiJjazFxZHo2bGMwMjFkM2RzeHNlNjd4NjR3In0.BADipEjIKFaTMjt3dX6F-w";
+mapboxgl.accessToken =
+  "pk.eyJ1Ijoic3RhY2V5MjAxOSIsImEiOiJjazFxZHo2bGMwMjFkM2RzeHNlNjd4NjR3In0.BADipEjIKFaTMjt3dX6F-w";
 
-// Coordinates now live on each Location in lib/data.ts (loc.coords) so this
-// map + the location-detail map + any future map surface share one source
-// of truth. Fallback center/zoom is used only when a city has ≤1 location.
+// Coordinates live on each Location in lib/data.ts (loc.coords) so this
+// map + the location-detail map + any future map surface share one
+// source of truth.
 const cityFallback: Record<string, { center: [number, number]; zoom: number }> = {
   hamburg: { center: [9.98, 53.565], zoom: 12 },
   berlin: { center: [13.405, 52.511], zoom: 13 },
   vallendar: { center: [7.619, 50.396], zoom: 14 },
 };
 
-export default function LocationMap({ onMarkerHover }: { onMarkerHover?: (slug: string | null) => void }) {
+type CityFilter = "all" | "hamburg" | "berlin" | "vallendar";
+type MarkerVariant = "number" | "photo" | "expand";
+
+export default function LocationMap({
+  cityFilter = "all",
+  activeSlug = null,
+  onSelect,
+  numbers = {},
+  markerVariant = "number",
+}: {
+  cityFilter?: CityFilter;
+  activeSlug?: string | null;
+  onSelect?: (slug: string | null) => void;
+  /** Optional slug → display number map for the marker labels. Used
+   *  when `markerVariant === "number"`. */
+  numbers?: Record<string, number>;
+  /** "number" — black circle with digit (default).
+   *  "photo"  — small rounded-[5px] thumbnail of the location image.
+   *  "expand" — small black "S" dot that expands into a photo+name
+   *             pill on hover (Airbnb-style). */
+  markerVariant?: MarkerVariant;
+}) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
+  // Per-slug refs to the marker root elements so we can update their
+  // styling in response to activeSlug / cityFilter without recreating.
+  const markerEls = useRef<Record<string, HTMLDivElement>>({});
   const markersRef = useRef<mapboxgl.Marker[]>([]);
-  const [activeCity, setActiveCity] = useState("hamburg");
 
+  // Mount the map once + create one marker per location. Markers stay
+  // alive across filter changes; only their styling is updated below.
   useEffect(() => {
     if (!mapContainer.current || map.current) return;
 
@@ -32,166 +58,244 @@ export default function LocationMap({ onMarkerHover }: { onMarkerHover?: (slug: 
       zoom: cityFallback.hamburg.zoom,
       attributionControl: false,
     });
+    // Default Mapbox NavigationControl looks utilitarian and clashes
+    // with the premium pill+map composition. Discovery on the homepage
+    // doesn't need manual zoom — fitBounds + flyTo do the work.
 
-    map.current.addControl(new mapboxgl.NavigationControl(), "top-right");
+    locations.forEach((loc) => {
+      if (!loc.coords) return;
+      const el = document.createElement("div");
+      el.className = "stacey-marker";
+      el.style.cssText = "cursor:pointer;will-change:transform";
+
+      if (markerVariant === "photo") {
+        // Square photo thumbnail with white border. Active state adds
+        // pink ring + scale via the active effect below.
+        el.innerHTML = `
+          <div class="stacey-marker__inner" style="
+            position:relative;
+            width:48px;height:48px;
+            border-radius:5px;
+            overflow:hidden;
+            border:2px solid white;
+            box-shadow:0 4px 14px rgba(0,0,0,0.35);
+            background:#1A1A1A;
+            transition:all 0.25s ease;
+          ">
+            <span class="stacey-marker__pulse" style="
+              position:absolute;inset:-4px;border-radius:8px;
+              background:transparent;opacity:0;pointer-events:none;
+            "></span>
+            <img class="stacey-marker__photo" src="${loc.images[0]}" alt="" style="
+              width:100%;height:100%;object-fit:cover;display:block;
+              pointer-events:none;
+            " />
+          </div>`;
+      } else if (markerVariant === "expand") {
+        // Small dot that morphs into a photo + name badge on hover.
+        // Pink for LONG, black for SHORT — same color logic as the
+        // SHORT/LONG badges in the side-panel list and on the cards.
+        const bg = loc.stayType === "SHORT" ? "#1A1A1A" : "#FCB0C0";
+        const txt = loc.stayType === "SHORT" ? "white" : "#1A1A1A";
+        el.innerHTML = `
+          <div class="stacey-marker__inner stacey-marker--expand" style="
+            position:relative;
+            display:flex;align-items:center;
+            background:${bg};
+            padding:3px;
+            border-radius:5px;
+            border:2px solid white;
+            box-shadow:0 2px 10px rgba(0,0,0,0.35);
+            transition:all 0.3s ease;
+          ">
+            <span class="stacey-marker__photo" style="
+              width:22px;height:22px;border-radius:3px;
+              background-image:url('${loc.images[0]}');
+              background-size:cover;background-position:center;
+              transition:all 0.3s ease;flex-shrink:0;
+              border:1px solid rgba(0,0,0,0.15);
+            "></span>
+            <span class="stacey-marker__name" style="
+              color:${txt};font-weight:700;font-size:12px;
+              font-family:Montserrat,sans-serif;
+              white-space:nowrap;
+              max-width:0;overflow:hidden;
+              padding-left:0;padding-right:0;
+              transition:all 0.3s ease;
+            ">${loc.name}</span>
+          </div>`;
+      } else {
+        // "number" — original numbered/S badge.
+        el.innerHTML = `
+          <div class="stacey-marker__inner" style="
+            position:relative;
+            width:32px;height:32px;
+            background:#1A1A1A;
+            border-radius:50%;
+            display:flex;align-items:center;justify-content:center;
+            box-shadow:0 2px 8px rgba(0,0,0,0.35);
+            border:2px solid white;
+            transition:all 0.25s ease;
+          ">
+            <span class="stacey-marker__pulse" style="
+              position:absolute;inset:0;border-radius:50%;
+              background:#FCB0C0;opacity:0;pointer-events:none;
+            "></span>
+            <span class="stacey-marker__label" style="
+              position:relative;
+              color:white;font-weight:900;font-size:14px;
+              font-family:Montserrat,sans-serif;
+              line-height:1;
+            ">S</span>
+          </div>`;
+      }
+
+      el.addEventListener("mouseenter", () => onSelect?.(loc.slug));
+      el.addEventListener("mouseleave", () => onSelect?.(null));
+      el.addEventListener("click", (e) => {
+        e.stopPropagation();
+        window.location.href = `/locations/${loc.slug}`;
+      });
+
+      markerEls.current[loc.slug] = el;
+      const m = new mapboxgl.Marker({ element: el }).setLngLat(loc.coords).addTo(map.current!);
+      markersRef.current.push(m);
+    });
 
     return () => {
       map.current?.remove();
       map.current = null;
+      markersRef.current = [];
+      markerEls.current = {};
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Update marker labels whenever the numbering changes (e.g. user
+  // switches city tab → numbers reset to that city's slice).
+  useEffect(() => {
+    Object.entries(markerEls.current).forEach(([slug, el]) => {
+      const label = el.querySelector<HTMLElement>(".stacey-marker__label");
+      if (!label) return;
+      label.textContent = numbers[slug] != null ? String(numbers[slug]) : "S";
+    });
+  }, [numbers]);
+
+  // City filter — pan/zoom the map to fit the filtered set, dim markers
+  // outside the filter so the user's eye lands on what's selected.
   useEffect(() => {
     if (!map.current) return;
 
-    markersRef.current.forEach((m) => m.remove());
-    markersRef.current = [];
-
-    const cityLocations = locations.filter((l) => l.city === activeCity);
-    const coordsList = cityLocations
+    const filtered = cityFilter === "all" ? locations : locations.filter((l) => l.city === cityFilter);
+    const coordsList = filtered
       .map((l) => l.coords)
       .filter((c): c is [number, number] => Boolean(c));
 
     if (coordsList.length >= 2) {
-      // Multi-location city → fit all markers in the viewport with padding.
-      // padding top is larger so the marker popups don't clip against the
-      // nav controls; bottom padding keeps markers above sticky UI.
       const bounds = coordsList.reduce(
         (b, c) => b.extend(c),
         new mapboxgl.LngLatBounds(coordsList[0], coordsList[0]),
       );
       map.current.fitBounds(bounds, {
         padding: { top: 60, bottom: 60, left: 40, right: 40 },
-        duration: 1000,
-        maxZoom: 14, // don't get too close even if markers are tight together
+        duration: 900,
+        maxZoom: 13,
       });
-    } else {
-      // Single-location city → fall back to fixed center + zoom.
-      const fallback = cityFallback[activeCity];
+    } else if (coordsList.length === 1) {
+      const fallback = cityFilter !== "all" ? cityFallback[cityFilter] : null;
       if (fallback) {
-        map.current.flyTo({ center: fallback.center, zoom: fallback.zoom, duration: 1000 });
+        map.current.flyTo({ center: fallback.center, zoom: fallback.zoom, duration: 900 });
+      } else {
+        map.current.flyTo({ center: coordsList[0], zoom: 13, duration: 900 });
       }
     }
 
-    cityLocations.forEach((loc) => {
-      const coords = loc.coords;
-      if (!coords) return;
-
-      // STACEY "S" marker
-      const el = document.createElement("div");
-      el.addEventListener("click", (e) => e.stopPropagation());
-      el.innerHTML = `
-        <div style="
-          width: 32px;
-          height: 32px;
-          background: ${loc.stayType === "SHORT" ? "#1A1A1A" : "#FCB0C0"};
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          cursor: pointer;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-          transition: transform 0.2s;
-          border: 2px solid white;
-        ">
-          <span style="color: white; font-weight: 900; font-size: 14px; font-family: Montserrat, sans-serif;">S</span>
-        </div>
-      `;
-      // Popup with photo
-      const popup = new mapboxgl.Popup({ offset: 25, closeButton: false, maxWidth: "280px", className: "stacey-popup" }).setHTML(`
-        <a href="/locations/${loc.slug}" style="font-family: Montserrat, sans-serif; text-decoration: none; color: inherit; display: block;">
-          <div style="position: relative;">
-            <img src="${loc.images[0]}" alt="${loc.name}" style="width: 100%; height: 140px; object-fit: cover; display: block; border-radius: 5px;" />
-            <span style="
-              position: absolute; top: 8px; left: 8px;
-              background: ${loc.stayType === "SHORT" ? "#1A1A1A" : "#FCB0C0"};
-              color: white; padding: 3px 8px; border-radius: 5px;
-              font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px;
-            ">${loc.stayType === "SHORT" ? "SHORT" : "LONG"}</span>
-            <span style="
-              position: absolute; bottom: 8px; left: 8px;
-              background: rgba(255,255,255,0.2); backdrop-filter: blur(4px);
-              color: white; padding: 3px 8px; border-radius: 5px;
-              font-size: 12px; font-weight: 700;
-            ">€${loc.priceFrom}${loc.stayType === "SHORT" ? "/night" : "/mo"}</span>
-          </div>
-          <div style="padding: 12px;">
-            <p style="font-weight: 800; font-size: 15px; margin: 0; color: #1A1A1A;">STACEY ${loc.name}</p>
-            <p style="font-size: 11px; color: #6B6B6B; margin: 4px 0 0;">${loc.neighborhood}</p>
-            <p style="margin: 8px 0 0; font-size: 11px; font-weight: 600; color: #1A1A1A;">View location →</p>
-          </div>
-        </a>
-      `);
-
-      const marker = new mapboxgl.Marker({ element: el })
-        .setLngLat(coords)
-        .addTo(map.current!);
-
-      let hoverTimeout: ReturnType<typeof setTimeout>;
-
-      el.addEventListener("mouseenter", () => {
-        const inner = el.firstElementChild as HTMLElement;
-        if (inner) inner.style.transform = "scale(1.3)";
-        onMarkerHover?.(loc.slug);
-        popup.setLngLat(coords).addTo(map.current!);
-      });
-      el.addEventListener("mouseleave", () => {
-        const inner = el.firstElementChild as HTMLElement;
-        if (inner) inner.style.transform = "scale(1)";
-        onMarkerHover?.(null);
-        // Delay removal so user can hover onto popup
-        hoverTimeout = setTimeout(() => popup.remove(), 300);
-      });
-
-      // Keep popup open when hovering over it
-      popup.getElement()?.addEventListener?.("mouseenter", () => {
-        clearTimeout(hoverTimeout);
-      });
-      popup.getElement()?.addEventListener?.("mouseleave", () => {
-        popup.remove();
-      });
-
-      // Also attach listeners after popup opens (element not available until then)
-      popup.on("open", () => {
-        const popupEl = popup.getElement();
-        if (popupEl) {
-          popupEl.addEventListener("mouseenter", () => clearTimeout(hoverTimeout));
-          popupEl.addEventListener("mouseleave", () => popup.remove());
-        }
-      });
-
-      markersRef.current.push(marker);
+    // Dim markers outside the filter.
+    locations.forEach((loc) => {
+      const el = markerEls.current[loc.slug];
+      if (!el) return;
+      const dimmed = cityFilter !== "all" && loc.city !== cityFilter;
+      el.style.opacity = dimmed ? "0.25" : "1";
+      el.style.pointerEvents = dimmed ? "none" : "";
     });
-  }, [activeCity, onMarkerHover]);
+  }, [cityFilter]);
+
+  // Active marker — fly to it + apply variant-specific active state.
+  // Other markers calm down. When activeSlug becomes null, the calm
+  // state stays so the map doesn't snap back unexpectedly.
+  useEffect(() => {
+    Object.entries(markerEls.current).forEach(([slug, el]) => {
+      const inner = el.querySelector<HTMLElement>(".stacey-marker__inner");
+      if (!inner) return;
+      const pulse = el.querySelector<HTMLElement>(".stacey-marker__pulse");
+      const isActive = slug === activeSlug;
+      inner.style.zIndex = isActive ? "10" : "auto";
+
+      if (markerVariant === "photo") {
+        // Outer pink ring via box-shadow, scale up.
+        inner.style.transform = isActive ? "scale(1.18)" : "scale(1)";
+        inner.style.borderColor = isActive ? "#FCB0C0" : "white";
+        inner.style.boxShadow = isActive
+          ? "0 0 0 4px rgba(252,176,192,0.55), 0 6px 20px rgba(0,0,0,0.45)"
+          : "0 4px 14px rgba(0,0,0,0.35)";
+        if (pulse) {
+          pulse.style.background = "#FCB0C0";
+          pulse.style.opacity = isActive ? "0.4" : "0";
+          pulse.style.animation = isActive
+            ? "stacey-marker-ping 1.5s cubic-bezier(0,0,0.2,1) infinite"
+            : "none";
+        }
+      } else if (markerVariant === "expand") {
+        // Photo grows + name slides in. Active state adds a glow ring
+        // in the badge's own color (pink for LONG, black for SHORT)
+        // so the highlight reads consistent with the badge's identity.
+        const loc = locations.find((l) => l.slug === slug);
+        const isLong = loc?.stayType !== "SHORT";
+        const photo = el.querySelector<HTMLElement>(".stacey-marker__photo");
+        const name = el.querySelector<HTMLElement>(".stacey-marker__name");
+        inner.style.transform = isActive ? "scale(1.05)" : "scale(1)";
+        inner.style.boxShadow = isActive
+          ? isLong
+            ? "0 0 0 4px rgba(252,176,192,0.55), 0 6px 18px rgba(0,0,0,0.4)"
+            : "0 0 0 4px rgba(26,26,26,0.55), 0 6px 18px rgba(0,0,0,0.5)"
+          : "0 2px 10px rgba(0,0,0,0.35)";
+        if (photo) {
+          photo.style.width = isActive ? "30px" : "22px";
+          photo.style.height = isActive ? "30px" : "22px";
+        }
+        if (name) {
+          name.style.maxWidth = isActive ? "200px" : "0";
+          name.style.paddingLeft = isActive ? "10px" : "0";
+          name.style.paddingRight = isActive ? "6px" : "0";
+        }
+      } else {
+        // "number" — original behaviour
+        inner.style.background = isActive ? "#FCB0C0" : "#1A1A1A";
+        inner.style.transform = isActive ? "scale(1.25)" : "scale(1)";
+        if (pulse) {
+          pulse.style.opacity = isActive ? "0.5" : "0";
+          pulse.style.animation = isActive
+            ? "stacey-marker-ping 1.5s cubic-bezier(0,0,0.2,1) infinite"
+            : "none";
+        }
+      }
+    });
+
+    if (!map.current || !activeSlug) return;
+    const loc = locations.find((l) => l.slug === activeSlug);
+    if (!loc?.coords) return;
+    map.current.flyTo({
+      center: loc.coords,
+      zoom: 14,
+      duration: 700,
+      essential: true,
+    });
+  }, [activeSlug, markerVariant]);
 
   return (
-    <div>
-      {/* City tabs */}
-      <div className="mb-4 flex items-center justify-center gap-2">
-        {[
-          { slug: "hamburg", label: "Hamburg", count: 6 },
-          { slug: "berlin", label: "Berlin", count: 1 },
-          { slug: "vallendar", label: "Vallendar", count: 1 },
-        ].map((city) => (
-          <button
-            key={city.slug}
-            onClick={() => setActiveCity(city.slug)}
-            className={`rounded-[5px] px-4 py-2 text-sm font-semibold transition-colors ${
-              activeCity === city.slug
-                ? "bg-black text-white"
-                : "bg-[#F0F0F0] text-gray hover:text-black"
-            }`}
-          >
-            {city.label} · {city.count}
-          </button>
-        ))}
-      </div>
-
-      {/* Map */}
-      <div
-        ref={mapContainer}
-        className="h-[420px] w-full overflow-hidden rounded-[5px] sm:h-[600px]"
-      />
-    </div>
+    <div
+      ref={mapContainer}
+      className="h-[420px] w-full overflow-hidden rounded-[5px] sm:h-[600px]"
+    />
   );
 }
