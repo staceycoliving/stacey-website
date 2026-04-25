@@ -15,6 +15,7 @@ import SearchFields from "@/components/move-in/SearchFields";
 import FeaturesSection from "@/components/home/FeaturesSection";
 import VideoSection from "@/components/home/VideoSection";
 import HowItWorksSection from "@/components/home/HowItWorksSection";
+import FAQSection from "@/components/home/FAQSection";
 import AboutSection from "@/components/home/AboutSection";
 import MapSection from "@/components/home/MapSection";
 import { locations, formatMoveInLabel } from "@/lib/data";
@@ -372,10 +373,28 @@ export default function HomePage() {
       </section>
 
       {/* ── LOCATIONS — low pt on every breakpoint so card tops peek
-           under the 88vh hero (mobile + desktop). Bottom padding scales
+           under the 82vh hero (mobile + desktop). Bottom padding scales
            normally for rhythm with the next section. bg-[#FAFAFA] gives
            the cards a subtle plinth so the white-on-photo content pops. */}
       <section className="bg-[#FAFAFA] pb-12 pt-4 sm:pb-16 sm:pt-6 md:pb-20 md:pt-8">
+        {/* Brand intro paragraph — defines STACEY for first-time visitors
+            before they hit the cards. Gives the page some load-bearing
+            copy without a heavy section above. */}
+        <div className="mx-auto max-w-3xl px-4 pb-8 pt-2 text-center sm:px-6 sm:pb-10 lg:px-8">
+          <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-pink">
+            What is STACEY?
+          </p>
+          <p className="mt-3 text-base leading-relaxed text-gray sm:text-lg">
+            Coliving for young professionals who&rsquo;d rather{" "}
+            <span className="font-semibold text-black">meet someone</span> than
+            scroll someone. Eight furnished homes across Hamburg, Berlin and
+            Vallendar, each with a community manager who knows everyone&rsquo;s
+            name. Move in with a suitcase. Stay for the people.{" "}
+            <span className="italic">Built in Hamburg since 2019, now home to
+            300+ members.</span>
+          </p>
+        </div>
+
         {/* No FadeIn here — this section peeks under the hero on first
             paint; triggering a scroll-in animation delays the cards
             and defeats the whole peek-to-tease pattern. */}
@@ -595,11 +614,16 @@ export default function HomePage() {
            what it actually costs. */}
       <FeaturesSection />
 
+      {/* FAQ — answers the five most common conversion-blocking
+           questions (notice period, what's included, couples, pets,
+           why cheaper). Sits after Receipts because that's where most
+           "but..." objections fire. SEO + objection-handling beat. */}
+      <FAQSection />
+
       {/* CLOSING TEASERS — one section with two 50:50 cards. Left:
            about teaser → /why-stacey. Right: member-stories teaser →
-           /why-stacey#stories. Replaces the previous separate
-           TestimonialsSection + AboutSection. The full content (long
-           team story + all 3 interview videos) lives on /why-stacey. */}
+           /why-stacey#stories. The full content (long team story +
+           all 3 interview videos) lives on /why-stacey. */}
       <AboutSection />
 
       <Footer />
