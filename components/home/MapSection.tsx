@@ -110,12 +110,13 @@ export default function MapSection() {
               horizontal scroll-snap carousel so the section doesn't
               stack to ~2000px tall. Desktop keeps the sticky-headered
               vertical list. */}
-          <div className="order-2 lg:order-1">
-            {/* Mobile: horizontal carousel. -mx-4 lets the first/last
-                cards scroll past the section edges; px-4 puts them
-                back in the safe area when at rest. */}
+          <div className="order-2 min-w-0 lg:order-1">
+            {/* Mobile: horizontal carousel. min-w-0 on the parent +
+                px-[5px] here keeps the rail inside the map's
+                horizontal bounds with a 5px inset on both sides;
+                cards snap one at a time with a peek of the next. */}
             <div
-              className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-3 snap-x snap-mandatory lg:hidden"
+              className="flex gap-2 overflow-x-auto px-[5px] pb-3 snap-x snap-mandatory lg:hidden"
               style={{ scrollbarWidth: "none" }}
             >
               {filtered.map((loc) => {
@@ -127,7 +128,7 @@ export default function MapSection() {
                     ref={(el) => {
                       itemRefs.current[loc.slug] = el;
                     }}
-                    className="w-[78vw] max-w-[280px] flex-shrink-0 snap-start"
+                    className="w-[85%] flex-shrink-0 snap-start"
                   >
                     <Link
                       href={`/locations/${loc.slug}`}
