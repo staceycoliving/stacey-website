@@ -19,8 +19,20 @@ const STEPS = [
   {
     num: "02",
     title: "Sign + pay",
-    body: "Sign your lease digitally and pay the €195 booking fee on the same day. Your room is locked in. For long stays the deposit of 2× monthly rent follows by email and is due within 48 hours.",
-    time: "Same day + 48h for deposit",
+    body: "Confirm your booking. The flow differs by stay type.",
+    time: "Same day",
+    splits: [
+      {
+        stayType: "SHORT" as const,
+        label: "Short",
+        body: "Pay the full amount upfront. No booking fee, no deposit. Your room is confirmed instantly.",
+      },
+      {
+        stayType: "LONG" as const,
+        label: "Long",
+        body: "Sign your lease digitally and pay the €195 booking fee. Deposit (2× monthly rent) follows by email within 48 hours.",
+      },
+    ],
   },
   {
     num: "03",
@@ -226,6 +238,54 @@ function SectionHeader() {
   );
 }
 
+type StepSplit = { stayType: "SHORT" | "LONG"; label: string; body: string };
+type Step = (typeof STEPS)[number] & { splits?: StepSplit[] };
+
+// Renders either the unified body text or, when `splits` is present
+// (Step 02), a SHORT/LONG comparison row with the same badge style
+// used everywhere else on the site (black for SHORT, pink for LONG).
+function StepBody({ step, align = "left" }: { step: Step; align?: "left" | "center" }) {
+  if (!step.splits) {
+    return (
+      <p
+        className={clsx(
+          "text-sm leading-relaxed text-gray sm:text-base",
+          align === "center" && "mx-auto max-w-xl",
+        )}
+      >
+        {step.body}
+      </p>
+    );
+  }
+  return (
+    <div
+      className={clsx(
+        "space-y-2.5",
+        align === "center" && "mx-auto max-w-xl text-left",
+      )}
+    >
+      {step.splits.map((s) => (
+        <div
+          key={s.stayType}
+          className="flex items-start gap-2.5 rounded-[5px] bg-[#FAFAFA] p-3 ring-1 ring-black/5"
+        >
+          <span
+            className={clsx(
+              "mt-0.5 flex-shrink-0 rounded-[3px] px-1.5 py-0.5 text-[9px] font-black uppercase tracking-[0.15em]",
+              s.stayType === "SHORT"
+                ? "bg-black text-white"
+                : "bg-pink text-black",
+            )}
+          >
+            {s.label}
+          </span>
+          <p className="text-sm leading-relaxed text-gray">{s.body}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function Cta() {
   return (
     <div className="mt-12 flex justify-center">
@@ -288,7 +348,9 @@ function VariantA() {
           <p className="mt-2 text-2xl font-black leading-tight tracking-tight sm:text-3xl">
             {step.title}
           </p>
-          <p className="mx-auto mt-2 max-w-xl text-sm text-gray sm:text-base">{step.body}</p>
+          <div className="mt-3">
+            <StepBody step={step} align="center" />
+          </div>
         </div>
         <div className="mt-6 flex justify-center gap-2">
           {STEPS.map((_, i) => (
@@ -368,7 +430,9 @@ function VariantB() {
             <h3 className="mt-2 text-3xl font-black leading-tight tracking-tight sm:text-4xl">
               {STEPS[idx].title}
             </h3>
-            <p className="mt-4 text-base leading-relaxed text-gray">{STEPS[idx].body}</p>
+            <div className="mt-4">
+              <StepBody step={STEPS[idx]} />
+            </div>
             <div className="mt-6 inline-flex items-center gap-2 rounded-[5px] bg-black px-4 py-2 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-white">
               <Check size={11} />
               {STEPS[idx].time}
@@ -402,9 +466,9 @@ function VariantC() {
                 <h3 className="mt-2 text-xl font-black leading-tight sm:text-2xl">
                   {s.title}
                 </h3>
-                <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-gray">
-                  {s.body}
-                </p>
+                <div className="mx-auto mt-3 max-w-sm">
+                  <StepBody step={s} />
+                </div>
               </div>
             </div>
           ))}
@@ -481,7 +545,9 @@ function VariantD() {
                 <h3 className="mt-2 text-2xl font-black leading-tight tracking-tight sm:text-3xl">
                   {s.title}
                 </h3>
-                <p className="mt-3 text-sm leading-relaxed text-gray sm:text-base">{s.body}</p>
+                <div className="mt-3">
+                  <StepBody step={s} />
+                </div>
               </div>
             ))}
           </div>
@@ -513,9 +579,9 @@ function VariantE() {
                 Step 01 · {STEPS[0].time}
               </p>
               <h3 className="mt-2 text-2xl font-black leading-tight">{STEPS[0].title}</h3>
-              <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-gray">
-                {STEPS[0].body}
-              </p>
+              <div className="mx-auto mt-3 max-w-sm">
+                <StepBody step={STEPS[0]} />
+              </div>
             </div>
           </div>
           {/* Step 2, laptop */}
@@ -528,9 +594,9 @@ function VariantE() {
                 Step 02 · {STEPS[1].time}
               </p>
               <h3 className="mt-2 text-2xl font-black leading-tight">{STEPS[1].title}</h3>
-              <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-gray">
-                {STEPS[1].body}
-              </p>
+              <div className="mx-auto mt-3 max-w-sm">
+                <StepBody step={STEPS[1]} />
+              </div>
             </div>
           </div>
           {/* Step 3, polaroid */}
@@ -548,9 +614,9 @@ function VariantE() {
                 Step 03 · {STEPS[2].time}
               </p>
               <h3 className="mt-2 text-2xl font-black leading-tight">{STEPS[2].title}</h3>
-              <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-gray">
-                {STEPS[2].body}
-              </p>
+              <div className="mx-auto mt-3 max-w-sm">
+                <StepBody step={STEPS[2]} />
+              </div>
             </div>
           </div>
         </div>
