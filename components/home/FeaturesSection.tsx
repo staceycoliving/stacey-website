@@ -14,15 +14,19 @@ const RIVAL_ITEMS: { label: string; price: number }[] = [
   { label: "1-bed apartment, Hamburg", price: 1100 },
   { label: "Furniture, amortised", price: 120 },
   { label: "Utilities", price: 180 },
-  { label: "Fibre internet", price: 40 },
+  { label: "Internet", price: 40 },
   { label: "Weekly cleaning", price: 80 },
   { label: "Maintenance buffer", price: 60 },
-  { label: "Move-in admin", price: 90 },
 ];
-const RIVAL_TOTAL = RIVAL_ITEMS.reduce((s, i) => s + i.price, 0); // 1670
-const STACEY_TOTAL = 795; // cheapest Hamburg LONG suite (lib/data.ts priceFrom)
-const SAVINGS_MONTH = RIVAL_TOTAL - STACEY_TOTAL; // 875
-const SAVINGS_YEAR = SAVINGS_MONTH * 12; // 10,500
+const RIVAL_TOTAL = RIVAL_ITEMS.reduce((s, i) => s + i.price, 0); // 1580
+// Hamburg Mighty category — cheapest Mighty room across our Hamburg
+// LONG locations (Mühlenkamp, Eppendorf, St. Pauli all = 895). Source:
+// lib/data.ts priceMonthly. Move-in admin / booking-fee NOT included on
+// the rival side because STACEY also charges a one-time booking fee —
+// keeping that line in would make the comparison unfair.
+const STACEY_TOTAL = 895;
+const SAVINGS_MONTH = RIVAL_TOTAL - STACEY_TOTAL; // 685
+const SAVINGS_YEAR = SAVINGS_MONTH * 12; // 8,220
 
 function fmt(n: number) {
   return n.toLocaleString("en-US");
@@ -155,10 +159,10 @@ export default function FeaturesSection() {
               </p>
               <p className="mt-2 text-3xl font-black leading-tight sm:text-4xl">
                 One private suite.{" "}
-                <span className="italic font-light text-pink">Everything in.</span>
+                <span className="italic font-light text-pink">Almost everything in.</span>
               </p>
               <p className="mt-4 text-sm leading-relaxed text-white/70">
-                Suite, utilities, fibre, cleaning, maintenance, community, and
+                Suite, utilities, internet, cleaning, maintenance, community, and
                 free transfers between cities — all on the bill below.
               </p>
             </div>
@@ -170,6 +174,9 @@ export default function FeaturesSection() {
                   €{fmt(staceyCount)}
                 </p>
               </div>
+              <p className="mt-2 text-right font-mono text-[10px] uppercase tracking-[0.18em] text-white/45">
+                Our Mighty category · Hamburg
+              </p>
             </div>
           </div>
         </div>
@@ -201,6 +208,21 @@ export default function FeaturesSection() {
             />
           </Link>
         </div>
+
+        {/* Legal hedge — illustrative comparison only, not a binding
+            quote. Solo-rent figures are typical Hamburg market values
+            (Q1 2026); STACEY total is the cheapest Mighty room across
+            our Hamburg LONG locations and excludes the one-time
+            booking fee + deposit. Booking-fee was also stripped from
+            the rival side to keep the monthly comparison apples-to-
+            apples. */}
+        <p className="mx-auto mt-6 max-w-3xl text-center text-[11px] leading-relaxed text-gray">
+          Illustrative comparison · non-binding. Solo-rent values reflect typical
+          Hamburg market averages; the STACEY total is the cheapest Mighty room
+          in our Hamburg LONG portfolio. Final pricing depends on suite, dates,
+          and city — see <Link href="/move-in" className="underline decoration-pink underline-offset-2 hover:text-black">/move-in</Link> for binding offers. Booking fee and deposit
+          apply separately.
+        </p>
       </div>
     </section>
   );
