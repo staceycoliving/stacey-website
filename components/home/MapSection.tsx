@@ -102,7 +102,7 @@ export default function MapSection() {
 
   return (
     <section className="bg-[#FAFAFA] px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
-      <div className="mx-auto max-w-7xl">
+      <div className="mx-auto max-w-6xl">
         {/* Editorial header — subtitle morphs to the active city */}
         <div className="mb-8 text-center sm:mb-10">
           <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-pink">
