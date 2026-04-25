@@ -583,14 +583,22 @@ export default function HomePage() {
            question reads in colour, not as a cold lookup. */}
       <MapSection />
 
-      {/* CONVERT — Receipts make the value case, HowItWorks turns
-           intent into action. Read as one beat. */}
-      <FeaturesSection />
+      {/* HOWITWORKS — pulled up as a transition between Map (where) and
+           Receipts (cost). The "boarding-pass / journey home" framing
+           is literally a transition concept: after the user finds a
+           home on the map, this softens them into "okay, what would
+           the journey look like?" before the Receipts deliver the
+           value-case punch. */}
       <HowItWorksSection />
 
-      {/* PROOF — Member interviews. Final social-proof beat, sits
-           where conversion psychology puts it: right before the user
-           commits. */}
+      {/* RECEIPTS — math/value case. Lands after HowItWorks so the
+           reader has already imagined the journey before being shown
+           what it actually costs. */}
+      <FeaturesSection />
+
+      {/* PROOF — Member interviews. Final social-proof beat right
+           after the value claim, where conversion psychology puts it:
+           "yes, real members agree the math works." */}
       <TestimonialsSection />
 
       {/* BRAND — Who we are. Closing trust beat before the Footer. */}
