@@ -219,6 +219,163 @@ function StepScreen({ idx }: { idx: number }) {
   return <Screen03Email />;
 }
 
+/* ─── Phone-format screens (mobile-native UI for the 9:19 aspect) ─ */
+
+function PhoneScreen01Browse() {
+  // Single-column room stack instead of the desktop 3-col grid; the
+  // mobile /move-in view actually looks like this.
+  const rooms = [
+    { name: "Mühlenkamp", price: "795", city: "Hamburg", img: "/images/locations/muehlenkamp/community/01-muehlenkamp.webp" },
+    { name: "Eppendorf", price: "895", city: "Hamburg", img: "/images/locations/muehlenkamp/community/02-muehlenkamp.webp" },
+  ];
+  return (
+    <div className="flex h-full flex-col bg-[#FAFAFA]">
+      {/* Status bar */}
+      <div className="flex items-center justify-between bg-[#FAFAFA] px-3 pt-4 pb-1 text-[7px] font-bold tabular-nums">
+        <span>9:41</span>
+        <span className="flex gap-0.5"><span>●●●</span><span>●●</span></span>
+      </div>
+      {/* App header */}
+      <div className="flex items-center justify-between border-b border-black/5 bg-white px-2 py-1.5">
+        <span className="font-mono text-[8px] font-black tracking-widest">STACEY</span>
+        <span className="font-mono text-[7px] font-bold text-pink">8 homes</span>
+      </div>
+      {/* City tabs */}
+      <div className="flex gap-1 bg-white px-2 py-1.5">
+        <span className="rounded-[3px] bg-black px-1.5 py-0.5 text-[7px] font-black text-white">Hamburg</span>
+        <span className="rounded-[3px] bg-white px-1.5 py-0.5 text-[7px] font-semibold text-black/50 ring-1 ring-black/10">Berlin</span>
+        <span className="rounded-[3px] bg-white px-1.5 py-0.5 text-[7px] font-semibold text-black/50 ring-1 ring-black/10">Vallendar</span>
+      </div>
+      {/* Room cards stacked */}
+      <div className="flex-1 space-y-1.5 overflow-hidden p-2">
+        {rooms.map((r) => (
+          <div key={r.name} className="overflow-hidden rounded-[3px] bg-white shadow-sm ring-1 ring-black/5">
+            <div className="relative aspect-[16/9]">
+              <Image src={r.img} alt={r.name} fill className="object-cover" sizes="180px" />
+              <span className="absolute right-1 top-1 rounded-[2px] bg-pink px-1 py-0.5 text-[6px] font-black text-black">LONG</span>
+            </div>
+            <div className="px-2 py-1.5">
+              <p className="text-[8px] font-bold leading-tight">{r.name}</p>
+              <p className="mt-0.5 text-[7px] text-gray">from €{r.price}/mo</p>
+            </div>
+          </div>
+        ))}
+      </div>
+      {/* Sticky bottom CTA */}
+      <div className="border-t border-black/5 bg-white p-2">
+        <div className="rounded-[3px] bg-black px-2 py-1.5 text-center">
+          <span className="text-[7px] font-black uppercase tracking-wider text-white">Continue →</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PhoneScreen02Sign() {
+  return (
+    <div className="flex h-full flex-col bg-white">
+      <div className="flex items-center justify-between bg-[#FAFAFA] px-3 pt-4 pb-1 text-[7px] font-bold tabular-nums">
+        <span>9:41</span>
+        <span>●●● ●●</span>
+      </div>
+      <div className="border-b border-black/5 px-3 py-2">
+        <p className="font-mono text-[7px] font-bold uppercase tracking-widest text-pink">Step 2 of 3</p>
+        <p className="text-[10px] font-black leading-tight">Sign your lease</p>
+      </div>
+      {/* Document preview */}
+      <div className="flex-1 space-y-1.5 overflow-hidden p-2">
+        <div className="rounded-[3px] bg-[#FAFAFA] p-2 ring-1 ring-black/5">
+          <p className="font-mono text-[6px] uppercase tracking-widest text-pink">Lease</p>
+          <p className="text-[8px] font-bold leading-tight">Mühlenkamp · Mighty</p>
+          <div className="mt-1.5 space-y-1">
+            {[100, 90, 95, 70, 100, 85].map((w, i) => (
+              <div key={i} className="h-0.5 rounded bg-black/10" style={{ width: `${w}%` }} />
+            ))}
+          </div>
+          <div className="mt-2 border-t border-dashed border-black/15 pt-1.5">
+            <p className="font-mono text-[6px] uppercase tracking-widest text-gray">Sign here</p>
+            <p className="font-serif text-[12px] italic leading-none text-pink">Anna M.</p>
+          </div>
+        </div>
+      </div>
+      {/* Sticky bottom: pay box */}
+      <div className="border-t border-black/5 bg-black p-2 text-white">
+        <div className="flex items-baseline justify-between">
+          <p className="font-mono text-[6px] uppercase tracking-widest text-pink">Booking fee</p>
+          <p className="text-[10px] font-black tabular-nums">€195</p>
+        </div>
+        <button className="mt-1 w-full rounded-[2px] bg-pink py-1 text-[8px] font-black uppercase tracking-wider text-black">
+          Pay & confirm
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function PhoneScreen03Email() {
+  return (
+    <div className="flex h-full flex-col bg-[#F5F5F0]">
+      <div className="flex items-center justify-between bg-[#F5F5F0] px-3 pt-4 pb-1 text-[7px] font-bold tabular-nums">
+        <span>9:41</span>
+        <span>●●● ●●</span>
+      </div>
+      <div className="flex items-center gap-1.5 border-b border-black/5 bg-white px-2 py-1.5">
+        <span className="text-[10px] leading-none">←</span>
+        <span className="font-mono text-[7px] uppercase tracking-widest text-gray">Inbox</span>
+      </div>
+      <div className="border-b border-black/5 bg-white px-2 py-1.5">
+        <p className="font-mono text-[6px] uppercase tracking-widest text-pink">From: hello@stacey.de</p>
+        <p className="mt-0.5 text-[9px] font-black leading-tight">Welcome home, Anna 🏠</p>
+        <p className="font-mono text-[6px] text-gray">3 days until move-in</p>
+      </div>
+      <div className="flex-1 space-y-1 overflow-hidden p-2">
+        <p className="text-[8px] leading-snug text-black">See you Friday. Here&rsquo;s everything.</p>
+        <div className="space-y-1">
+          {[
+            { l: "Address", v: "Dorotheenstr. 3" },
+            { l: "Check-in", v: "Fri 16:00" },
+            { l: "Door code", v: "7 4 2 1 #" },
+          ].map((r) => (
+            <div key={r.l} className="flex items-center justify-between rounded-[2px] bg-white px-1.5 py-1 ring-1 ring-black/5">
+              <span className="font-mono text-[6px] uppercase tracking-widest text-gray">{r.l}</span>
+              <span className="font-mono text-[7px] font-bold">{r.v}</span>
+            </div>
+          ))}
+        </div>
+        <div className="rounded-[2px] bg-pink px-1.5 py-1 text-center">
+          <p className="text-[6px] font-black uppercase tracking-wider text-black">Friday: house dinner, 8 PM</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PhoneStepScreen({ idx }: { idx: number }) {
+  if (idx === 0) return <PhoneScreen01Browse />;
+  if (idx === 1) return <PhoneScreen02Sign />;
+  return <PhoneScreen03Email />;
+}
+
+// Responsive device frame: laptop on desktop (lg+), phone on mobile.
+// User on a phone sees a phone, user on a laptop sees a laptop —
+// preserves the "see what you'll do" promise of the section.
+function ResponsiveDevice({ idx, scale = 1 }: { idx: number; scale?: number }) {
+  return (
+    <>
+      <div className="hidden lg:block">
+        <LaptopFrame scale={scale}>
+          <StepScreen idx={idx} />
+        </LaptopFrame>
+      </div>
+      <div className="lg:hidden">
+        <PhoneFrame>
+          <PhoneStepScreen idx={idx} />
+        </PhoneFrame>
+      </div>
+    </>
+  );
+}
+
 /* ─── Shared section header ──────────────────────────────────────── */
 
 function SectionHeader() {
@@ -337,9 +494,7 @@ function VariantA() {
       <div className="mx-auto max-w-5xl">
         <SectionHeader />
         <div className="mt-12">
-          <LaptopFrame>
-            <StepScreen idx={idx} />
-          </LaptopFrame>
+          <ResponsiveDevice idx={idx} />
         </div>
         <div key={idx} className="mt-10 text-center" style={{ animation: "fadeSlide 0.4s ease-out" }}>
           <p className="font-mono text-[10px] font-bold uppercase tracking-[0.25em] text-pink">
@@ -419,9 +574,7 @@ function VariantB() {
         </div>
         <div className="mt-10 grid items-center gap-10 lg:grid-cols-[1.4fr_1fr] lg:gap-14">
           <div key={idx} style={{ animation: "fadeSlide 0.4s ease-out" }}>
-            <LaptopFrame>
-              <StepScreen idx={idx} />
-            </LaptopFrame>
+            <ResponsiveDevice idx={idx} />
           </div>
           <div key={`copy-${idx}`} style={{ animation: "fadeSlide 0.4s ease-out" }}>
             <p className="font-mono text-[10px] font-bold uppercase tracking-[0.25em] text-pink">
@@ -456,9 +609,7 @@ function VariantC() {
         <div className="mt-12 grid gap-10 sm:mt-14 lg:grid-cols-3 lg:gap-6">
           {STEPS.map((s, i) => (
             <div key={s.num} className="text-center">
-              <LaptopFrame scale={0.65}>
-                <StepScreen idx={i} />
-              </LaptopFrame>
+              <ResponsiveDevice idx={i} scale={0.65} />
               <div className="mt-6">
                 <p className="font-mono text-[10px] font-bold uppercase tracking-[0.25em] text-pink">
                   Step {s.num} · {s.time}
@@ -510,9 +661,7 @@ function VariantD() {
         <div ref={containerRef} className="mt-12 grid gap-10 lg:grid-cols-[1.1fr_1fr] lg:gap-16">
           <div className="lg:sticky lg:top-24 lg:self-start">
             <div key={activeIdx} style={{ animation: "fadeSlide 0.4s ease-out" }}>
-              <LaptopFrame>
-                <StepScreen idx={activeIdx} />
-              </LaptopFrame>
+              <ResponsiveDevice idx={activeIdx} />
             </div>
             <div className="mt-6 flex justify-center gap-2">
               {STEPS.map((_, i) => (
