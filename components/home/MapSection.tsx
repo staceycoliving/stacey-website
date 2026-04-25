@@ -29,6 +29,11 @@ export default function MapSection() {
   const [city, setCity] = useState<CityFilter>("all");
   const [active, setActive] = useState<string | null>(null);
   const itemRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  // Mobile carousel: scroll position drives `active`, marker taps drive
+  // scroll. The flag prevents the two from fighting each other.
+  const carouselRef = useRef<HTMLDivElement | null>(null);
+  const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const programmaticScrollRef = useRef(false);
 
   const filtered = useMemo(
     () => (city === "all" ? ORDERED_LOCATIONS : ORDERED_LOCATIONS.filter((l) => l.city === city)),
@@ -45,11 +50,55 @@ export default function MapSection() {
     }));
   }, [filtered]);
 
-  // Auto-scroll the list to the active item when the marker is hovered.
+  // Sync external active-slug changes (marker tap / desktop hover) to
+  // the carousel + desktop list. Mark the scroll as programmatic so the
+  // carousel scroll listener doesn't fire setActive in a feedback loop.
   useEffect(() => {
     if (!active) return;
     itemRefs.current[active]?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    const card = cardRefs.current[active];
+    if (card && carouselRef.current) {
+      programmaticScrollRef.current = true;
+      card.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+      // Snap settles in <500ms; release the flag a beat later.
+      const t = setTimeout(() => {
+        programmaticScrollRef.current = false;
+      }, 600);
+      return () => clearTimeout(t);
+    }
   }, [active]);
+
+  // Carousel scroll → set active to whichever card is closest to the
+  // viewport center. rAF-throttled, ignored during programmatic scroll.
+  useEffect(() => {
+    const carousel = carouselRef.current;
+    if (!carousel) return;
+    let raf = 0;
+    const onScroll = () => {
+      if (programmaticScrollRef.current) return;
+      if (raf) cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        const center = carousel.scrollLeft + carousel.clientWidth / 2;
+        let bestSlug: string | null = null;
+        let bestDist = Infinity;
+        for (const [slug, el] of Object.entries(cardRefs.current)) {
+          if (!el) continue;
+          const cardCenter = el.offsetLeft + el.offsetWidth / 2;
+          const d = Math.abs(cardCenter - center);
+          if (d < bestDist) {
+            bestDist = d;
+            bestSlug = slug;
+          }
+        }
+        if (bestSlug) setActive((prev) => (prev === bestSlug ? prev : bestSlug));
+      });
+    };
+    carousel.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      carousel.removeEventListener("scroll", onScroll);
+      if (raf) cancelAnimationFrame(raf);
+    };
+  }, [filtered]);
 
   return (
     <section className="bg-[#FAFAFA] px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
@@ -191,13 +240,16 @@ export default function MapSection() {
                 markerVariant="expand"
               />
               {/* Mobile: cards float over the map's bottom edge,
-                  Airbnb/Google-Maps style. 5px inset from the map
-                  borders, scroll-snap one card at a time with a peek
-                  of the next. lg+ hides this since the side-panel
-                  list takes over. */}
-              <div className="pointer-events-none absolute inset-x-[5px] bottom-[5px] lg:hidden">
+                  Airbnb/Google-Maps style. Each card is ~80% of the
+                  map width with snap-center, so the active card is
+                  centred and the previous/next cards peek on either
+                  side. Scrolling the carousel updates `active` →
+                  the map flies to that pin. lg+ hides this since the
+                  side-panel list takes over. */}
+              <div className="pointer-events-none absolute inset-x-0 bottom-[5px] lg:hidden">
                 <div
-                  className="pointer-events-auto flex gap-2 overflow-x-auto snap-x snap-mandatory"
+                  ref={carouselRef}
+                  className="pointer-events-auto flex gap-2 overflow-x-auto px-[10%] snap-x snap-mandatory"
                   style={{ scrollbarWidth: "none" }}
                 >
                   {filtered.map((loc) => {
@@ -207,13 +259,12 @@ export default function MapSection() {
                       <div
                         key={loc.slug}
                         ref={(el) => {
-                          itemRefs.current[loc.slug] = el;
+                          cardRefs.current[loc.slug] = el;
                         }}
-                        className="w-full flex-shrink-0 snap-start"
+                        className="w-[80%] max-w-[320px] flex-shrink-0 snap-center"
                       >
                         <Link
                           href={`/locations/${loc.slug}`}
-                          onClick={() => setActive(loc.slug)}
                           className={clsx(
                             "flex w-full items-center gap-2.5 rounded-[5px] bg-white p-2 text-left shadow-[0_4px_18px_rgba(0,0,0,0.18)] ring-1 transition-all",
                             isActive

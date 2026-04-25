@@ -150,12 +150,25 @@ export default function LocationMap({
           </div>`;
       }
 
-      el.addEventListener("mouseenter", () => onSelect?.(loc.slug));
-      el.addEventListener("mouseleave", () => onSelect?.(null));
-      el.addEventListener("click", (e) => {
-        e.stopPropagation();
-        window.location.href = `/locations/${loc.slug}`;
-      });
+      // Hover-capable devices (desktop): hover = preview, click = navigate.
+      // Touch devices: tap = select on map (carousel syncs); user navigates
+      // by tapping the corresponding card. This avoids the iOS "first tap
+      // is hover, second tap is click" awkwardness.
+      const hoverCapable =
+        typeof window !== "undefined" && window.matchMedia("(hover: hover)").matches;
+      if (hoverCapable) {
+        el.addEventListener("mouseenter", () => onSelect?.(loc.slug));
+        el.addEventListener("mouseleave", () => onSelect?.(null));
+        el.addEventListener("click", (e) => {
+          e.stopPropagation();
+          window.location.href = `/locations/${loc.slug}`;
+        });
+      } else {
+        el.addEventListener("click", (e) => {
+          e.stopPropagation();
+          onSelect?.(loc.slug);
+        });
+      }
 
       markerEls.current[loc.slug] = el;
       const m = new mapboxgl.Marker({ element: el }).setLngLat(loc.coords).addTo(map.current!);
