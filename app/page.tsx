@@ -563,30 +563,35 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Page is grouped into four intent clusters:
+      {/* Page narrative arc:
            1) DISCOVER — Locations cards (above) + Map (geography)
-           2) EMOTION  — Video + Testimonials (lifestyle + member voices)
-           3) CONVERT  — Receipts (value/cost) + HowItWorks (process)
-           4) BRAND    — About
-         Mixing emotion and conversion sections (the previous order had
-         Map between Video and Features) broke the narrative arc. */}
+           2) EMOTION  — Video, the cinematic lifestyle moment
+           3) CONVERT  — Receipts (value) + HowItWorks (process)
+           4) PROOF    — Testimonials, classic "right before CTA" slot
+           5) BRAND    — About
+         Testimonials are deliberately separated from Video: both are
+         video-heavy "members talking" content, so stacking them was
+         redundant. The interview block now sits as final trust before
+         the user makes a decision. */}
 
       {/* DISCOVER — Map directly after the location cards. Same task:
-           "where can I live". Geography concludes the discovery cluster
-           before we pivot to emotional content. */}
+           "where can I live". Closes the discovery cluster. */}
       <MapSection />
 
-      {/* EMOTION — Video first (cinematic, sets the vibe), then member
-           interview testimonials. Two beats of social proof in a row
-           build conviction before we ask for the credit card. */}
+      {/* EMOTION — Cinematic Life at STACEY moment. Sets the lifestyle
+           tone. Stands alone so the moment lands without competing
+           video content right after. */}
       <VideoSection />
-      <TestimonialsSection />
 
-      {/* CONVERT — Once trust is earned, the receipt-vs-receipt section
-           makes the value case. HowItWorks then turns intent into
-           action with the booking flow walkthrough. */}
+      {/* CONVERT — Receipts make the value case, HowItWorks turns
+           intent into action. Read as one beat. */}
       <FeaturesSection />
       <HowItWorksSection />
+
+      {/* PROOF — Member interviews. Final social-proof beat, sits
+           where conversion psychology puts it: right before the user
+           commits. */}
+      <TestimonialsSection />
 
       {/* BRAND — Who we are. Closing trust beat before the Footer. */}
       <AboutSection />
