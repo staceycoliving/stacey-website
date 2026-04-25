@@ -47,8 +47,11 @@ export default function Navbar({
 
   // Hero-immersive on transparent pages until the user scrolls; then
   // pill chrome materialises. Non-transparent pages (everything off the
-  // homepage) start in the chromed state immediately.
-  const chromed = !transparent || scrolled;
+  // homepage) start in the chromed state immediately. Opening the
+  // mobile drawer also forces chrome — otherwise the transparent pill
+  // would sit over the white drawer body with white hamburger lines
+  // invisibly.
+  const chromed = mobileOpen || drawerVisible || !transparent || scrolled;
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
@@ -112,12 +115,6 @@ export default function Navbar({
       ? "Check in"
       : "Move in"
     : "Move in";
-
-  const logoSrc = drawerVisible
-    ? "/images/stacey-logo-new-black-001.webp"
-    : logoHover
-      ? "/images/stacey-logo-new-pink-001.webp"
-      : "/images/stacey-logo-new-white-001.webp";
 
   return (
     <>
@@ -297,61 +294,86 @@ export default function Navbar({
           </div>
         </div>
 
-        {/* Mobile bar — slim, transparent. The pill design doesn't earn
-            its space when the only visible items are logo + hamburger,
-            so we keep mobile clean. Logo + hamburger sit on top of
-            whatever background; on the homepage hero the photo provides
-            contrast; on white pages the logo swaps to a black version
-            via drawer state below. */}
-        <div className="flex h-14 items-center justify-between px-4 lg:hidden">
-          <Link
-            href="/"
-            onClick={(e) => {
-              if (pathname === "/") {
-                e.preventDefault();
-                setMobileOpen(false);
-                window.scrollTo({ top: 0, behavior: "smooth" });
-              }
-            }}
-            className="relative h-10 w-32 transition-transform duration-300 hover:scale-[1.03]"
+        {/* Mobile bar — pill morph matching desktop. Wrapper is fixed
+            h-14 so the drawer's top-14 anchor stays aligned. Inside, an
+            h-10 inner pill picks up dark-glass chrome when chromed,
+            stays transparent over the hero. CTA appears once chromed
+            so the hero stays minimal but every scrolled view has a
+            one-tap booking action. */}
+        <div className="flex h-14 items-center px-3 lg:hidden">
+          <div
+            className={clsx(
+              "flex h-10 w-full items-center justify-between rounded-[5px] px-3 transition-all duration-500 ease-out",
+              chromed
+                ? "bg-black/60 shadow-[0_4px_24px_rgba(0,0,0,0.25)] ring-1 ring-white/10 backdrop-blur-xl"
+                : "bg-transparent shadow-none ring-0",
+            )}
           >
-            <Image src={logoSrc} alt="STACEY" fill className="object-contain object-left" sizes="140px" priority />
-          </Link>
-          <button
-            onClick={() => setMobileOpen(!mobileOpen)}
-            className="relative h-6 w-6"
-            aria-label="Toggle menu"
-          >
-            <span
-              className={clsx(
-                "absolute left-0 block h-0.5 w-6 transition-all duration-300",
-                drawerVisible ? "bg-black" : "bg-white",
-                mobileOpen ? "top-[11px] rotate-45" : "top-1",
+            <Link
+              href="/"
+              onClick={(e) => {
+                if (pathname === "/") {
+                  e.preventDefault();
+                  setMobileOpen(false);
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }
+              }}
+              className="relative h-7 w-24 transition-transform duration-300 hover:scale-[1.03]"
+            >
+              <Image
+                src="/images/stacey-logo-new-white-001.webp"
+                alt="STACEY"
+                fill
+                className="object-contain object-left"
+                sizes="100px"
+                priority
+              />
+            </Link>
+            <div className="flex items-center gap-2">
+              {chromed && !mobileOpen && (
+                <Link
+                  href="/move-in"
+                  className="rounded-[4px] bg-pink px-3 py-1 text-[11px] font-bold text-black transition-transform hover:scale-[1.04]"
+                >
+                  Move in
+                </Link>
               )}
-            />
-            <span
-              className={clsx(
-                "absolute left-0 top-[11px] block h-0.5 w-6 transition-all duration-300",
-                drawerVisible ? "bg-black" : "bg-white",
-                mobileOpen ? "opacity-0" : "opacity-100",
-              )}
-            />
-            <span
-              className={clsx(
-                "absolute left-0 block h-0.5 w-6 transition-all duration-300",
-                drawerVisible ? "bg-black" : "bg-white",
-                mobileOpen ? "top-[11px] -rotate-45" : "top-[21px]",
-              )}
-            />
-          </button>
+              <button
+                onClick={() => setMobileOpen(!mobileOpen)}
+                className="relative h-6 w-6"
+                aria-label="Toggle menu"
+              >
+                <span
+                  className={clsx(
+                    "absolute left-0 block h-0.5 w-6 bg-white transition-all duration-300",
+                    mobileOpen ? "top-[11px] rotate-45" : "top-1",
+                  )}
+                />
+                <span
+                  className={clsx(
+                    "absolute left-0 top-[11px] block h-0.5 w-6 bg-white transition-all duration-300",
+                    mobileOpen ? "opacity-0" : "opacity-100",
+                  )}
+                />
+                <span
+                  className={clsx(
+                    "absolute left-0 block h-0.5 w-6 bg-white transition-all duration-300",
+                    mobileOpen ? "top-[11px] -rotate-45" : "top-[21px]",
+                  )}
+                />
+              </button>
+            </div>
+          </div>
         </div>
       </nav>
 
       {/* Mobile drawer — slides in from the right, anchored just below
-          the slim mobile bar (h-14 = 56px). */}
+          the slim mobile bar (h-14 = 56px). Dark-glass body matches the
+          desktop mega menu so the brand stays consistent across
+          breakpoints. */}
       <div
         className={clsx(
-          "fixed inset-0 top-14 z-40 bg-white transition-transform duration-300 lg:hidden",
+          "fixed inset-0 top-14 z-40 bg-black/95 backdrop-blur-xl transition-transform duration-300 lg:hidden",
           mobileOpen ? "translate-x-0" : "translate-x-full",
         )}
         aria-hidden={!mobileOpen}
@@ -360,7 +382,7 @@ export default function Navbar({
           <div className="mx-auto max-w-md px-5 pb-28 pt-6">
             {navCities.map((city) => (
               <div key={city.slug} className="mb-7">
-                <p className="mb-3 text-[10px] font-bold uppercase tracking-widest text-gray">
+                <p className="mb-3 text-[10px] font-bold uppercase tracking-widest text-white/50">
                   {city.name} · {city.locs.length}{" "}
                   {city.locs.length === 1 ? "location" : "locations"}
                 </p>
@@ -373,19 +395,25 @@ export default function Navbar({
                       }
                       return loc.priceFrom;
                     })();
+                    const isActive = pathname === `/locations/${loc.slug}`;
                     return (
                       <Link
                         key={loc.slug}
                         href={`/locations/${loc.slug}`}
                         onClick={() => setMobileOpen(false)}
-                        className="flex items-center gap-3 rounded-[5px] bg-[#FAFAFA] p-2.5 active:bg-[#F0F0F0]"
+                        className={clsx(
+                          "flex items-center gap-3 rounded-[5px] bg-white/5 p-2.5 ring-1 transition-all active:bg-white/10",
+                          isActive ? "ring-pink/60" : "ring-white/10",
+                        )}
                       >
                         <div className="relative h-12 w-16 flex-shrink-0 overflow-hidden rounded-[3px]">
                           <Image src={loc.images[0]} alt={loc.name} fill className="object-cover" sizes="64px" />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-semibold text-black">{loc.name}</p>
-                          <p className="truncate text-[11px] text-gray">
+                          <p className="truncate text-sm font-semibold text-white">
+                            {loc.name}
+                          </p>
+                          <p className="truncate text-[11px] text-white/60">
                             from €{price}
                             {loc.stayType === "SHORT" ? "/night" : "/mo"}
                           </p>
@@ -393,7 +421,7 @@ export default function Navbar({
                         <span
                           className={clsx(
                             "flex-shrink-0 rounded-[5px] px-2 py-0.5 text-[9px] font-bold",
-                            loc.stayType === "SHORT" ? "bg-black text-white" : "bg-pink text-white",
+                            loc.stayType === "SHORT" ? "bg-white text-black" : "bg-pink text-white",
                           )}
                         >
                           {loc.stayType === "SHORT" ? "SHORT" : "LONG"}
@@ -405,33 +433,33 @@ export default function Navbar({
               </div>
             ))}
 
-            <div className="mt-2 border-t border-lightgray pt-5">
+            <div className="mt-2 border-t border-white/10 pt-5">
               <div className="grid grid-cols-2 gap-2">
                 <Link
                   href="/why-stacey"
                   onClick={() => setMobileOpen(false)}
-                  className="rounded-[5px] bg-[#FAFAFA] px-4 py-2.5 text-center text-sm font-medium text-black active:bg-[#F0F0F0]"
+                  className="rounded-[5px] bg-white/5 px-4 py-2.5 text-center text-sm font-medium text-white ring-1 ring-white/10 active:bg-white/10"
                 >
                   Why STACEY
                 </Link>
                 <Link
                   href="/faq"
                   onClick={() => setMobileOpen(false)}
-                  className="rounded-[5px] bg-[#FAFAFA] px-4 py-2.5 text-center text-sm font-medium text-black active:bg-[#F0F0F0]"
+                  className="rounded-[5px] bg-white/5 px-4 py-2.5 text-center text-sm font-medium text-white ring-1 ring-white/10 active:bg-white/10"
                 >
                   FAQ
                 </Link>
                 <Link
                   href="/partners"
                   onClick={() => setMobileOpen(false)}
-                  className="rounded-[5px] bg-[#FAFAFA] px-4 py-2.5 text-center text-sm font-medium text-black active:bg-[#F0F0F0]"
+                  className="rounded-[5px] bg-white/5 px-4 py-2.5 text-center text-sm font-medium text-white ring-1 ring-white/10 active:bg-white/10"
                 >
                   For Partners
                 </Link>
                 <a
                   href="mailto:booking@stacey.de"
                   onClick={() => setMobileOpen(false)}
-                  className="rounded-[5px] bg-[#FAFAFA] px-4 py-2.5 text-center text-sm font-medium text-black active:bg-[#F0F0F0]"
+                  className="rounded-[5px] bg-white/5 px-4 py-2.5 text-center text-sm font-medium text-white ring-1 ring-white/10 active:bg-white/10"
                 >
                   Contact
                 </a>
@@ -441,10 +469,11 @@ export default function Navbar({
         </div>
       </div>
 
-      {/* Mobile drawer bottom-fixed CTA — slides in from below */}
+      {/* Mobile drawer bottom-fixed CTA — pink to pop against the
+          dark-glass drawer body. */}
       <div
         className={clsx(
-          "fixed inset-x-0 bottom-0 z-50 border-t border-lightgray bg-white p-4 transition-transform duration-300 lg:hidden",
+          "fixed inset-x-0 bottom-0 z-50 border-t border-white/10 bg-black/95 p-4 backdrop-blur-xl transition-transform duration-300 lg:hidden",
           drawerVisible && mobileOpen ? "translate-y-0" : "translate-y-full",
         )}
         aria-hidden={!mobileOpen}
@@ -453,7 +482,7 @@ export default function Navbar({
           <Link
             href="/move-in"
             onClick={() => setMobileOpen(false)}
-            className="block w-full rounded-[5px] bg-black px-6 py-3.5 text-center text-sm font-semibold text-white active:opacity-80"
+            className="block w-full rounded-[5px] bg-pink px-6 py-3.5 text-center text-sm font-bold text-black active:opacity-80"
           >
             {ctaLabel}
           </Link>
