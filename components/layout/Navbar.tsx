@@ -118,7 +118,7 @@ export default function Navbar({
               }
             }}
             className={clsx(
-              "relative transition-all duration-200 hover:opacity-80",
+              "relative transition-all duration-300 hover:scale-[1.03] hover:opacity-90",
               scrolled ? "h-12 w-36 sm:h-14 sm:w-44" : "h-10 w-32 sm:h-12 sm:w-36"
             )}
             onMouseEnter={() => setLogoHover(true)}

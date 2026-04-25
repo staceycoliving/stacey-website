@@ -10,6 +10,7 @@ import type { StayType } from "@/lib/data";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import FadeIn from "@/components/ui/FadeIn";
+import HeroHeadline from "@/components/home/HeroHeadline";
 import SearchFields from "@/components/move-in/SearchFields";
 import FeaturesSection from "@/components/home/FeaturesSection";
 import VideoSection from "@/components/home/VideoSection";
@@ -160,6 +161,30 @@ export default function HomePage() {
     ...locations.filter((l) => l.slug !== "mitte" && l.slug !== "muehlenkamp"),
   ];
 
+  // Per-location card stats (available rooms · new residents this month
+  // · next-availability date for fully booked homes). Lives in /api/
+  // locations/stats which combines DB query (LONG) and apaleo (SHORT),
+  // edge-cached 10 min. Failure is non-fatal — cards just hide the
+  // social-proof / availability rows when we don't have the data.
+  type LocationStat = {
+    available: number;
+    newResidents: number;
+    nextAvailable: string | null;
+  };
+  const [locationStats, setLocationStats] = useState<Record<string, LocationStat>>({});
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/locations/stats")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((res) => {
+        if (!cancelled && res?.ok) setLocationStats(res.data ?? {});
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const handleCalendarSelect = (date: string) => {
     if (!checkIn || (checkIn && checkOut)) {
       setCheckIn(date);
@@ -208,30 +233,68 @@ export default function HomePage() {
           src="/images/website-hero.webp"
           alt="STACEY Coliving"
           fill
-          className="object-cover"
+          className="hero-ken-burns object-cover"
           priority
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/30 to-black/60" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/35 via-black/15 to-black/55" />
 
         <div className="relative z-30 w-full px-5 text-center sm:px-6">
-          {/* Headline uses a wider container so "OUR MEMBERS CALL US HOME."
-              fits on one line on desktop (text-6xl) instead of wrapping
-              awkwardly inside a narrow booking-form container. */}
-          <motion.h1
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.4, ease: "easeOut" }}
-            className="mx-auto max-w-4xl text-4xl font-extrabold leading-[1.1] tracking-tight text-white sm:text-5xl lg:text-6xl"
-          >
-            OUR MEMBERS CALL US <span className="italic font-light">HOME.</span>
-          </motion.h1>
+          {/* Cinematic word-by-word reveal — brand moment, fully
+              reduced-motion compliant. */}
+          <HeroHeadline />
 
-          {/* SearchFields + submit stay inside a narrow column so fields
-              don't sprawl across the viewport on desktop. */}
+          {/* Sub-headline — one warm line that turns the claim into a
+              full thought and sets the brand voice before the booking
+              flow starts. */}
+          <motion.p
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 1.1, ease: "easeOut" }}
+            className="mx-auto mt-5 max-w-xl text-sm font-medium leading-snug text-white/80 sm:mt-6 sm:text-lg"
+          >
+            Rooms come furnished. Friends come included.
+          </motion.p>
+
+          {/* Member portraits — five real STACEY faces (interview thumbs
+              + community photos as launch placeholders) overlapping in
+              a strip + "+ X more members" tag. Human-first signal sits
+              above the booking flow on purpose: see the people, then
+              pick your stay. Stacks vertically on mobile so neither the
+              avatars nor the count get squeezed. */}
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 1.35, ease: "easeOut" }}
+            className="mx-auto mt-5 flex flex-col items-center justify-center gap-2 sm:mt-8 sm:flex-row sm:gap-3"
+          >
+            <div className="flex -space-x-2">
+              {[
+                "/images/members/member-1.jpeg",
+                "/images/interview-1-thumb.webp",
+                "/images/members/member-2.jpeg",
+                "/images/interview-2-thumb.webp",
+                "/images/members/member-3.jpeg",
+              ].map((src, i) => (
+                <span
+                  key={i}
+                  className="relative inline-block h-8 w-8 overflow-hidden rounded-full ring-2 ring-white/90 shadow-md sm:h-10 sm:w-10"
+                >
+                  <Image src={src} alt="" fill className="object-cover" sizes="48px" />
+                </span>
+              ))}
+            </div>
+            <span className="text-[11px] font-semibold text-white/90 sm:text-xs">
+              + 295 more members
+            </span>
+          </motion.div>
+
+          {/* SearchFields stays inside a narrow column so fields don't
+              sprawl on desktop. Fades in last so the entrance reads as
+              headline → voice → people → action. */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ duration: 0.4, delay: 0.15, ease: "easeOut" }}
+            transition={{ duration: 0.6, delay: 1.55, ease: "easeOut" }}
             className="mx-auto max-w-md"
           >
             <SearchFields
@@ -249,32 +312,15 @@ export default function HomePage() {
           </motion.div>
         </div>
 
-        {/* Press banner inside hero at bottom */}
-        <div className="absolute bottom-12 left-0 right-0 z-20">
-          <div className="mx-auto max-w-xl rounded-[5px] bg-white/80 py-2.5 backdrop-blur-sm">
-            <div className="flex items-center justify-center gap-6 px-4 sm:gap-10">
-              <span className="text-[9px] font-medium uppercase tracking-wider text-black/30">As seen in</span>
-              <a href="https://www.abendblatt.de/advertorials/stacey.html" target="_blank" rel="noopener noreferrer" className="opacity-40 transition-opacity hover:opacity-80">
-                <img src="/images/press/hamburger-abendblatt.svg" alt="Hamburger Abendblatt" className="h-3.5 brightness-0 sm:h-4" />
-              </a>
-              <a href="https://www.handelsblatt.com/adv/firmen/stacey.html" target="_blank" rel="noopener noreferrer" className="opacity-40 transition-opacity hover:opacity-80">
-                <img src="/images/press/handelsblatt.svg" alt="Handelsblatt" className="h-3.5 brightness-0 sm:h-4" />
-              </a>
-              <a href="https://unternehmen.welt.de/finanzen-immobilien/coliving.html" target="_blank" rel="noopener noreferrer" className="opacity-40 transition-opacity hover:opacity-80">
-                <img src="/images/press/die-welt.svg" alt="Die Welt" className="h-3.5 brightness-0 sm:h-4" />
-              </a>
-            </div>
-          </div>
-        </div>
-
         {/* Gradient fade into white */}
-        <div className="absolute bottom-0 left-0 right-0 z-10 h-24 bg-gradient-to-t from-white to-transparent" />
+        <div className="absolute bottom-0 left-0 right-0 z-10 h-24 bg-gradient-to-t from-[#FAFAFA] to-transparent" />
       </section>
 
       {/* ── LOCATIONS — low pt on every breakpoint so card tops peek
            under the 88vh hero (mobile + desktop). Bottom padding scales
-           normally for rhythm with the next section. ── */}
-      <section className="bg-white pb-12 pt-4 sm:pb-16 sm:pt-6 md:pb-20 md:pt-8">
+           normally for rhythm with the next section. bg-[#FAFAFA] gives
+           the cards a subtle plinth so the white-on-photo content pops. */}
+      <section className="bg-[#FAFAFA] pb-12 pt-4 sm:pb-16 sm:pt-6 md:pb-20 md:pt-8">
         {/* No FadeIn here — this section peeks under the hero on first
             paint; triggering a scroll-in animation delays the cards
             and defeats the whole peek-to-tease pattern. */}
@@ -289,23 +335,36 @@ export default function HomePage() {
                   >
                     {orderedLocations.map((loc) => {
                       const href = `/locations/${loc.slug}`;
+                      const s = locationStats[loc.slug];
+                      // Up to 3 mini-avatars per card. We always pull from
+                      // the 5 hero portraits — same faces, same brand.
+                      const avatarSrc = [
+                        "/images/members/member-1.jpeg",
+                        "/images/members/member-2.jpeg",
+                        "/images/members/member-3.jpeg",
+                      ];
+                      const avatarsToShow = s
+                        ? Math.min(3, Math.max(0, s.newResidents))
+                        : 0;
                       return (
                         <Link
                           key={loc.slug}
                           href={href}
-                          className="group relative w-[85vw] flex-shrink-0 snap-start overflow-hidden rounded-[5px] sm:w-[340px]"
+                          className="group relative w-[85vw] flex-shrink-0 snap-start overflow-hidden rounded-[5px] bg-white shadow-[0_2px_12px_rgba(0,0,0,0.06)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_8px_24px_rgba(0,0,0,0.12)] sm:w-[340px]"
                         >
-                          <div className="relative aspect-[3/4]">
+                          <div className="relative aspect-[3/4] overflow-hidden">
                             <Image
                               src={loc.images[0]}
                               alt={loc.name}
                               fill
-                              className="object-cover"
+                              className="object-cover transition-transform duration-500 group-hover:scale-105"
                               sizes="340px"
                             />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent transition-colors duration-300 group-hover:from-black/70 group-hover:via-black/30 group-hover:to-black/20" />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/10 to-transparent" />
+
+                            {/* SHORT/LONG badge — top-left anchor */}
                             <div className="absolute left-3 top-3">
-                              <span className={`rounded-[5px] px-3 py-1.5 text-xs font-black uppercase tracking-wider ${
+                              <span className={`rounded-[5px] px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.15em] ${
                                 loc.stayType === "SHORT"
                                   ? "bg-black text-white"
                                   : "bg-pink text-white"
@@ -313,19 +372,64 @@ export default function HomePage() {
                                 {loc.stayType === "SHORT" ? "SHORT" : "LONG"}
                               </span>
                             </div>
-                            <div className="absolute bottom-0 left-0 right-0 p-4">
-                              <p className="text-[11px] font-bold uppercase tracking-wider text-white/60">
-                                {loc.city === "hamburg" ? "Hamburg" : loc.city === "berlin" ? "Berlin" : "Vallendar"}
-                              </p>
-                              <h3 className="mt-1 text-xl font-bold text-white">{loc.name}</h3>
-                              <span className="mt-2 inline-block rounded-[5px] bg-white/20 px-2.5 py-1 text-sm font-bold text-white backdrop-blur-sm">
+
+                            {/* Price chip — top-right, frosted glass.
+                                Flips to solid black on card hover for a
+                                clearer "click me" affordance. */}
+                            <div className="absolute right-3 top-3">
+                              <span className="rounded-[5px] bg-white/90 px-2.5 py-1 text-xs font-bold text-black shadow-sm backdrop-blur-sm transition-colors duration-300 group-hover:bg-black group-hover:text-white">
                                 from &euro;{loc.priceFrom}{loc.stayType === "SHORT" ? "/night" : "/mo"}
                               </span>
                             </div>
-                            <div className="absolute inset-0 flex items-center justify-center opacity-0 transition-opacity duration-300 group-hover:opacity-100">
-                              <span className="rounded-[5px] bg-white px-5 py-2.5 text-sm font-semibold text-black shadow-lg">
-                                View rooms
-                              </span>
+
+                            {/* Bottom story block: city → name →
+                                avatars (social proof) → live availability */}
+                            <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-5">
+                              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/60">
+                                {loc.city === "hamburg" ? "Hamburg" : loc.city === "berlin" ? "Berlin" : "Vallendar"}
+                              </p>
+                              <h3 className="mt-1 text-2xl font-extrabold leading-tight text-white sm:text-[1.625rem]">
+                                {loc.name}
+                              </h3>
+
+                              {s && s.newResidents > 0 && avatarsToShow > 0 && (
+                                <div className="mt-3 flex items-center gap-2">
+                                  <div className="flex -space-x-1.5">
+                                    {avatarSrc.slice(0, avatarsToShow).map((src, i) => (
+                                      <span
+                                        key={i}
+                                        className="relative inline-block h-7 w-7 overflow-hidden rounded-full ring-2 ring-white/90"
+                                      >
+                                        <Image src={src} alt="" fill className="object-cover" sizes="28px" />
+                                      </span>
+                                    ))}
+                                  </div>
+                                  <span className="text-[11px] font-medium text-white/85">
+                                    {s.newResidents} new {s.newResidents === 1 ? "resident" : "residents"} this month
+                                  </span>
+                                </div>
+                              )}
+
+                              {s && s.available > 0 && (
+                                <div className={(s.newResidents > 0 ? "mt-2" : "mt-3") + " flex items-center gap-1.5"}>
+                                  <span className="relative flex h-1.5 w-1.5">
+                                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-pink opacity-70" />
+                                    <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-pink" />
+                                  </span>
+                                  <span className="text-[11px] font-semibold text-white">
+                                    {s.available} {s.available === 1 ? "room" : "rooms"} available now
+                                  </span>
+                                </div>
+                              )}
+
+                              {s && s.available === 0 && s.nextAvailable && (
+                                <div className="mt-3 flex items-center gap-1.5">
+                                  <span className="h-1.5 w-1.5 rounded-full bg-white/60" />
+                                  <span className="text-[11px] font-medium text-white/80">
+                                    Next available {new Date(s.nextAvailable).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
+                                  </span>
+                                </div>
+                              )}
                             </div>
                           </div>
                         </Link>

@@ -75,3 +75,24 @@ select,
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+/* Hero background slow zoom-out ("Ken-Burns"). Runs once on mount so the
+   hero photo feels alive without looping distraction. Paired with the
+   overflow-hidden section wrapper to mask the scale growth. */
+@keyframes hero-ken-burns {
+  from { transform: scale(1.02); }
+  to { transform: scale(1.12); }
+}
+.hero-ken-burns {
+  animation: hero-ken-burns 22s ease-out both;
+  transform-origin: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-ken-burns {
+    animation: none;
+  }
+  .animate-marquee {
+    animation: none;
+  }
+}
