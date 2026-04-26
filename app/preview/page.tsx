@@ -980,6 +980,148 @@ function VariantH() {
   );
 }
 
+/* ================================================================== */
+/* I, Scroll-pinned step-through (B + Apple-style scrolljacking)      */
+/*    Section is ~300vh tall; the inner layout sticks to the          */
+/*    viewport while scroll progress drives which step is active.    */
+/*    User can't skip the section without seeing all three. Tabs     */
+/*    remain clickable as a jump fallback. Mobile falls back to a    */
+/*    normal stacked render so we don't fight touch gestures.        */
+/* ================================================================== */
+function VariantI() {
+  const sectionRef = useRef<HTMLElement | null>(null);
+  const [idx, setIdx] = useState(0);
+  const [progress, setProgress] = useState(0);
+
+  useEffect(() => {
+    const handle = () => {
+      const section = sectionRef.current;
+      if (!section) return;
+      const rect = section.getBoundingClientRect();
+      const scrollableHeight = rect.height - window.innerHeight;
+      if (scrollableHeight <= 0) return;
+      const scrolled = -rect.top;
+      const p = Math.max(0, Math.min(1, scrolled / scrollableHeight));
+      setProgress(p);
+      const newIdx = Math.min(STEPS.length - 1, Math.floor(p * STEPS.length));
+      setIdx((prev) => (prev === newIdx ? prev : newIdx));
+    };
+    let raf = 0;
+    const onScroll = () => {
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        handle();
+        raf = 0;
+      });
+    };
+    handle();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", handle);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", handle);
+    };
+  }, []);
+
+  const scrollToStep = (i: number) => {
+    const section = sectionRef.current;
+    if (!section) return;
+    const rect = section.getBoundingClientRect();
+    const sectionTop = rect.top + window.scrollY;
+    const scrollable = rect.height - window.innerHeight;
+    // Land slightly past the start of the step's slice so the index
+    // settles on it cleanly (avoid boundary thrash).
+    const targetProgress = i / STEPS.length + 0.05;
+    const targetY = sectionTop + scrollable * targetProgress;
+    window.scrollTo({ top: targetY, behavior: "smooth" });
+  };
+
+  return (
+    <section ref={sectionRef} className="relative bg-white" style={{ height: "300vh" }}>
+      {/* Mobile fallback: just render Variant B normally so we don't
+          fight touch scroll. Hidden lg+ uses the sticky scrolljack. */}
+      <div className="lg:hidden">
+        <VariantB />
+      </div>
+
+      <div className="sticky top-0 hidden h-screen items-center overflow-hidden px-4 sm:px-6 lg:flex lg:px-8">
+        <div className="mx-auto w-full max-w-6xl">
+          <SectionHeader />
+
+          {/* Progress bar that fills as you scroll the section */}
+          <div className="mx-auto mt-6 h-0.5 w-full max-w-2xl overflow-hidden rounded-full bg-black/5">
+            <div
+              className="h-full bg-pink transition-[width] duration-100"
+              style={{ width: `${progress * 100}%` }}
+            />
+          </div>
+
+          {/* Step tabs, scroll-driven active state */}
+          <div className="mt-6 grid gap-3 sm:grid-cols-3 sm:gap-4">
+            {STEPS.map((s, i) => {
+              const isActive = idx === i;
+              return (
+                <button
+                  key={s.num}
+                  onClick={() => scrollToStep(i)}
+                  className={clsx(
+                    "group rounded-[5px] p-3 text-left transition-all",
+                    isActive
+                      ? "bg-black text-white shadow-md"
+                      : "bg-[#FAFAFA] text-black ring-1 ring-black/5 hover:ring-black/30",
+                  )}
+                >
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={clsx(
+                        "flex h-6 w-6 items-center justify-center rounded-full font-mono text-[10px] font-black",
+                        isActive ? "bg-pink text-black" : "bg-black text-white",
+                      )}
+                    >
+                      {s.num}
+                    </span>
+                    <span
+                      className={clsx(
+                        "font-mono text-[9px] font-bold uppercase tracking-[0.2em]",
+                        isActive ? "text-pink" : "text-gray",
+                      )}
+                    >
+                      {s.time}
+                    </span>
+                  </div>
+                  <p className="mt-2 text-base font-black leading-tight">{s.title}</p>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Device + body, swap with active step */}
+          <div className="mt-8 grid items-center gap-10 lg:grid-cols-[1.4fr_1fr] lg:gap-14">
+            <div key={`device-${idx}`} style={{ animation: "fadeSlide 0.4s ease-out" }}>
+              <ResponsiveDevice idx={idx} />
+            </div>
+            <div key={`copy-${idx}`} style={{ animation: "fadeSlide 0.4s ease-out" }}>
+              <p className="font-mono text-[10px] font-bold uppercase tracking-[0.25em] text-pink">
+                Step {STEPS[idx].num}
+              </p>
+              <h3 className="mt-2 text-3xl font-black leading-tight tracking-tight sm:text-4xl">
+                {STEPS[idx].title}
+              </h3>
+              <div className="mt-4">
+                <StepBody step={STEPS[idx]} />
+              </div>
+              <div className="mt-6 inline-flex items-center gap-2 rounded-[5px] bg-black px-4 py-2 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-white">
+                <Check size={11} />
+                {STEPS[idx].time}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 /* ─── Page wrapper ───────────────────────────────────────────────── */
 
 export default function PreviewPage() {
@@ -1056,9 +1198,16 @@ export default function PreviewPage() {
       />
       <VariantH />
 
+      <VariantLabel
+        n="I"
+        title="Scroll-Pinned Step-Through (B + Apple-style scrolljacking)"
+        desc="Section ist 300vh hoch, der Inhalt sticky-pinned. Während du scrollst bleibt die Seite stehen und steppt durch alle drei Steps durch. User kann nicht skippen ohne alles gesehen zu haben. Tabs bleiben klickbar als Jump-Fallback. Mobile fällt auf normales B-Layout zurück."
+      />
+      <VariantI />
+
       <div className="mx-auto max-w-3xl px-6 py-16 text-center">
         <p className="text-sm text-gray">
-          Pick A bis H. Ich verdrahte die Wahl als neuen Default.
+          Pick A bis I. Ich verdrahte die Wahl als neuen Default.
         </p>
       </div>
     </main>
