@@ -775,6 +775,211 @@ function VariantE() {
   );
 }
 
+/* ================================================================== */
+/* F, B-pattern with lifestyle photo for Step 03                      */
+/*    Click-through tabs same as B; mockups for Browse + Sign; Step 3 */
+/*    swaps to a real STACEY community photo. Best practice + brand   */
+/*    fit (people-first closer instead of another mockup).            */
+/* ================================================================== */
+function VariantF() {
+  const [idx, setIdx] = useState(0);
+  const step3Photo = "/images/locations/eimsbuettel/community/001-community-ei.webp";
+  return (
+    <section className="bg-white px-4 py-20 sm:px-6 sm:py-24 lg:px-8">
+      <div className="mx-auto max-w-6xl">
+        <SectionHeader />
+        <div className="mt-12 grid gap-3 sm:grid-cols-3 sm:gap-4">
+          {STEPS.map((s, i) => {
+            const isActive = idx === i;
+            return (
+              <button
+                key={s.num}
+                onClick={() => setIdx(i)}
+                className={clsx(
+                  "group rounded-[5px] p-4 text-left transition-all sm:p-5",
+                  isActive
+                    ? "bg-black text-white shadow-md"
+                    : "bg-[#FAFAFA] text-black ring-1 ring-black/5 hover:ring-black/30",
+                )}
+              >
+                <div className="flex items-center gap-2">
+                  <span
+                    className={clsx(
+                      "flex h-7 w-7 items-center justify-center rounded-full font-mono text-[11px] font-black",
+                      isActive ? "bg-pink text-black" : "bg-black text-white",
+                    )}
+                  >
+                    {s.num}
+                  </span>
+                  <span
+                    className={clsx(
+                      "font-mono text-[10px] font-bold uppercase tracking-[0.2em]",
+                      isActive ? "text-pink" : "text-gray",
+                    )}
+                  >
+                    {s.time}
+                  </span>
+                </div>
+                <p className="mt-3 text-lg font-black leading-tight">{s.title}</p>
+              </button>
+            );
+          })}
+        </div>
+        <div className="mt-10 grid items-center gap-10 lg:grid-cols-[1.4fr_1fr] lg:gap-14">
+          <div key={idx} style={{ animation: "fadeSlide 0.4s ease-out" }}>
+            {idx === 2 ? (
+              // Step 03 = real photo, not a mockup
+              <div className="relative aspect-[16/10] overflow-hidden rounded-[5px] bg-black shadow-[0_18px_50px_rgba(0,0,0,0.18)]">
+                <Image
+                  src={step3Photo}
+                  alt="Move-in day at STACEY"
+                  fill
+                  className="object-cover"
+                  sizes="(min-width: 1024px) 760px, 100vw"
+                  priority
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                <div className="absolute bottom-4 left-4 right-4 sm:bottom-6 sm:left-6 sm:right-6">
+                  <p className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-pink">
+                    Day one · welcome home
+                  </p>
+                  <p className="mt-1 text-2xl font-black text-white sm:text-3xl">
+                    Friday is the house dinner.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <ResponsiveDevice idx={idx} />
+            )}
+          </div>
+          <div key={`copy-${idx}`} style={{ animation: "fadeSlide 0.4s ease-out" }}>
+            <p className="font-mono text-[10px] font-bold uppercase tracking-[0.25em] text-pink">
+              Step {STEPS[idx].num}
+            </p>
+            <h3 className="mt-2 text-3xl font-black leading-tight tracking-tight sm:text-4xl">
+              {STEPS[idx].title}
+            </h3>
+            <div className="mt-4">
+              <StepBody step={STEPS[idx]} />
+            </div>
+            <div className="mt-6 inline-flex items-center gap-2 rounded-[5px] bg-black px-4 py-2 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-white">
+              <Check size={11} />
+              {STEPS[idx].time}
+            </div>
+          </div>
+        </div>
+        <Cta />
+      </div>
+    </section>
+  );
+}
+
+/* ================================================================== */
+/* G, All lifestyle photos, no UI mockups                             */
+/*    Three real STACEY photos as the visual carrier per step. Step  */
+/*    numbers, captions, and bodies overlay or sit beneath. Pure     */
+/*    people-first; no tech-demo language.                           */
+/* ================================================================== */
+function VariantG() {
+  const photos = [
+    {
+      src: "/images/locations/muehlenkamp/community/02-muehlenkamp.webp",
+      alt: "Browse a STACEY home",
+    },
+    {
+      src: "/images/locations/muehlenkamp/jumbo/001-jumbo-mk.webp",
+      alt: "Your private suite",
+    },
+    {
+      src: "/images/locations/eimsbuettel/community/001-community-ei.webp",
+      alt: "Move-in day at STACEY",
+    },
+  ];
+  return (
+    <section className="bg-white px-4 py-20 sm:px-6 sm:py-24 lg:px-8">
+      <div className="mx-auto max-w-7xl">
+        <SectionHeader />
+        <div className="mt-12 grid gap-5 sm:mt-14 lg:grid-cols-3 lg:gap-6">
+          {STEPS.map((s, i) => (
+            <article key={s.num} className="group">
+              <div className="relative aspect-[4/5] overflow-hidden rounded-[5px] bg-black shadow-[0_8px_30px_rgba(0,0,0,0.12)]">
+                <Image
+                  src={photos[i].src}
+                  alt={photos[i].alt}
+                  fill
+                  className="object-cover transition-transform duration-700 group-hover:scale-105"
+                  sizes="(min-width: 1024px) 33vw, 100vw"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent" />
+                <span className="absolute left-4 top-4 flex h-12 w-12 items-center justify-center rounded-full bg-white font-mono text-base font-black text-black shadow-md sm:h-14 sm:w-14 sm:text-lg">
+                  {s.num}
+                </span>
+                <div className="absolute inset-x-0 bottom-0 p-5 text-white sm:p-6">
+                  <p className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-pink">
+                    Step {s.num} · {s.time}
+                  </p>
+                  <h3 className="mt-1 text-2xl font-black leading-tight tracking-tight sm:text-3xl">
+                    {s.title}
+                  </h3>
+                </div>
+              </div>
+              <div className="mt-4">
+                <StepBody step={s} />
+              </div>
+            </article>
+          ))}
+        </div>
+        <Cta />
+      </div>
+    </section>
+  );
+}
+
+/* ================================================================== */
+/* H, Editorial cards, no devices, no photos                          */
+/*    Pure typography + step numbers + body copy. Clean, fast,        */
+/*    leaves Receipts and Map as the section's tech-demo moments.     */
+/* ================================================================== */
+function VariantH() {
+  return (
+    <section className="bg-white px-4 py-20 sm:px-6 sm:py-24 lg:px-8">
+      <div className="mx-auto max-w-6xl">
+        <SectionHeader />
+        <div className="mt-12 grid grid-cols-1 gap-5 sm:mt-14 lg:grid-cols-3 lg:gap-6">
+          {STEPS.map((s) => (
+            <article
+              key={s.num}
+              className="group relative overflow-hidden rounded-[5px] bg-[#FAFAFA] p-6 ring-1 ring-black/5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md sm:p-8"
+            >
+              <span
+                aria-hidden
+                className="pointer-events-none absolute -bottom-8 -right-2 select-none text-[160px] font-black leading-none tracking-tighter text-black/[0.05] sm:text-[200px]"
+              >
+                {s.num}
+              </span>
+              <div className="relative">
+                <p className="font-mono text-[10px] font-bold uppercase tracking-[0.25em] text-pink">
+                  Step {s.num}
+                </p>
+                <h3 className="mt-3 text-2xl font-black leading-tight tracking-tight sm:text-3xl">
+                  {s.title}
+                </h3>
+                <div className="mt-4">
+                  <StepBody step={s} />
+                </div>
+                <p className="mt-6 inline-flex items-center gap-1.5 rounded-[3px] bg-black px-2 py-1 font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-white">
+                  {s.time}
+                </p>
+              </div>
+            </article>
+          ))}
+        </div>
+        <Cta />
+      </div>
+    </section>
+  );
+}
+
 /* ─── Page wrapper ───────────────────────────────────────────────── */
 
 export default function PreviewPage() {
@@ -782,16 +987,16 @@ export default function PreviewPage() {
     <main className="bg-white">
       <div className="mx-auto max-w-3xl px-6 py-10">
         <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-pink">
-          Internal preview · take 5
+          Internal preview · take 6
         </p>
         <h1 className="mt-2 text-3xl font-black sm:text-4xl">
           How it works,{" "}
-          <span className="italic font-light">five product walkthroughs</span>
+          <span className="italic font-light">eight directions</span>
         </h1>
         <p className="mt-3 text-sm text-gray">
-          Echte Steps mit Mockups der echten STACEY-UI (Browse, Sign + pay,
-          Welcome email). Mockups sind Tailwind-gerendert, nicht abfotografiert
-          aber match-up der finalen Seite. Pick eine Variante.
+          A-E nutzen UI-Mockups der echten STACEY-UI in Device-Frames.
+          F-H probieren brand-fit Alternativen: Lifestyle-Fotos statt
+          (oder zusätzlich zu) Mockups, oder ganz ohne Devices.
         </p>
       </div>
 
@@ -830,9 +1035,30 @@ export default function PreviewPage() {
       />
       <VariantE />
 
+      <VariantLabel
+        n="F"
+        title="Click-Through + Lifestyle Photo for Step 03 (best practice + brand fit)"
+        desc="Wie B (Click-Through Tabs), aber Step 03 swappt Mockup gegen ein echtes STACEY-Foto vom Common Space. Closer wird emotional/people-first statt noch ein UI-Screen. Mein favorisierter Hybrid."
+      />
+      <VariantF />
+
+      <VariantLabel
+        n="G"
+        title="All Lifestyle Photos, no UI mockups"
+        desc="Drei echte STACEY-Fotos in 3-col Grid mit Step-Number-Bubbles. Pure people-first, keine tech-demo Sprache. Lässt Receipts + Map als die einzigen 'tech demos' der Seite stehen."
+      />
+      <VariantG />
+
+      <VariantLabel
+        n="H"
+        title="Editorial Cards, no devices, no photos"
+        desc="Drei klare Cards mit riesigen Watermark-Numbers, Title, Body. Keine Devices, keine Photos. Schnellste, sauberste Lösung. Airbnb-style, fast forschungs-zen."
+      />
+      <VariantH />
+
       <div className="mx-auto max-w-3xl px-6 py-16 text-center">
         <p className="text-sm text-gray">
-          Pick A, B, C, D, oder E. Ich verdrahte als neuen Default.
+          Pick A bis H. Ich verdrahte die Wahl als neuen Default.
         </p>
       </div>
     </main>
