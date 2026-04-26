@@ -84,22 +84,6 @@ select,
   75%, 100% { transform: scale(1.8); opacity: 0; }
 }
 
-/* Equalizer-bar animation for the audio-active state on the video
-   section sound toggle. Three different cycles so the bars look
-   organic rather than synchronised. */
-@keyframes eqBar1 {
-  0%, 100% { transform: scaleY(0.4); }
-  50% { transform: scaleY(1); }
-}
-@keyframes eqBar2 {
-  0%, 100% { transform: scaleY(0.6); }
-  50% { transform: scaleY(1); }
-}
-@keyframes eqBar3 {
-  0%, 100% { transform: scaleY(0.5); }
-  50% { transform: scaleY(0.9); }
-}
-
 /* Hero background slow zoom-out ("Ken-Burns"). Runs once on mount so the
    hero photo feels alive without looping distraction. Paired with the
    overflow-hidden section wrapper to mask the scale growth. */

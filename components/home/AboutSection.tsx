@@ -1,93 +1,134 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, Play } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import FadeIn from "@/components/ui/FadeIn";
 
-// Closing block, two side-by-side teaser cards in one light-grey
-// section. Member Stories on the left, About on the right. Both
-// point to /why-stacey for the long-form content.
+// Team-story closer, mirrors the VideoSection split layout: editorial
+// column left (eyebrow, headline, body, CTA), 16:9 team photo right
+// with the same card chrome as the video player. Mobile collapses to a
+// classic centered stack.
+//
+// The member-interview strip used to live at the bottom of this section,
+// it now lives in MemberStoriesSection right before the FinalCtaSection
+// so social proof lands immediately before the conversion ask.
+
 export default function AboutSection() {
   return (
-    <section className="bg-white px-4 py-20 sm:px-6 sm:py-24 lg:px-8">
+    <section className="bg-[#FAFAFA] px-4 py-14 sm:px-6 sm:py-20 lg:px-8">
       <FadeIn>
-        <div className="mx-auto grid max-w-6xl gap-4 sm:gap-6 lg:grid-cols-2">
-          {/* LEFT: Stories teaser, featured Jihane interview pointing
-              to the full grid on /why-stacey#stories. */}
-          <Link
-            href="/why-stacey#stories"
-            className="group grid items-center gap-5 rounded-[5px] bg-[#FAFAFA] p-5 shadow-sm ring-1 ring-black/5 transition-all hover:-translate-y-0.5 hover:shadow-md sm:grid-cols-[180px_1fr] sm:gap-6 sm:p-6 lg:p-7"
-          >
-            <div className="relative aspect-square overflow-hidden rounded-[5px] bg-black">
-              <Image
-                src="/images/interview-3-thumb.webp"
-                alt="Jihane"
-                fill
-                className="object-cover transition-transform duration-500 group-hover:scale-105"
-                sizes="(min-width: 640px) 180px, 100vw"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-transparent" />
-              <span className="absolute inset-0 flex items-center justify-center">
-                <span className="flex h-11 w-11 items-center justify-center rounded-full bg-white/95 shadow-lg transition-transform group-hover:scale-110">
-                  <Play size={16} className="ml-0.5 fill-black text-black" />
-                </span>
-              </span>
-            </div>
-            <div>
-              <p className="inline-block rounded-[5px] bg-pink px-2.5 py-1 text-[10px] font-bold uppercase text-white">
-                Member stories
+        <div className="mx-auto max-w-7xl">
+          {/* MOBILE, classic centered stack mirroring the VideoSection
+              mobile pattern: pink chip → headline → body → photo → CTA. */}
+          <div className="mx-auto max-w-3xl text-center lg:hidden">
+            <p className="inline-block rounded-[5px] bg-pink px-2.5 py-1 text-[10px] font-bold uppercase text-white">
+              Hamburg · since 2019
+            </p>
+            <h2 className="mt-3 text-3xl font-black leading-[1.05] tracking-tight sm:text-5xl">
+              Built by us, for the way{" "}
+              <span className="italic font-light">we</span> wanted to live.
+            </h2>
+            <div className="mx-auto mt-5 max-w-md space-y-3.5 text-left text-sm leading-relaxed text-gray">
+              <p>
+                STACEY started in Hamburg, in 2019. Born from the friction
+                of finding a flat: bureaucracy, scattered listings, high
+                setup costs, and the wrong flatmates.
               </p>
-              <h3 className="mt-2 text-xl font-black leading-tight tracking-tight sm:text-2xl">
-                <span className="italic font-light">&ldquo;Strangers became</span>{" "}
-                neighbors.&rdquo;
-              </h3>
-              <p className="mt-3 text-sm leading-relaxed text-gray">
-                Three members, three stories. Watch the full interviews.
+              <p>
+                We wanted shared apartments done properly. One hassle-free
+                sign-up, design that feels like home, people you&rsquo;d
+                actually want to share a kitchen with.
               </p>
-              <span className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-black transition-colors group-hover:text-pink">
-                More stories
-                <ArrowRight
-                  size={14}
-                  className="transition-transform duration-200 group-hover:translate-x-0.5"
-                />
-              </span>
+              <p>
+                We started with one apartment. Today, eight homes across
+                three cities, with more on the way.
+              </p>
             </div>
-          </Link>
 
-          {/* RIGHT: About teaser, founder-story handshake. */}
-          <Link
-            href="/why-stacey"
-            className="group grid items-center gap-5 rounded-[5px] bg-[#FAFAFA] p-5 shadow-sm ring-1 ring-black/5 transition-all hover:-translate-y-0.5 hover:shadow-md sm:grid-cols-[180px_1fr] sm:gap-6 sm:p-6 lg:p-7"
-          >
-            <div className="relative aspect-square overflow-hidden rounded-[5px]">
-              <Image
-                src="/images/stacey-team.webp"
-                alt="The STACEY team"
-                fill
-                className="object-cover transition-transform duration-500 group-hover:scale-105"
-                sizes="(min-width: 640px) 180px, 100vw"
-              />
+            <div className="mt-8">
+              <div className="relative aspect-video w-full overflow-hidden rounded-[8px] bg-black/5 ring-1 ring-black/12 shadow-[0_24px_60px_rgba(0,0,0,0.14)]">
+                <Image
+                  src="/images/stacey-team.webp"
+                  alt="The STACEY team"
+                  fill
+                  className="object-cover"
+                  sizes="100vw"
+                />
+              </div>
             </div>
+
+            <Link
+              href="/why-stacey"
+              className="group mt-8 inline-flex items-center gap-2 rounded-[5px] bg-black px-8 py-3.5 text-sm font-semibold text-white transition-all hover:opacity-80"
+            >
+              Meet the team
+              <ArrowRight
+                size={14}
+                className="transition-transform duration-200 group-hover:translate-x-0.5"
+              />
+            </Link>
+          </div>
+
+          {/* DESKTOP split, mirrors the VideoSection layout: editorial
+              column left, 16:9 team photo right. */}
+          <div className="mx-auto hidden max-w-7xl items-center gap-16 lg:grid lg:grid-cols-[1fr_1.15fr]">
             <div>
-              <p className="inline-block rounded-[5px] bg-pink px-2.5 py-1 text-[10px] font-bold uppercase text-white">
-                Hamburg, since 2019
-              </p>
-              <h3 className="mt-2 text-xl font-black leading-tight tracking-tight sm:text-2xl">
-                Why I started{" "}
-                <span className="italic font-light">STACEY</span>.
-              </h3>
-              <p className="mt-3 text-sm leading-relaxed text-gray">
-                Seven years, three cities, hundreds of members. Read the founder
-                story.
-              </p>
-              <span className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-black transition-colors group-hover:text-pink">
-                The full story
+              <div className="flex items-center gap-3">
+                <span className="block h-8 w-[3px] rounded-full bg-pink" />
+                <p className="font-mono text-[10px] font-bold uppercase tracking-[0.25em] text-pink">
+                  Hamburg · since 2019
+                </p>
+              </div>
+
+              <h2 className="mt-5 text-5xl font-black leading-[1.05] tracking-tight lg:text-6xl">
+                Built by us, for the way{" "}
+                <span className="italic font-light">we</span> wanted to live.
+              </h2>
+
+              <div className="mt-6 max-w-md space-y-4 text-base leading-relaxed text-gray">
+                <p>
+                  STACEY started in Hamburg, in 2019. Born from the friction
+                  of finding a flat: bureaucracy, scattered listings, high
+                  setup costs, and the wrong flatmates.
+                </p>
+                <p>
+                  We wanted shared apartments done properly. One hassle-free
+                  sign-up, design that feels like home, people you&rsquo;d
+                  actually want to share a kitchen with.
+                </p>
+                <p>
+                  We started with one apartment. Today, eight homes across
+                  three cities, with more on the way.
+                </p>
+              </div>
+
+              <Link
+                href="/why-stacey"
+                className="group mt-8 inline-flex items-center gap-2 rounded-[5px] bg-black px-8 py-3.5 text-sm font-semibold text-white transition-all hover:opacity-80"
+              >
+                Meet the team
                 <ArrowRight
                   size={14}
                   className="transition-transform duration-200 group-hover:translate-x-0.5"
                 />
-              </span>
+              </Link>
             </div>
-          </Link>
+
+            <div>
+              <div className="relative block w-full overflow-hidden rounded-[8px] bg-black/5 ring-1 ring-black/12 shadow-[0_30px_80px_rgba(0,0,0,0.14)]">
+                <div className="relative aspect-video">
+                  <Image
+                    src="/images/stacey-team.webp"
+                    alt="The STACEY team"
+                    fill
+                    className="object-cover"
+                    sizes="(min-width: 1024px) 700px, 100vw"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </FadeIn>
     </section>

@@ -1,22 +1,19 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
-import { ArrowRight, Play, X } from "lucide-react";
+import { Play, X } from "lucide-react";
 import { clsx } from "clsx";
 
-// Cinematic "Life at STACEY" section. Background video loops muted with
-// a strong gradient + radial vignette so the headline reads in any
-// frame. Foreground rotates real member quotes (pink decorative quote
-// marks bracket the text), with a multi-avatar strip showing the whole
-// crew and a highlight ring on the currently quoted member.
+// Split-layout video moment between Locations and Map. Click-to-play
+// player on the right (custom poster + pulsing pink play button), an
+// editorial column on the left with headline + a single member quote
+// + an avatar strip that doubles as manual pagination. No background
+// loop, no auto-rotation, no sound-toggle, all of which fought against
+// the content and entered the page as 2018-era dressing.
 //
-// Sound-toggle pill bottom-right unmutes the background loop without
-// opening the modal, modal opens via the "Watch the film" CTA which
-// plays the full video with controls.
-//
-// Section is min-h-[70vh] so it still reads as a destination moment
-// but doesn't dominate the page like 85vh did.
+// Mobile drops the quote/avatar column entirely and uses a classic
+// pink-chip header → headline → subline → full-width player stack.
 
 const VIDEO_SRC = "/images/life-at-stacey.mp4";
 
@@ -81,187 +78,204 @@ function VideoModal({ onClose }: { onClose: () => void }) {
   );
 }
 
+function usePrefersReducedMotion() {
+  const [reduced, setReduced] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.matchMedia) return;
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const onChange = () => setReduced(mq.matches);
+    onChange();
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+  return reduced;
+}
+
+// Desktop player surface: looping muted video so the home feels alive,
+// poster as the still fallback for first paint and prefers-reduced-motion.
+// The actual sound + controls happen in the modal on click.
+function LoopingPlayer() {
+  const reduced = usePrefersReducedMotion();
+  if (reduced) {
+    return (
+      <Image
+        src="/images/video-thumbnail.webp"
+        alt="Life at STACEY"
+        fill
+        className="object-cover transition-transform duration-700 group-hover:scale-[1.02]"
+        sizes="(min-width: 1024px) 700px, 100vw"
+      />
+    );
+  }
+  return (
+    <video
+      autoPlay
+      muted
+      loop
+      playsInline
+      preload="metadata"
+      poster="/images/video-thumbnail.webp"
+      className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.02]"
+    >
+      <source src={VIDEO_SRC} type="video/mp4" />
+    </video>
+  );
+}
+
+// Center play button with a slowly expanding pink ring (same easing as
+// the location-map markers, so the brand pulse reads consistent across
+// the site).
+function PulsingPlay({ size = "lg" }: { size?: "lg" | "md" }) {
+  const dim = size === "lg" ? "h-20 w-20" : "h-14 w-14";
+  const icon = size === "lg" ? 26 : 18;
+  return (
+    <span className="pointer-events-none relative flex items-center justify-center">
+      <span
+        className={clsx("absolute rounded-full bg-pink/50", dim)}
+        style={{ animation: "stacey-marker-ping 1.6s cubic-bezier(0,0,0.2,1) infinite" }}
+      />
+      <span
+        className={clsx(
+          "relative flex items-center justify-center rounded-full bg-white shadow-[0_10px_30px_rgba(0,0,0,0.35)] transition-transform duration-300 group-hover:scale-110",
+          dim,
+        )}
+      >
+        <Play size={icon} className="ml-1 fill-black text-black" strokeWidth={0} />
+      </span>
+    </span>
+  );
+}
+
 export default function VideoSection() {
   const [open, setOpen] = useState(false);
-  const [idx, setIdx] = useState(0);
-  const [muted, setMuted] = useState(true);
-  const ref = useRef<HTMLVideoElement | null>(null);
-
-  // Rotate through quotes every 5s.
-  useEffect(() => {
-    const t = setInterval(() => setIdx((i) => (i + 1) % QUOTES.length), 5000);
-    return () => clearInterval(t);
-  }, []);
-
+  const [idx, setIdx] = useState(3);
   const q = QUOTES[idx];
-
-  const toggleSound = () => {
-    if (!ref.current) return;
-    const next = !muted;
-    ref.current.muted = next;
-    // Unmuting requires a play attempt to satisfy autoplay policies.
-    if (!next) ref.current.play().catch(() => {});
-    setMuted(next);
-  };
 
   return (
     <section
       id="stacey-video"
-      className="relative flex min-h-[70vh] items-center overflow-hidden bg-black py-20 sm:py-24"
+      className="relative overflow-hidden bg-black px-4 py-16 sm:px-6 sm:py-20 lg:px-8 lg:py-24"
     >
-      <video
-        ref={ref}
-        autoPlay
-        muted
-        loop
-        playsInline
-        className="absolute inset-0 h-full w-full object-cover opacity-45"
-      >
-        <source src={VIDEO_SRC} type="video/mp4" />
-      </video>
-
-      {/* Stronger gradient + radial vignette so headline+quote read in
-          any video frame */}
-      <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/45 to-black/70" />
-      <div
-        className="absolute inset-0"
-        style={{
-          background:
-            "radial-gradient(ellipse 60% 50% at 50% 50%, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0) 60%)",
-        }}
-      />
-
-      {/* Floating sound toggle, equalizer-bar visualiser. Bars
-          animate (eqBar1/2/3 keyframes in globals.css) while audio is
-          on; static + dimmed when muted. The visual itself tells the
-          state without relying on the icon alone. */}
-      <button
-        onClick={toggleSound}
-        className="absolute bottom-4 right-4 z-20 inline-flex items-center gap-2 rounded-full bg-black/60 px-4 py-2 text-xs font-semibold text-white ring-1 ring-white/20 backdrop-blur-md transition-all hover:bg-black/80 sm:bottom-6 sm:right-6 sm:text-sm"
-        aria-label={muted ? "Unmute background video" : "Mute background video"}
-      >
-        <span className="flex items-end gap-[3px]" aria-hidden>
-          <span
-            className={clsx(
-              "w-[3px] rounded-sm bg-pink",
-              muted ? "h-2 opacity-50" : "h-3 origin-bottom",
-            )}
-            style={!muted ? { animation: "eqBar1 0.9s ease-in-out infinite" } : undefined}
-          />
-          <span
-            className={clsx(
-              "w-[3px] rounded-sm bg-pink",
-              muted ? "h-3 opacity-50" : "h-4 origin-bottom",
-            )}
-            style={!muted ? { animation: "eqBar2 0.7s ease-in-out infinite" } : undefined}
-          />
-          <span
-            className={clsx(
-              "w-[3px] rounded-sm bg-pink",
-              muted ? "h-2 opacity-50" : "h-3 origin-bottom",
-            )}
-            style={!muted ? { animation: "eqBar3 1.1s ease-in-out infinite" } : undefined}
-          />
-        </span>
-        {muted ? "Add sound" : "Sound on"}
-      </button>
-
-      <div className="relative z-10 mx-auto w-full max-w-3xl px-4 text-center sm:px-6 lg:px-8">
+      {/* MOBILE, classic stack: pink chip → headline → subline → player */}
+      <div className="mx-auto max-w-3xl text-center lg:hidden">
         <p className="inline-block rounded-[5px] bg-pink px-2.5 py-1 text-[10px] font-bold uppercase text-white">
           Life at STACEY
         </p>
-        <h2
-          className="mt-3 text-4xl font-black leading-[1.05] tracking-tight text-white sm:text-6xl lg:text-7xl"
-          style={{ textShadow: "0 2px 16px rgba(0,0,0,0.5)" }}
-        >
+        <h2 className="mt-3 text-4xl font-black leading-[1.05] tracking-tight text-white sm:text-5xl">
           More than a place to <span className="italic font-light">sleep.</span>
         </h2>
-        <p className="mt-4 text-xs font-medium uppercase tracking-[0.2em] text-white/60">
-          Press play. Or just listen for a sec.
+        <p className="mx-auto mt-3 max-w-md text-sm text-white/60 sm:text-base">
+          Ninety seconds. The home, the people, an ordinary Friday.
         </p>
 
-        {/* Rotating quote with pink decorative quote-marks. The `key`
-            forces a re-mount on rotation so the fadeSlide keyframe
-            (defined in globals.css) replays each time. */}
-        <div
-          key={idx}
-          className="relative mt-10"
-          style={{ animation: "fadeSlide 0.5s ease-out" }}
+        <button
+          onClick={() => setOpen(true)}
+          className="group relative mt-8 block w-full overflow-hidden rounded-[8px] shadow-[0_24px_60px_rgba(0,0,0,0.5)] ring-1 ring-white/10"
         >
-          <span
-            aria-hidden
-            className="pointer-events-none absolute -left-2 -top-6 font-serif text-7xl leading-none text-pink/70 sm:-left-6 sm:text-8xl"
-          >
-            &ldquo;
-          </span>
-          <span
-            aria-hidden
-            className="pointer-events-none absolute -bottom-12 -right-2 font-serif text-7xl leading-none text-pink/70 sm:-right-6 sm:text-8xl"
-          >
-            &rdquo;
-          </span>
-          <p
-            className="mx-auto max-w-2xl text-lg italic font-light text-white/95 sm:text-xl"
-            style={{ textShadow: "0 1px 12px rgba(0,0,0,0.5)" }}
-          >
-            {q.text}
+          <div className="relative aspect-video">
+            <Image
+              src="/images/video-thumbnail.webp"
+              alt="Life at STACEY"
+              fill
+              className="object-cover transition-transform duration-700 group-hover:scale-[1.02]"
+              sizes="100vw"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-black/10" />
+            <span className="absolute inset-0 flex items-center justify-center">
+              <PulsingPlay size="md" />
+            </span>
+            <span className="absolute bottom-3 left-3 inline-flex items-center gap-2 rounded-[3px] bg-black/60 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-white/90 backdrop-blur-sm">
+              90 sec
+            </span>
+          </div>
+        </button>
+      </div>
+
+      {/* DESKTOP, split layout: editorial column left, video player right */}
+      <div className="mx-auto hidden max-w-7xl items-center gap-16 lg:grid lg:grid-cols-[1fr_1.15fr]">
+        <div>
+          {/* Eyebrow with vertical pink line, breaks the pink-chip pattern
+              that repeats elsewhere on the homepage. */}
+          <div className="flex items-center gap-3">
+            <span className="block h-8 w-[3px] rounded-full bg-pink" />
+            <p className="font-mono text-[10px] font-bold uppercase tracking-[0.25em] text-pink">
+              Life at STACEY
+            </p>
+          </div>
+
+          <h2 className="mt-5 text-5xl font-black leading-[1.05] tracking-tight text-white lg:text-6xl">
+            More than a place to{" "}
+            <span className="italic font-light">sleep.</span>
+          </h2>
+
+          <p className="mt-4 max-w-md text-base text-white/60">
+            Ninety seconds. The home, the people, an ordinary Friday.
           </p>
 
-          {/* Multi-avatar strip, quoted member highlighted, rest dimmed */}
-          <div className="mt-5 flex items-center justify-center gap-3">
+          <div
+            key={idx}
+            className="relative mt-10"
+            style={{ animation: "fadeSlide 0.4s ease-out" }}
+          >
+            <span
+              aria-hidden
+              className="pointer-events-none absolute -left-6 -top-6 font-serif text-8xl leading-none text-pink/60"
+            >
+              &ldquo;
+            </span>
+            <p className="relative max-w-md pl-2 text-xl italic font-light leading-snug text-white/95">
+              {q.text}
+            </p>
+          </div>
+
+          {/* Avatar strip = pagination. Click a face to switch the quote. */}
+          <div className="mt-7 flex items-center gap-4">
             <div className="flex -space-x-2">
               {QUOTES.map((other, i) => {
                 const active = i === idx;
                 return (
-                  <span
+                  <button
                     key={other.name}
+                    onClick={() => setIdx(i)}
+                    aria-label={`Quote from ${other.name}`}
                     className={clsx(
-                      "relative inline-block overflow-hidden rounded-full transition-all duration-500",
+                      "relative inline-block overflow-hidden rounded-full transition-all duration-300",
                       active
                         ? "z-10 h-12 w-12 ring-2 ring-pink shadow-[0_0_0_3px_rgba(252,176,192,0.25)]"
-                        : "h-8 w-8 opacity-50 ring-2 ring-white/30",
+                        : "h-9 w-9 opacity-55 ring-2 ring-white/30 hover:opacity-90",
                     )}
                   >
                     <Image src={other.avatar} alt="" fill className="object-cover" sizes="48px" />
-                  </span>
+                  </button>
                 );
               })}
             </div>
-            <p
-              className="text-xs font-medium text-white/80"
-              style={{ textShadow: "0 1px 6px rgba(0,0,0,0.5)" }}
-            >
-              {q.name}, {q.age} · {q.where} · since {q.since}
-            </p>
+            <div>
+              <p className="text-sm font-bold text-white">{q.name}, {q.age}</p>
+              <p className="text-[11px] uppercase tracking-[0.2em] text-white/55">
+                {q.where} · since {q.since}
+              </p>
+            </div>
           </div>
         </div>
 
-        {/* Pagination dots, user-controlled story browsing */}
-        <div className="mt-8 flex justify-center gap-1.5">
-          {QUOTES.map((_, i) => (
-            <button
-              key={i}
-              onClick={() => setIdx(i)}
-              aria-label={`Story ${i + 1}`}
-              className={clsx(
-                "h-1.5 rounded-full transition-all duration-300",
-                i === idx ? "w-6 bg-pink" : "w-1.5 bg-white/30 hover:bg-white/60",
-              )}
-            />
-          ))}
+        <div>
+          <button
+            onClick={() => setOpen(true)}
+            className="group relative block w-full overflow-hidden rounded-[8px] shadow-[0_30px_80px_rgba(0,0,0,0.5)] ring-1 ring-white/10"
+          >
+            <div className="relative aspect-video">
+              <LoopingPlayer />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-black/10" />
+              <span className="absolute inset-0 flex items-center justify-center">
+                <PulsingPlay size="lg" />
+              </span>
+              <span className="absolute bottom-4 left-4 inline-flex items-center gap-2 rounded-[3px] bg-black/60 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-white/90 backdrop-blur-sm">
+                90 sec · the film
+              </span>
+            </div>
+          </button>
         </div>
-
-        <button
-          onClick={() => setOpen(true)}
-          className="group mt-10 inline-flex items-center gap-2 rounded-[5px] bg-white px-6 py-3 text-sm font-bold text-black shadow-2xl transition-all duration-300 hover:scale-[1.04] sm:text-base"
-        >
-          <Play size={14} className="fill-black" />
-          Watch the film
-          <ArrowRight
-            size={14}
-            className="transition-transform duration-300 group-hover:translate-x-0.5"
-          />
-        </button>
       </div>
 
       {open && <VideoModal onClose={() => setOpen(false)} />}

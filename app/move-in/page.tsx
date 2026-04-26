@@ -24,6 +24,7 @@ import Badge from "@/components/ui/Badge";
 import StepAboutYou from "@/components/move-in/StepAboutYou";
 import StepLease from "@/components/move-in/StepLease";
 import SearchFields from "@/components/move-in/SearchFields";
+import JourneyStrip from "@/components/move-in/JourneyStrip";
 import BrunoWidget from "@/components/move-in/BrunoWidget";
 import { Reveal, SectionHeader, CollapsedSection } from "@/components/move-in/chrome";
 import {
@@ -817,14 +818,21 @@ function MoveInFlow() {
                 onSubmit={handleSearch}
               />
 
-              {/* Trust: Press logos */}
+              {/* Journey expectation strip + press logos. Both only show
+                  in the initial state (before stayType is picked) so the
+                  hero stays uncluttered once the user is mid-booking. */}
               {!stayType && (
-                <div className="mt-12 flex items-center justify-center gap-6 sm:gap-10">
-                  <span className="text-[9px] font-medium uppercase tracking-wider text-white/30">As seen in</span>
-                  {["hamburger-abendblatt", "handelsblatt", "die-welt"].map((name) => (
-                    <img key={name} src={`/images/press/${name}.svg`} alt={name} className="h-3 brightness-0 invert opacity-30 sm:h-3.5" />
-                  ))}
-                </div>
+                <>
+                  <div className="mt-10">
+                    <JourneyStrip tone="dark" />
+                  </div>
+                  <div className="mt-10 flex items-center justify-center gap-6 sm:gap-10">
+                    <span className="text-[9px] font-medium uppercase tracking-wider text-white/30">As seen in</span>
+                    {["hamburger-abendblatt", "handelsblatt", "die-welt"].map((name) => (
+                      <img key={name} src={`/images/press/${name}.svg`} alt={name} className="h-3 brightness-0 invert opacity-30 sm:h-3.5" />
+                    ))}
+                  </div>
+                </>
               )}
             </motion.div>
 

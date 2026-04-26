@@ -63,7 +63,7 @@ export default function FAQSection() {
   const [open, setOpen] = useState<number | null>(0);
 
   return (
-    <section className="bg-[#FAFAFA] px-4 py-20 sm:px-6 sm:py-24 lg:px-8">
+    <section className="bg-white px-4 py-14 sm:px-6 sm:py-20 lg:px-8">
       <FadeIn>
         <div className="mx-auto max-w-4xl">
           <div className="mx-auto max-w-2xl text-center">
@@ -80,7 +80,7 @@ export default function FAQSection() {
             </p>
           </div>
 
-          <div className="mt-10 divide-y divide-black/10 rounded-[5px] bg-white shadow-sm ring-1 ring-black/5 sm:mt-12">
+          <div className="mt-10 divide-y divide-black/10 rounded-[5px] bg-white ring-1 ring-black/8 shadow-[0_8px_28px_rgba(0,0,0,0.06)] sm:mt-12">
             {QUESTIONS.map((qa, i) => {
               const isOpen = open === i;
               return (

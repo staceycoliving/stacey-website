@@ -196,34 +196,49 @@ export default function LocationMap({
 
   // City filter, pan/zoom the map to fit the filtered set, dim markers
   // outside the filter so the user's eye lands on what's selected.
+  //
+  // "all" intentionally frames Hamburg (6 of 8 homes live there). A true
+  // fitBounds across Hamburg+Berlin+Vallendar zooms out so far that the
+  // markers shrink into specks and the section reads like a country map
+  // instead of a neighbourhood scout. Berlin/Vallendar markers stay
+  // active and undimmed, just outside the initial viewport, the user
+  // can pan or pick a city tab to focus them.
   useEffect(() => {
     if (!map.current) return;
 
-    const filtered = cityFilter === "all" ? locations : locations.filter((l) => l.city === cityFilter);
-    const coordsList = filtered
+    const framingCity = cityFilter === "all" ? "hamburg" : cityFilter;
+    const framingCoords = locations
+      .filter((l) => l.city === framingCity)
       .map((l) => l.coords)
       .filter((c): c is [number, number] => Boolean(c));
 
-    if (coordsList.length >= 2) {
-      const bounds = coordsList.reduce(
+    if (framingCoords.length >= 2) {
+      const bounds = framingCoords.reduce(
         (b, c) => b.extend(c),
-        new mapboxgl.LngLatBounds(coordsList[0], coordsList[0]),
+        new mapboxgl.LngLatBounds(framingCoords[0], framingCoords[0]),
       );
       map.current.fitBounds(bounds, {
         padding: { top: 60, bottom: 60, left: 40, right: 40 },
         duration: 900,
         maxZoom: 13,
       });
-    } else if (coordsList.length === 1) {
-      const fallback = cityFilter !== "all" ? cityFallback[cityFilter] : null;
+    } else if (framingCoords.length === 1) {
+      const fallback = cityFallback[framingCity];
       if (fallback) {
         map.current.flyTo({ center: fallback.center, zoom: fallback.zoom, duration: 900 });
       } else {
-        map.current.flyTo({ center: coordsList[0], zoom: 13, duration: 900 });
+        map.current.flyTo({ center: framingCoords[0], zoom: 13, duration: 900 });
+      }
+    } else {
+      const fallback = cityFallback[framingCity];
+      if (fallback) {
+        map.current.flyTo({ center: fallback.center, zoom: fallback.zoom, duration: 900 });
       }
     }
 
-    // Dim markers outside the filter.
+    // Dim markers outside the picked city, but keep ALL markers active
+    // when "all" is selected so the user can still tap a Berlin pin
+    // even if the framing centres on Hamburg.
     locations.forEach((loc) => {
       const el = markerEls.current[loc.slug];
       if (!el) return;

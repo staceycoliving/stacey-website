@@ -10,23 +10,9 @@ const vallendar = locations.filter((l) => l.city === "vallendar");
 export default function Footer() {
   return (
     <footer className="bg-black text-white">
-      {/* Claim + CTA */}
-      <div className="border-b border-white/5 py-12">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-          <p
-            className="text-lg font-extrabold uppercase tracking-[0.2em] sm:text-xl"
-            style={{
-              background: "linear-gradient(90deg, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0.5) var(--fill), #FCB0C0 var(--fill), #FCB0C0 100%)",
-              WebkitBackgroundClip: "text",
-              backgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-              animation: "claimFill 5s ease-in-out infinite",
-            }}
-          >OUR MEMBERS CALL US HOME.</p>
-        </div>
-      </div>
-
-      {/* Links */}
+      {/* The animated claim ribbon used to live here, it now has its own
+          stage in FinalCtaSection right above this footer. Footer is
+          back to being a pure functional layer: locations, links, contact. */}
       <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:px-8">
         <div className="grid grid-cols-2 gap-10 lg:grid-cols-4">
           {/* Hamburg */}

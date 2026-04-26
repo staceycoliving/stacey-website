@@ -14,9 +14,11 @@ import HeroHeadline from "@/components/home/HeroHeadline";
 import SearchFields from "@/components/move-in/SearchFields";
 import FeaturesSection from "@/components/home/FeaturesSection";
 import VideoSection from "@/components/home/VideoSection";
-import HowItWorksSection from "@/components/home/HowItWorksSection";
 import FAQSection from "@/components/home/FAQSection";
 import AboutSection from "@/components/home/AboutSection";
+import MemberStoriesSection from "@/components/home/MemberStoriesSection";
+import PullQuoteSection from "@/components/home/PullQuoteSection";
+import FinalCtaSection from "@/components/home/FinalCtaSection";
 import MapSection from "@/components/home/MapSection";
 import { locations, formatMoveInLabel } from "@/lib/data";
 import { expandMoveInDates } from "@/lib/availability";
@@ -368,15 +370,16 @@ export default function HomePage() {
           </motion.div>
         </div>
 
-        {/* Gradient fade into white */}
-        <div className="absolute bottom-0 left-0 right-0 z-10 h-24 bg-gradient-to-t from-[#FAFAFA] to-transparent" />
+        {/* Gradient fade into white, matches the Locations section bg
+            below so the hero photo dissolves cleanly into the page. */}
+        <div className="absolute bottom-0 left-0 right-0 z-10 h-24 bg-gradient-to-t from-white to-transparent" />
       </section>
 
       {/* ── LOCATIONS, low pt on every breakpoint so card tops peek
            under the 82vh hero (mobile + desktop). Bottom padding scales
-           normally for rhythm with the next section. bg-[#FAFAFA] gives
-           the cards a subtle plinth so the white-on-photo content pops. */}
-      <section className="bg-[#FAFAFA] pb-12 pt-4 sm:pb-16 sm:pt-6 md:pb-20 md:pt-8">
+           normally for rhythm with the next section. White section bg,
+           cards earn definition through ring + medium shadow chrome. */}
+      <section className="bg-white pb-12 pt-4 sm:pb-16 sm:pt-6 md:pb-20 md:pt-8">
         {/* No FadeIn here, this section peeks under the hero on first
             paint; triggering a scroll-in animation delays the cards
             and defeats the whole peek-to-tease pattern. */}
@@ -403,7 +406,7 @@ export default function HomePage() {
                         <Link
                           key={loc.slug}
                           href={href}
-                          className="group relative w-[85vw] flex-shrink-0 snap-start overflow-hidden rounded-[5px] bg-white shadow-[0_2px_12px_rgba(0,0,0,0.06)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_8px_24px_rgba(0,0,0,0.12)] sm:w-[340px]"
+                          className="group relative w-[85vw] flex-shrink-0 snap-start overflow-hidden rounded-[5px] bg-white ring-1 ring-black/8 shadow-[0_6px_22px_rgba(0,0,0,0.06)] transition-all duration-300 hover:-translate-y-1 hover:ring-black/15 hover:shadow-[0_16px_36px_rgba(0,0,0,0.12)] sm:w-[340px]"
                         >
                           <div className="relative aspect-[3/4] overflow-hidden">
                             <Image
@@ -441,7 +444,7 @@ export default function HomePage() {
                               <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/60">
                                 {loc.city === "hamburg" ? "Hamburg" : loc.city === "berlin" ? "Berlin" : "Vallendar"}
                               </p>
-                              <h3 className="mt-1 text-2xl font-extrabold leading-tight text-white sm:text-[1.625rem]">
+                              <h3 className="mt-1 text-2xl font-black leading-tight text-white sm:text-3xl">
                                 {loc.name}
                               </h3>
 
@@ -569,9 +572,11 @@ export default function HomePage() {
            Video       → "what's the vibe?"        (emotional palate-cleanser)
            Map         → "is one near me?"          (info-dense, benefits from emotional warm-up)
            Receipts    → "is it worth it?"
-           HowItWorks  → "how do I book?"
-           Testimonials→ "can I trust this?"
-           About       → "who's behind it?" */}
+           FAQ         → "what about [my objection]?"
+           About       → "who's behind it?"
+           The booking-process explainer that used to sit between Map
+           and Receipts moved to /move-in (JourneyStrip) where users
+           actually need it. */}
 
       {/* VIDEO, placed between Locations and Map as a vibe-check.
            Locations cards are visually dense; the cinematic Video
@@ -583,30 +588,38 @@ export default function HomePage() {
            question reads in colour, not as a cold lookup. */}
       <MapSection />
 
-      {/* HOWITWORKS, pulled up as a transition between Map (where) and
-           Receipts (cost). The "boarding-pass / journey home" framing
-           is literally a transition concept: after the user finds a
-           home on the map, this softens them into "okay, what would
-           the journey look like?" before the Receipts deliver the
-           value-case punch. */}
-      <HowItWorksSection />
-
-      {/* RECEIPTS, math/value case. Lands after HowItWorks so the
-           reader has already imagined the journey before being shown
-           what it actually costs. */}
+      {/* WHAT'S INCLUDED, atmospheric inclusions grid (no math comparison
+           anymore, that was Hamburg/LONG-only and rechtlich heikel). */}
       <FeaturesSection />
+
+      {/* PULL-QUOTE, brand pause between two content-heavy sections.
+           Single member quote on full-bleed black, decorative pink
+           quote-marks. Third black anchor on the page (Video, here,
+           Final-CTA), breaks the run of lower-page lese-sektionen. */}
+      <PullQuoteSection />
 
       {/* FAQ, answers the five most common conversion-blocking
            questions (notice period, what's included, couples, pets,
-           why cheaper). Sits after Receipts because that's where most
-           "but..." objections fire. SEO + objection-handling beat. */}
+           why cheaper). Sits right after What's-Included so it catches
+           remaining objections before the trust + social-proof beats
+           build the page toward the conversion ask. */}
       <FAQSection />
 
-      {/* CLOSING TEASERS, one section with two 50:50 cards. Left:
-           about teaser → /why-stacey. Right: member-stories teaser →
-           /why-stacey#stories. The full content (long team story +
-           all 3 interview videos) lives on /why-stacey. */}
+      {/* ABOUT, who is behind this, told as a team-story split (16:9
+           team photo + founder/team copy). Lands after FAQ so trust
+           builds on a reader whose objections are already cleared. */}
       <AboutSection />
+
+      {/* MEMBER STORIES, thin transitional band between About and the
+           Final-CTA. Three clickable interview thumbs without an
+           editorial header (deliberately not a peer-section), each
+           thumb's own "Member story" badge carries the context. */}
+      <MemberStoriesSection />
+
+      {/* FINAL-CTA, gives the brand claim its own stage on full-bleed
+           black and serves the final conversion handoff to /move-in,
+           right before the functional footer. */}
+      <FinalCtaSection />
 
       <Footer />
     </>

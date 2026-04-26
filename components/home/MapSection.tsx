@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState, useEffect } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import dynamic from "next/dynamic";
@@ -18,19 +18,18 @@ const CITY_LABELS: Record<string, string> = {
 const CITY_ORDER = ["hamburg", "berlin", "vallendar"] as const;
 type CityFilter = "all" | (typeof CITY_ORDER)[number];
 
-// Locations grouped + ordered for the side-panel list. Hamburg first
-// (most homes), Berlin, Vallendar. Numbering follows this order so the
-// markers and list cards line up at a glance.
 const ORDERED_LOCATIONS = CITY_ORDER.flatMap((c) =>
   locations.filter((l) => l.city === c),
 );
 
-export default function MapSection({ hideHeader = false }: { hideHeader?: boolean } = {}) {
+// Discovery section, full-bleed map with a glassmorphic floating left
+// rail on desktop (city tabs + scrollable list) and an Airbnb-style
+// bottom-sheet card carousel on mobile (swipe ↔ flies map to that
+// location). Idle framing centers Hamburg, since 6 of 8 homes live
+// there, but Berlin and Vallendar markers stay active and undimmed.
+export default function MapSection() {
   const [city, setCity] = useState<CityFilter>("all");
   const [active, setActive] = useState<string | null>(null);
-  const itemRefs = useRef<Record<string, HTMLDivElement | null>>({});
-  // Mobile carousel: scroll position drives `active`, marker taps drive
-  // scroll. The flag prevents the two from fighting each other.
   const carouselRef = useRef<HTMLDivElement | null>(null);
   const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const programmaticScrollRef = useRef(false);
@@ -40,27 +39,15 @@ export default function MapSection({ hideHeader = false }: { hideHeader?: boolea
     [city],
   );
 
-  // Group filtered list by city for the sticky-header sections in the
-  // side panel. With city filter set we only have one group, but the
-  // markup stays unified.
-  const grouped = useMemo(() => {
-    return CITY_ORDER.filter((c) => filtered.some((l) => l.city === c)).map((c) => ({
-      city: c,
-      locs: filtered.filter((l) => l.city === c),
-    }));
-  }, [filtered]);
-
-  // Sync external active-slug changes (marker tap / desktop hover) to
-  // the carousel + desktop list. Mark the scroll as programmatic so the
-  // carousel scroll listener doesn't fire setActive in a feedback loop.
+  // External active changes (marker tap, list hover) → scroll the
+  // matching mobile card to centre. The programmatic flag prevents the
+  // scroll-listener feedback loop.
   useEffect(() => {
     if (!active) return;
-    itemRefs.current[active]?.scrollIntoView({ behavior: "smooth", block: "nearest" });
     const card = cardRefs.current[active];
     if (card && carouselRef.current) {
       programmaticScrollRef.current = true;
       card.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
-      // Snap settles in <500ms; release the flag a beat later.
       const t = setTimeout(() => {
         programmaticScrollRef.current = false;
       }, 600);
@@ -68,8 +55,9 @@ export default function MapSection({ hideHeader = false }: { hideHeader?: boolea
     }
   }, [active]);
 
-  // Carousel scroll → set active to whichever card is closest to the
-  // viewport center. rAF-throttled, ignored during programmatic scroll.
+  // Mobile carousel swipe → set active to whichever card is closest to
+  // the viewport centre. The map flies to that location automatically
+  // via LocationMap's activeSlug effect.
   useEffect(() => {
     const carousel = carouselRef.current;
     if (!carousel) return;
@@ -101,228 +89,215 @@ export default function MapSection({ hideHeader = false }: { hideHeader?: boolea
   }, [filtered]);
 
   return (
-    <section className="bg-[#FAFAFA] px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
-      <div className="mx-auto max-w-6xl">
-        {/* Editorial header, subtitle morphs to the active city.
-            Skipped when hideHeader is true (e.g. when a parent
-            DiscoverySection already provides the shared header). */}
-        {!hideHeader && (
-          <div className="mb-8 text-center sm:mb-10">
-            <p className="inline-block rounded-[5px] bg-pink px-2.5 py-1 text-[10px] font-bold uppercase text-white">
-              8 homes · 3 cities
-            </p>
-            <h2 className="mt-2 text-3xl font-black leading-tight tracking-tight sm:text-5xl">
-              Find us in{" "}
-              <span className="italic font-light">
-                {city === "all" ? "Hamburg, Berlin, Vallendar" : CITY_LABELS[city]}
-              </span>
-              .
-            </h2>
-            <p className="mx-auto mt-3 max-w-xl text-xs text-gray sm:text-sm">
-              {city === "all" &&
-                "Hover a marker, scroll the list. Click any home to check live availability."}
-              {city === "hamburg" &&
-                "Across the most-walkable neighbourhoods: canals, corner cafés, late-night ferment."}
-              {city === "berlin" &&
-                "Mitte. Two minutes from Museum Island, U2 and U8 at your door."}
-              {city === "vallendar" &&
-                "Quiet outpost on the Rhine, next door to WHU Otto Beisheim."}
-            </p>
-          </div>
-        )}
+    <section className="bg-white py-12 sm:py-16">
+      {/* Editorial header lives inside the constrained container; the map
+          below escapes to full-bleed for cinematic effect. */}
+      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+        <div className="text-center">
+          <p className="inline-block rounded-[5px] bg-pink px-2.5 py-1 text-[10px] font-bold uppercase text-white">
+            8 homes · 3 cities
+          </p>
+          <h2 className="mt-2 text-3xl font-black leading-tight tracking-tight sm:text-5xl">
+            Find us in{" "}
+            <span className="italic font-light">
+              {city === "all" ? "Hamburg, Berlin, Vallendar" : CITY_LABELS[city]}
+            </span>
+            .
+          </h2>
+          <p className="mx-auto mt-3 max-w-xl text-sm text-gray sm:text-base">
+            {city === "all" &&
+              "Hover a marker, scroll the list. Click any home to check live availability."}
+            {city === "hamburg" &&
+              "Across the most-walkable neighbourhoods: canals, corner cafés, late-night ferment."}
+            {city === "berlin" &&
+              "Mitte. Two minutes from Museum Island, U2 and U8 at your door."}
+            {city === "vallendar" &&
+              "Quiet outpost on the Rhine, next door to WHU Otto Beisheim."}
+          </p>
+        </div>
+      </div>
 
-        {/* City tabs, sit close under the header so they read as
-            part of the same heading block rather than a detached row. */}
-        <div className="mb-6 flex justify-center sm:mb-8">
-          <div className="inline-flex gap-1 rounded-[5px] border border-black/10 bg-white p-1 shadow-sm">
-            <button
-              type="button"
-              onClick={() => setCity("all")}
-              className={clsx(
-                "rounded-[3px] px-3 py-1.5 text-xs font-semibold transition-colors",
-                city === "all" ? "bg-black text-white" : "text-black/70 hover:bg-[#F5F5F5]",
-              )}
-            >
-              All
-            </button>
-            {CITY_ORDER.map((c) => (
-              <button
-                key={c}
-                type="button"
-                onClick={() => setCity(c)}
-                className={clsx(
-                  "rounded-[3px] px-3 py-1.5 text-xs font-semibold transition-colors",
-                  city === c ? "bg-black text-white" : "text-black/70 hover:bg-[#F5F5F5]",
-                )}
-              >
-                {CITY_LABELS[c]}
-              </button>
-            ))}
+      {/* Full-bleed map with floating overlays (desktop rail + mobile
+          bottom carousel + mobile city-tabs pill). overflow-hidden keeps
+          the rail's drop-shadow inside this section. */}
+      <div className="relative mt-8 overflow-hidden">
+        <LocationMap
+          cityFilter={city}
+          activeSlug={active}
+          onSelect={setActive}
+          markerVariant="expand"
+        />
+
+        {/* Desktop floating rail, glassmorphic city tabs + scrollable
+            list of compact location items. Hidden under lg. */}
+        <div className="pointer-events-none absolute inset-y-0 left-0 hidden w-full max-w-[380px] p-6 lg:flex lg:flex-col">
+          <div className="pointer-events-auto flex max-h-full flex-col overflow-hidden rounded-[8px] border border-white/40 bg-white/90 shadow-[0_18px_50px_rgba(0,0,0,0.18)] backdrop-blur-md">
+            <div className="border-b border-black/10 p-3">
+              <CityTabs city={city} setCity={setCity} variant="glass" />
+            </div>
+            <div className="space-y-2 overflow-y-auto p-3">
+              {filtered.map((loc) => {
+                const isActive = active === loc.slug;
+                const isShort = loc.stayType === "SHORT";
+                return (
+                  <Link
+                    key={loc.slug}
+                    href={`/locations/${loc.slug}`}
+                    onMouseEnter={() => setActive(loc.slug)}
+                    onMouseLeave={() => setActive(null)}
+                    className={clsx(
+                      "flex w-full items-center gap-3 rounded-[5px] bg-white p-2.5 text-left ring-1 transition-all",
+                      isActive
+                        ? isShort
+                          ? "ring-black/60 shadow-md"
+                          : "ring-pink/60 shadow-md"
+                        : "ring-black/5 hover:ring-black/20",
+                    )}
+                  >
+                    <div className="relative h-12 w-16 flex-shrink-0 overflow-hidden rounded-[3px]">
+                      <Image
+                        src={loc.images[0]}
+                        alt={loc.name}
+                        fill
+                        className="object-cover"
+                        sizes="64px"
+                      />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-bold text-black">{loc.name}</p>
+                      <p className="truncate text-[11px] text-gray">
+                        from €{loc.priceFrom}
+                        {loc.stayType === "SHORT" ? "/night" : "/mo"}
+                      </p>
+                    </div>
+                    <span
+                      className={clsx(
+                        "flex-shrink-0 rounded-[5px] px-2.5 py-1 text-[10px] font-black uppercase tracking-wider",
+                        isShort ? "bg-black text-white" : "bg-pink text-white",
+                      )}
+                    >
+                      {isShort ? "SHORT" : "LONG"}
+                    </span>
+                  </Link>
+                );
+              })}
+            </div>
           </div>
         </div>
 
-        {/* Two-column: side-panel list + map. Mobile shows map FIRST
-            (the visual hook), then the list scrolls in below. Desktop:
-            list left (340px, narrower since numbers are gone), map
-            right. */}
-        <div className="grid gap-4 lg:grid-cols-[340px_1fr] lg:gap-6">
-          {/* Side-panel, Mobile renders the carousel OVERLAID on the
-              map (Airbnb-style), see below. This column only renders
-              the desktop sticky-header list. */}
-          <div className="order-2 hidden min-w-0 lg:order-1 lg:block">
-            <div className="relative max-h-[600px] overflow-y-auto pr-1 lg:max-h-[600px]">
-              {grouped.map((group) => (
-                <div key={group.city} className="mb-3">
-                  {city === "all" && (
-                    <p className="sticky top-0 z-10 -mx-1 mb-2 bg-[#FAFAFA] px-1 py-2 text-[10px] font-bold uppercase tracking-[0.25em] text-pink shadow-[0_8px_8px_-8px_rgba(0,0,0,0.06)]">
-                      {CITY_LABELS[group.city]} · {group.locs.length}{" "}
-                      {group.locs.length === 1 ? "home" : "homes"}
-                    </p>
-                  )}
-                  <div className="space-y-2">
-                    {group.locs.map((loc) => {
-                      const isActive = active === loc.slug;
-                      const isShort = loc.stayType === "SHORT";
-                      return (
-                        <div
-                          key={loc.slug}
-                          ref={(el) => {
-                            itemRefs.current[loc.slug] = el;
-                          }}
-                        >
-                          <Link
-                            href={`/locations/${loc.slug}`}
-                            onMouseEnter={() => setActive(loc.slug)}
-                            onMouseLeave={() => setActive(null)}
-                            className={clsx(
-                              "flex w-full items-center gap-3 rounded-[5px] bg-white p-2.5 text-left shadow-sm ring-1 transition-all",
-                              isActive
-                                ? isShort
-                                  ? "ring-black/60 shadow-md"
-                                  : "ring-pink/60 shadow-md"
-                                : isShort
-                                  ? "ring-black/5 hover:ring-black/30"
-                                  : "ring-black/5 hover:ring-pink/30",
-                            )}
-                          >
-                            <div className="relative h-12 w-16 flex-shrink-0 overflow-hidden rounded-[3px]">
-                              <Image
-                                src={loc.images[0]}
-                                alt={loc.name}
-                                fill
-                                className="object-cover"
-                                sizes="64px"
-                              />
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <p className="truncate text-sm font-bold text-black">
-                                {loc.name}
-                              </p>
-                              <p className="truncate text-[11px] text-gray">
-                                from €{loc.priceFrom}
-                                {loc.stayType === "SHORT" ? "/night" : "/mo"}
-                              </p>
-                            </div>
-                            <span
-                              className={clsx(
-                                "flex-shrink-0 rounded-[5px] px-3 py-1.5 text-xs font-black uppercase tracking-wider",
-                                loc.stayType === "SHORT"
-                                  ? "bg-black text-white"
-                                  : "bg-pink text-white",
-                              )}
-                            >
-                              {loc.stayType === "SHORT" ? "SHORT" : "LONG"}
-                            </span>
-                          </Link>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-          <div className="order-1 lg:order-2">
-            <div className="relative">
-              <LocationMap
-                cityFilter={city}
-                activeSlug={active}
-                onSelect={setActive}
-                markerVariant="expand"
-              />
-              {/* Mobile: cards float over the map's bottom edge,
-                  Airbnb/Google-Maps style. Each card is ~80% of the
-                  map width with snap-center, so the active card is
-                  centred and the previous/next cards peek on either
-                  side. Scrolling the carousel updates `active` →
-                  the map flies to that pin. lg+ hides this since the
-                  side-panel list takes over. */}
-              <div className="pointer-events-none absolute inset-x-0 bottom-[5px] lg:hidden">
+        {/* Mobile floating city tabs, top-centre on the map. */}
+        <div className="absolute left-1/2 top-3 z-10 -translate-x-1/2 lg:hidden">
+          <CityTabs city={city} setCity={setCity} variant="glass" />
+        </div>
+
+        {/* Mobile bottom-sheet carousel, swipeable. Active card stays in
+            sync with the map markers in both directions. */}
+        <div className="pointer-events-none absolute inset-x-0 bottom-3 lg:hidden">
+          <div
+            ref={carouselRef}
+            className="pointer-events-auto flex gap-2 overflow-x-auto px-[10%] pb-1 snap-x snap-mandatory"
+            style={{ scrollbarWidth: "none" }}
+          >
+            {filtered.map((loc) => {
+              const isActive = active === loc.slug;
+              const isShort = loc.stayType === "SHORT";
+              return (
                 <div
-                  ref={carouselRef}
-                  className="pointer-events-auto flex gap-2 overflow-x-auto px-[10%] snap-x snap-mandatory"
-                  style={{ scrollbarWidth: "none" }}
+                  key={loc.slug}
+                  ref={(el) => {
+                    cardRefs.current[loc.slug] = el;
+                  }}
+                  className="w-[80%] max-w-[320px] flex-shrink-0 snap-center"
                 >
-                  {filtered.map((loc) => {
-                    const isActive = active === loc.slug;
-                    const isShort = loc.stayType === "SHORT";
-                    return (
-                      <div
-                        key={loc.slug}
-                        ref={(el) => {
-                          cardRefs.current[loc.slug] = el;
-                        }}
-                        className="w-[80%] max-w-[320px] flex-shrink-0 snap-center"
-                      >
-                        <Link
-                          href={`/locations/${loc.slug}`}
-                          className={clsx(
-                            "flex w-full items-center gap-2.5 rounded-[5px] bg-white p-2 text-left shadow-[0_4px_18px_rgba(0,0,0,0.18)] ring-1 transition-all",
-                            isActive
-                              ? isShort
-                                ? "ring-black/60"
-                                : "ring-pink/60"
-                              : "ring-black/5",
-                          )}
-                        >
-                          <div className="relative h-11 w-14 flex-shrink-0 overflow-hidden rounded-[3px]">
-                            <Image
-                              src={loc.images[0]}
-                              alt={loc.name}
-                              fill
-                              className="object-cover"
-                              sizes="56px"
-                            />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate text-[13px] font-bold leading-tight text-black">
-                              {loc.name}
-                            </p>
-                            <p className="truncate text-[11px] leading-tight text-gray">
-                              from €{loc.priceFrom}
-                              {loc.stayType === "SHORT" ? "/night" : "/mo"}
-                            </p>
-                          </div>
-                          <span
-                            className={clsx(
-                              "flex-shrink-0 rounded-[5px] px-2.5 py-1 text-[11px] font-black uppercase tracking-wider",
-                              loc.stayType === "SHORT"
-                                ? "bg-black text-white"
-                                : "bg-pink text-white",
-                            )}
-                          >
-                            {loc.stayType === "SHORT" ? "SHORT" : "LONG"}
-                          </span>
-                        </Link>
-                      </div>
-                    );
-                  })}
+                  <Link
+                    href={`/locations/${loc.slug}`}
+                    className={clsx(
+                      "flex w-full items-center gap-2.5 rounded-[5px] bg-white p-2 text-left shadow-[0_4px_18px_rgba(0,0,0,0.18)] ring-1 transition-all",
+                      isActive
+                        ? isShort
+                          ? "ring-black/60"
+                          : "ring-pink/60"
+                        : "ring-black/5",
+                    )}
+                  >
+                    <div className="relative h-11 w-14 flex-shrink-0 overflow-hidden rounded-[3px]">
+                      <Image
+                        src={loc.images[0]}
+                        alt={loc.name}
+                        fill
+                        className="object-cover"
+                        sizes="56px"
+                      />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[13px] font-bold leading-tight text-black">
+                        {loc.name}
+                      </p>
+                      <p className="truncate text-[11px] leading-tight text-gray">
+                        from €{loc.priceFrom}
+                        {loc.stayType === "SHORT" ? "/night" : "/mo"}
+                      </p>
+                    </div>
+                    <span
+                      className={clsx(
+                        "flex-shrink-0 rounded-[5px] px-2.5 py-1 text-[11px] font-black uppercase tracking-wider",
+                        isShort ? "bg-black text-white" : "bg-pink text-white",
+                      )}
+                    >
+                      {isShort ? "SHORT" : "LONG"}
+                    </span>
+                  </Link>
                 </div>
-              </div>
-            </div>
+              );
+            })}
           </div>
         </div>
       </div>
     </section>
+  );
+}
+
+function CityTabs({
+  city,
+  setCity,
+  variant = "default",
+}: {
+  city: CityFilter;
+  setCity: (c: CityFilter) => void;
+  variant?: "default" | "glass";
+}) {
+  return (
+    <div
+      className={clsx(
+        "inline-flex gap-1 rounded-[5px] p-1 shadow-sm",
+        variant === "glass"
+          ? "border border-white/20 bg-white/85 backdrop-blur-md"
+          : "border border-black/10 bg-white",
+      )}
+    >
+      <button
+        type="button"
+        onClick={() => setCity("all")}
+        className={clsx(
+          "rounded-[3px] px-3 py-1.5 text-xs font-semibold transition-colors",
+          city === "all" ? "bg-black text-white" : "text-black/70 hover:bg-black/5",
+        )}
+      >
+        All
+      </button>
+      {CITY_ORDER.map((c) => (
+        <button
+          key={c}
+          type="button"
+          onClick={() => setCity(c)}
+          className={clsx(
+            "rounded-[3px] px-3 py-1.5 text-xs font-semibold transition-colors",
+            city === c ? "bg-black text-white" : "text-black/70 hover:bg-black/5",
+          )}
+        >
+          {CITY_LABELS[c]}
+        </button>
+      ))}
+    </div>
   );
 }
