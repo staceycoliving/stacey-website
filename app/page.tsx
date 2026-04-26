@@ -417,7 +417,7 @@ export default function HomePage() {
 
                             {/* SHORT/LONG badge, top-left anchor */}
                             <div className="absolute left-3 top-3">
-                              <span className={`rounded-[5px] px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.15em] ${
+                              <span className={`rounded-[5px] px-3 py-1.5 text-xs font-black uppercase tracking-wider ${
                                 loc.stayType === "SHORT"
                                   ? "bg-black text-white"
                                   : "bg-pink text-white"

@@ -70,7 +70,7 @@ export default function FeaturesSection() {
       <div className="mx-auto max-w-6xl">
         {/* Editorial header */}
         <div className="mx-auto max-w-2xl text-center">
-          <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-pink">
+          <p className="inline-block rounded-[5px] bg-pink px-2.5 py-1 text-[10px] font-bold uppercase text-white">
             Do the math
           </p>
           <h2 className="mt-2 text-3xl font-black leading-tight tracking-tight sm:text-5xl">

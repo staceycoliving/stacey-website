@@ -167,10 +167,7 @@ export default function VideoSection() {
       </button>
 
       <div className="relative z-10 mx-auto w-full max-w-3xl px-4 text-center sm:px-6 lg:px-8">
-        <p
-          className="text-[10px] font-bold uppercase tracking-[0.25em] text-pink"
-          style={{ textShadow: "0 1px 8px rgba(0,0,0,0.4)" }}
-        >
+        <p className="inline-block rounded-[5px] bg-pink px-2.5 py-1 text-[10px] font-bold uppercase text-white">
           Life at STACEY
         </p>
         <h2

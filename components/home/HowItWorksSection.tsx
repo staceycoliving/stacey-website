@@ -201,7 +201,7 @@ export default function HowItWorksSection() {
         <div className="mx-auto max-w-7xl">
           {/* Editorial header, matches the rest of the site's DNA */}
           <div className="mx-auto max-w-2xl text-center">
-            <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-pink">
+            <p className="inline-block rounded-[5px] bg-pink px-2.5 py-1 text-[10px] font-bold uppercase text-white">
               How it works
             </p>
             <h2 className="mt-2 text-3xl font-black leading-tight tracking-tight sm:text-5xl">
@@ -226,7 +226,7 @@ export default function HowItWorksSection() {
                 position="top"
               />
               <div className="mt-6">
-                <p className="font-mono text-[10px] font-bold uppercase tracking-[0.25em] text-pink">
+                <p className="inline-block rounded-[5px] bg-pink px-2.5 py-1 font-mono text-[10px] font-bold uppercase text-white">
                   Step {STEPS[0].num} · {STEPS[0].time}
                 </p>
                 <h3 className="mt-2 text-2xl font-black leading-tight tracking-tight sm:text-3xl">
@@ -285,7 +285,7 @@ export default function HowItWorksSection() {
                 position="top"
               />
               <div className="mt-6">
-                <p className="font-mono text-[10px] font-bold uppercase tracking-[0.25em] text-pink">
+                <p className="inline-block rounded-[5px] bg-pink px-2.5 py-1 font-mono text-[10px] font-bold uppercase text-white">
                   Step {STEPS[1].num} · {STEPS[1].time}
                 </p>
                 <h3 className="mt-2 text-2xl font-black leading-tight tracking-tight sm:text-3xl">
@@ -306,7 +306,7 @@ export default function HowItWorksSection() {
                 caption="Day one · welcome home"
               />
               <div className="mt-6">
-                <p className="font-mono text-[10px] font-bold uppercase tracking-[0.25em] text-pink">
+                <p className="inline-block rounded-[5px] bg-pink px-2.5 py-1 font-mono text-[10px] font-bold uppercase text-white">
                   Step {STEPS[2].num} · {STEPS[2].time}
                 </p>
                 <h3 className="mt-2 text-2xl font-black leading-tight tracking-tight sm:text-3xl">

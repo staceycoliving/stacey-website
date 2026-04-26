@@ -33,7 +33,7 @@ export default function AboutSection() {
               </span>
             </div>
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-pink">
+              <p className="inline-block rounded-[5px] bg-pink px-2.5 py-1 text-[10px] font-bold uppercase text-white">
                 Member stories
               </p>
               <h3 className="mt-2 text-xl font-black leading-tight tracking-tight sm:text-2xl">
@@ -68,7 +68,7 @@ export default function AboutSection() {
               />
             </div>
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-pink">
+              <p className="inline-block rounded-[5px] bg-pink px-2.5 py-1 text-[10px] font-bold uppercase text-white">
                 Hamburg, since 2019
               </p>
               <h3 className="mt-2 text-xl font-black leading-tight tracking-tight sm:text-2xl">

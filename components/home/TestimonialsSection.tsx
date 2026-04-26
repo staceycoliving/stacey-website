@@ -51,7 +51,7 @@ export default function TestimonialsSection() {
     <section className="bg-black px-4 py-20 sm:px-6 sm:py-24 lg:px-8">
       <div className="mx-auto max-w-6xl">
         <div className="mx-auto max-w-2xl text-center">
-          <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-pink">
+          <p className="inline-block rounded-[5px] bg-pink px-2.5 py-1 text-[10px] font-bold uppercase text-white">
             Member stories
           </p>
           <h2 className="mt-2 text-3xl font-black leading-tight tracking-tight text-white sm:text-5xl">

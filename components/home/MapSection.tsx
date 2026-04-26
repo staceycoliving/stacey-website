@@ -108,7 +108,7 @@ export default function MapSection({ hideHeader = false }: { hideHeader?: boolea
             DiscoverySection already provides the shared header). */}
         {!hideHeader && (
           <div className="mb-8 text-center sm:mb-10">
-            <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-pink">
+            <p className="inline-block rounded-[5px] bg-pink px-2.5 py-1 text-[10px] font-bold uppercase text-white">
               8 homes · 3 cities
             </p>
             <h2 className="mt-2 text-3xl font-black leading-tight tracking-tight sm:text-5xl">
@@ -225,7 +225,7 @@ export default function MapSection({ hideHeader = false }: { hideHeader?: boolea
                             </div>
                             <span
                               className={clsx(
-                                "flex-shrink-0 rounded-[5px] px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.12em]",
+                                "flex-shrink-0 rounded-[5px] px-3 py-1.5 text-xs font-black uppercase tracking-wider",
                                 loc.stayType === "SHORT"
                                   ? "bg-black text-white"
                                   : "bg-pink text-white",
@@ -305,7 +305,7 @@ export default function MapSection({ hideHeader = false }: { hideHeader?: boolea
                           </div>
                           <span
                             className={clsx(
-                              "flex-shrink-0 rounded-[5px] px-1.5 py-0.5 text-[9px] font-black uppercase tracking-[0.1em]",
+                              "flex-shrink-0 rounded-[5px] px-2.5 py-1 text-[11px] font-black uppercase tracking-wider",
                               loc.stayType === "SHORT"
                                 ? "bg-black text-white"
                                 : "bg-pink text-white",

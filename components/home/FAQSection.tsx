@@ -21,7 +21,7 @@ const QUESTIONS: QA[] = [
     node: (
       <div className="space-y-3">
         <div className="flex items-start gap-3">
-          <span className="mt-0.5 flex-shrink-0 rounded-[5px] bg-black px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.15em] text-white">
+          <span className="mt-0.5 flex-shrink-0 rounded-[5px] bg-black px-3 py-1.5 text-xs font-black uppercase tracking-wider text-white">
             Short
           </span>
           <p className="text-sm leading-relaxed text-gray sm:text-base">
@@ -29,7 +29,7 @@ const QUESTIONS: QA[] = [
           </p>
         </div>
         <div className="flex items-start gap-3">
-          <span className="mt-0.5 flex-shrink-0 rounded-[5px] bg-pink px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.15em] text-black">
+          <span className="mt-0.5 flex-shrink-0 rounded-[5px] bg-pink px-3 py-1.5 text-xs font-black uppercase tracking-wider text-white">
             Long
           </span>
           <p className="text-sm leading-relaxed text-gray sm:text-base">
@@ -67,7 +67,7 @@ export default function FAQSection() {
       <FadeIn>
         <div className="mx-auto max-w-4xl">
           <div className="mx-auto max-w-2xl text-center">
-            <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-pink">
+            <p className="inline-block rounded-[5px] bg-pink px-2.5 py-1 text-[10px] font-bold uppercase text-white">
               Five questions
             </p>
             <h2 className="mt-2 text-3xl font-black leading-tight tracking-tight sm:text-5xl">
