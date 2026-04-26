@@ -25,7 +25,7 @@ export default function AboutSection() {
             <p className="inline-block rounded-[5px] bg-pink px-2.5 py-1 text-[10px] font-bold uppercase text-white">
               Hamburg · since 2019
             </p>
-            <h2 className="mt-3 text-3xl font-black leading-[1.05] tracking-tight sm:text-5xl">
+            <h2 className="mt-3 text-3xl font-black leading-[1.05] tracking-tight sm:text-4xl lg:text-5xl">
               Built by us, for the way{" "}
               <span className="italic font-light">we</span> wanted to live.
             </h2>

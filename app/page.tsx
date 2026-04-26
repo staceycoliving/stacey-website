@@ -314,7 +314,7 @@ export default function HomePage() {
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 1.1, ease: "easeOut" }}
-            className="mx-auto mt-5 max-w-xl text-sm font-medium leading-snug text-white/80 sm:mt-6 sm:text-lg"
+            className="mx-auto mt-5 max-w-xl text-base font-medium leading-snug text-white/80 sm:mt-6 sm:text-lg lg:text-xl"
           >
             Rooms come furnished. Friends come included.
           </motion.p>

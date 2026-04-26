@@ -55,7 +55,7 @@ const QUESTIONS: QA[] = [
   },
   {
     q: "Why is this cheaper than renting alone?",
-    a: "Because we share fixed costs across more people: building, internet, cleaning, furniture, maintenance. The math is in our &lsquo;Do the math&rsquo; section above: roughly €685/month savings vs. solo Hamburg, €8,200/year. Plus you skip the extra contracts and admin headaches that come with renting solo.",
+    a: "We share the fixed costs across more people: building, internet, cleaning, furniture, maintenance. One bill replaces seven, and the price gets you more than just a room. You also skip the deposits, contracts, and setup costs that come with renting solo.",
   },
 ];
 
@@ -70,7 +70,7 @@ export default function FAQSection() {
             <p className="inline-block rounded-[5px] bg-pink px-2.5 py-1 text-[10px] font-bold uppercase text-white">
               Five questions
             </p>
-            <h2 className="mt-2 text-3xl font-black leading-tight tracking-tight sm:text-5xl">
+            <h2 className="mt-2 text-3xl font-black leading-tight tracking-tight sm:text-4xl lg:text-5xl">
               The things people{" "}
               <span className="italic font-light">actually</span> ask.
             </h2>

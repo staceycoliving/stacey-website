@@ -141,10 +141,10 @@ function InclusionCard({ inc }: { inc: Inclusion }) {
         </span>
         {inc.scope !== "ALL" && <ScopeBadge scope={inc.scope} />}
       </div>
-      <h3 className="mt-4 text-base font-extrabold leading-tight tracking-tight">
+      <h3 className="mt-4 text-base font-extrabold leading-tight tracking-tight lg:text-lg">
         {inc.title}
       </h3>
-      <p className="mt-1.5 text-sm leading-relaxed text-gray">{inc.body}</p>
+      <p className="mt-1.5 text-sm leading-relaxed text-gray lg:text-base">{inc.body}</p>
     </article>
   );
 }
@@ -157,7 +157,7 @@ export default function FeaturesSection() {
           <p className="inline-block rounded-[5px] bg-pink px-2.5 py-1 text-[10px] font-bold uppercase text-white">
             What&rsquo;s included
           </p>
-          <h2 className="mt-3 text-3xl font-black leading-tight tracking-tight sm:text-5xl">
+          <h2 className="mt-3 text-3xl font-black leading-tight tracking-tight sm:text-4xl lg:text-5xl">
             Almost <span className="italic font-light">everything</span> included.
           </h2>
           <p className="mt-3 text-sm text-gray sm:text-base">

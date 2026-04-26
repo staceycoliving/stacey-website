@@ -97,7 +97,7 @@ export default function MapSection() {
           <p className="inline-block rounded-[5px] bg-pink px-2.5 py-1 text-[10px] font-bold uppercase text-white">
             8 homes · 3 cities
           </p>
-          <h2 className="mt-2 text-3xl font-black leading-tight tracking-tight sm:text-5xl">
+          <h2 className="mt-2 text-3xl font-black leading-tight tracking-tight sm:text-4xl lg:text-5xl">
             Find us in{" "}
             <span className="italic font-light">
               {city === "all" ? "Hamburg, Berlin, Vallendar" : CITY_LABELS[city]}
