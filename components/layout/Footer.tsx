@@ -80,7 +80,7 @@ export default function Footer() {
           <div className="flex items-center gap-4">
             <FooterLogo />
           </div>
-          <p className="text-[11px] text-white/30">&copy; {new Date().getFullYear()} STACEY Real Estate GmbH</p>
+          <p className="text-xs text-white/30">&copy; {new Date().getFullYear()} STACEY Real Estate GmbH</p>
         </div>
       </div>
     </footer>

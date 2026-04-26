@@ -67,7 +67,7 @@ export default function FAQSection() {
       <FadeIn>
         <div className="mx-auto max-w-4xl">
           <div className="mx-auto max-w-2xl text-center">
-            <p className="inline-block rounded-[5px] bg-pink px-2.5 py-1 text-[10px] font-bold uppercase text-white">
+            <p className="inline-block rounded-[5px] bg-pink px-2.5 py-1 text-[11px] font-bold uppercase text-white">
               Five questions
             </p>
             <h2 className="mt-2 text-3xl font-black leading-tight tracking-tight sm:text-4xl lg:text-5xl">

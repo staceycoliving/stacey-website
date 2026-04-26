@@ -158,10 +158,10 @@ export default function VideoSection() {
     >
       {/* MOBILE, classic stack: pink chip → headline → subline → player */}
       <div className="mx-auto max-w-3xl text-center lg:hidden">
-        <p className="inline-block rounded-[5px] bg-pink px-2.5 py-1 text-[10px] font-bold uppercase text-white">
+        <p className="inline-block rounded-[5px] bg-pink px-2.5 py-1 text-[11px] font-bold uppercase text-white">
           Life at STACEY
         </p>
-        <h2 className="mt-3 text-4xl font-black leading-[1.05] tracking-tight text-white sm:text-5xl">
+        <h2 className="mt-3 text-3xl font-black leading-[1.05] tracking-tight text-white sm:text-4xl lg:text-5xl">
           More than a place to <span className="italic font-light">sleep.</span>
         </h2>
         <p className="mx-auto mt-3 max-w-md text-sm text-white/60 sm:text-base">
@@ -184,7 +184,7 @@ export default function VideoSection() {
             <span className="absolute inset-0 flex items-center justify-center">
               <PulsingPlay size="md" />
             </span>
-            <span className="absolute bottom-3 left-3 inline-flex items-center gap-2 rounded-[3px] bg-black/60 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-white/90 backdrop-blur-sm">
+            <span className="absolute bottom-3 left-3 inline-flex items-center gap-2 rounded-[3px] bg-black/60 px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.2em] text-white/90 backdrop-blur-sm">
               90 sec
             </span>
           </div>
@@ -198,12 +198,12 @@ export default function VideoSection() {
               that repeats elsewhere on the homepage. */}
           <div className="flex items-center gap-3">
             <span className="block h-8 w-[3px] rounded-full bg-pink" />
-            <p className="font-mono text-[10px] font-bold uppercase tracking-[0.25em] text-pink">
+            <p className="font-mono text-[11px] font-bold uppercase tracking-[0.25em] text-pink">
               Life at STACEY
             </p>
           </div>
 
-          <h2 className="mt-5 text-5xl font-black leading-[1.05] tracking-tight text-white lg:text-6xl">
+          <h2 className="mt-5 text-3xl font-black leading-[1.05] tracking-tight text-white sm:text-4xl lg:text-5xl">
             More than a place to{" "}
             <span className="italic font-light">sleep.</span>
           </h2>
@@ -270,7 +270,7 @@ export default function VideoSection() {
               <span className="absolute inset-0 flex items-center justify-center">
                 <PulsingPlay size="lg" />
               </span>
-              <span className="absolute bottom-4 left-4 inline-flex items-center gap-2 rounded-[3px] bg-black/60 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-white/90 backdrop-blur-sm">
+              <span className="absolute bottom-4 left-4 inline-flex items-center gap-2 rounded-[3px] bg-black/60 px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.2em] text-white/90 backdrop-blur-sm">
                 90 sec · the film
               </span>
             </div>

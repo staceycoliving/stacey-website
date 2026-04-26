@@ -84,7 +84,7 @@ export default function MemberStoriesSection() {
                       <Play size={18} className="ml-0.5 fill-black text-black" strokeWidth={0} />
                     </span>
                   </span>
-                  <span className="absolute bottom-3 left-3 inline-block rounded-[3px] bg-pink px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.2em] text-white">
+                  <span className="absolute bottom-3 left-3 inline-block rounded-[3px] bg-pink px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.2em] text-white">
                     {iv.label}
                   </span>
                 </div>

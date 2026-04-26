@@ -54,7 +54,7 @@ export default function JourneyStrip({ tone = "light" }: { tone?: "light" | "dar
             <s.icon size={16} className="text-black" strokeWidth={2.4} />
             <span
               className={clsx(
-                "absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-black font-mono text-[8px] font-black text-pink ring-1",
+                "absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-black font-mono text-[10px] font-black text-pink ring-1",
                 isDark ? "ring-black" : "ring-white",
               )}
             >
@@ -65,7 +65,7 @@ export default function JourneyStrip({ tone = "light" }: { tone?: "light" | "dar
           {/* Time-code + label */}
           <p
             className={clsx(
-              "mt-2.5 font-mono text-[9px] font-bold uppercase tracking-[0.2em]",
+              "mt-2.5 font-mono text-[11px] font-bold uppercase tracking-[0.2em]",
               isDark ? "text-pink" : "text-pink",
             )}
           >

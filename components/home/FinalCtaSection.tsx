@@ -25,7 +25,7 @@ export default function FinalCtaSection() {
 
       <div className="relative mx-auto max-w-5xl text-center">
         <p
-          className="text-[2.5rem] font-black uppercase leading-[1.05] tracking-[0.04em] sm:text-6xl lg:text-7xl xl:text-[5.5rem]"
+          className="text-5xl font-black uppercase leading-[1.05] tracking-tight sm:text-6xl sm:tracking-[0.04em] lg:text-7xl xl:text-[5.5rem]"
           style={{
             background:
               "linear-gradient(90deg, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0.5) var(--fill), #FCB0C0 var(--fill), #FCB0C0 100%)",

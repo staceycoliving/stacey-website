@@ -49,8 +49,8 @@ export default function PullQuoteSection() {
             <Image src="/images/members/member-7.jpeg" alt="" fill className="object-cover" sizes="48px" />
           </span>
           <div className="text-left">
-            <p className="text-sm font-bold text-white">Lisa, 36</p>
-            <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-white/55">
+            <p className="text-sm font-bold text-white lg:text-base">Lisa, 36</p>
+            <p className="font-mono text-[11px] uppercase tracking-[0.25em] text-white/55">
               Eppendorf · since Mar 2025
             </p>
           </div>

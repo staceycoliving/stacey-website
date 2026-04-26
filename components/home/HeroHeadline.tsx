@@ -28,7 +28,7 @@ export default function HeroHeadline() {
         };
 
   return (
-    <h1 className="mx-auto max-w-5xl text-center text-[2.5rem] font-black leading-[0.95] tracking-tight text-white sm:text-6xl lg:text-7xl xl:text-8xl">
+    <h1 className="mx-auto max-w-5xl text-center text-5xl font-black leading-[0.95] tracking-tight text-white sm:text-6xl lg:text-7xl xl:text-8xl">
       <Line>
         <motion.span {...word(0.05)} className="inline-block">
           OUR

@@ -94,7 +94,7 @@ export default function MapSection() {
           below escapes to full-bleed for cinematic effect. */}
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <div className="text-center">
-          <p className="inline-block rounded-[5px] bg-pink px-2.5 py-1 text-[10px] font-bold uppercase text-white">
+          <p className="inline-block rounded-[5px] bg-pink px-2.5 py-1 text-[11px] font-bold uppercase text-white">
             8 homes · 3 cities
           </p>
           <h2 className="mt-2 text-3xl font-black leading-tight tracking-tight sm:text-4xl lg:text-5xl">
@@ -165,7 +165,7 @@ export default function MapSection() {
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-bold text-black">{loc.name}</p>
-                      <p className="truncate text-[11px] text-gray">
+                      <p className="truncate text-xs text-gray">
                         from €{loc.priceFrom}
                         {loc.stayType === "SHORT" ? "/night" : "/mo"}
                       </p>
@@ -230,10 +230,10 @@ export default function MapSection() {
                       />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-[13px] font-bold leading-tight text-black">
+                      <p className="truncate text-sm font-bold leading-tight text-black">
                         {loc.name}
                       </p>
-                      <p className="truncate text-[11px] leading-tight text-gray">
+                      <p className="truncate text-xs leading-tight text-gray">
                         from €{loc.priceFrom}
                         {loc.stayType === "SHORT" ? "/night" : "/mo"}
                       </p>

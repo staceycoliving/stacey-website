@@ -122,7 +122,7 @@ function ScopeBadge({ scope }: { scope: Scope }) {
   return (
     <span
       className={clsx(
-        "inline-block rounded-[3px] px-1.5 py-0.5 text-[9px] font-black uppercase tracking-[0.18em]",
+        "inline-block rounded-[3px] px-1.5 py-0.5 text-[10px] font-black uppercase tracking-[0.18em]",
         scope === "SHORT" ? "bg-black text-white" : "bg-pink text-black",
       )}
     >
@@ -154,7 +154,7 @@ export default function FeaturesSection() {
     <section className="bg-[#FAFAFA] px-4 py-14 sm:px-6 sm:py-20 lg:px-8">
       <FadeIn>
         <div className="mx-auto max-w-2xl text-center">
-          <p className="inline-block rounded-[5px] bg-pink px-2.5 py-1 text-[10px] font-bold uppercase text-white">
+          <p className="inline-block rounded-[5px] bg-pink px-2.5 py-1 text-[11px] font-bold uppercase text-white">
             What&rsquo;s included
           </p>
           <h2 className="mt-3 text-3xl font-black leading-tight tracking-tight sm:text-4xl lg:text-5xl">

@@ -179,7 +179,7 @@ export default function Navbar({
                       style={{ width: "360px" }}
                     >
                       <div className="rounded-[5px] bg-black/95 p-4 shadow-2xl ring-1 ring-white/15 backdrop-blur-xl">
-                        <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.25em] text-white/50">
+                        <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.25em] text-white/50">
                           {city.name} · {city.locs.length}{" "}
                           {city.locs.length === 1 ? "location" : "locations"}
                         </p>
@@ -201,7 +201,7 @@ export default function Navbar({
                               </div>
                               <div className="flex-1">
                                 <p className="text-sm font-semibold text-white">{loc.name}</p>
-                                <p className="text-[11px] text-white/60">
+                                <p className="text-xs text-white/60">
                                   from €
                                   {(() => {
                                     if (loc.stayType === "SHORT" && basePrices[loc.slug]) {
@@ -214,7 +214,7 @@ export default function Navbar({
                                 </p>
                               </div>
                               <span
-                                className={`rounded-[5px] px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.15em] ${
+                                className={`rounded-[5px] px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.15em] ${
                                   loc.stayType === "SHORT"
                                     ? "bg-white text-black"
                                     : "bg-pink text-white"
@@ -387,7 +387,7 @@ export default function Navbar({
           <div className="mx-auto max-w-md px-6 pb-28 pt-6">
             {navCities.map((city) => (
               <div key={city.slug} className="mb-7">
-                <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.25em] text-white/50">
+                <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.25em] text-white/50">
                   {city.name} · {city.locs.length}{" "}
                   {city.locs.length === 1 ? "location" : "locations"}
                 </p>

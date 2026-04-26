@@ -22,14 +22,14 @@ export default function AboutSection() {
           {/* MOBILE, classic centered stack mirroring the VideoSection
               mobile pattern: pink chip → headline → body → photo → CTA. */}
           <div className="mx-auto max-w-3xl text-center lg:hidden">
-            <p className="inline-block rounded-[5px] bg-pink px-2.5 py-1 text-[10px] font-bold uppercase text-white">
+            <p className="inline-block rounded-[5px] bg-pink px-2.5 py-1 text-[11px] font-bold uppercase text-white">
               Hamburg · since 2019
             </p>
             <h2 className="mt-3 text-3xl font-black leading-[1.05] tracking-tight sm:text-4xl lg:text-5xl">
               Built by us, for the way{" "}
               <span className="italic font-light">we</span> wanted to live.
             </h2>
-            <div className="mx-auto mt-5 max-w-md space-y-3.5 text-left text-sm leading-relaxed text-gray">
+            <div className="mx-auto mt-5 max-w-md space-y-3.5 text-left text-sm leading-relaxed text-gray sm:text-base">
               <p>
                 STACEY started in Hamburg, in 2019. Born from the friction
                 of finding a flat: bureaucracy, scattered listings, high
@@ -76,12 +76,12 @@ export default function AboutSection() {
             <div>
               <div className="flex items-center gap-3">
                 <span className="block h-8 w-[3px] rounded-full bg-pink" />
-                <p className="font-mono text-[10px] font-bold uppercase tracking-[0.25em] text-pink">
+                <p className="font-mono text-[11px] font-bold uppercase tracking-[0.25em] text-pink">
                   Hamburg · since 2019
                 </p>
               </div>
 
-              <h2 className="mt-5 text-5xl font-black leading-[1.05] tracking-tight lg:text-6xl">
+              <h2 className="mt-5 text-3xl font-black leading-[1.05] tracking-tight sm:text-4xl lg:text-5xl">
                 Built by us, for the way{" "}
                 <span className="italic font-light">we</span> wanted to live.
               </h2>

@@ -341,7 +341,7 @@ export default function HomePage() {
                 </span>
               ))}
             </div>
-            <span className="text-[11px] font-semibold text-white/90 sm:text-xs">
+            <span className="text-xs font-semibold text-white/90 sm:text-sm">
               + 295 more members
             </span>
           </motion.div>
@@ -441,7 +441,7 @@ export default function HomePage() {
                             {/* Bottom story block: city → name →
                                 avatars (social proof) → live availability */}
                             <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-5">
-                              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/60">
+                              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-white/60">
                                 {loc.city === "hamburg" ? "Hamburg" : loc.city === "berlin" ? "Berlin" : "Vallendar"}
                               </p>
                               <h3 className="mt-1 text-2xl font-black leading-tight text-white sm:text-3xl">
@@ -460,7 +460,7 @@ export default function HomePage() {
                                       </span>
                                     ))}
                                   </div>
-                                  <span className="text-[11px] font-medium text-white/85">
+                                  <span className="text-xs font-medium text-white/85">
                                     {s.newResidents} new {s.newResidents === 1 ? "resident" : "residents"} this month
                                   </span>
                                 </div>
@@ -472,7 +472,7 @@ export default function HomePage() {
                                     <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-pink opacity-70" />
                                     <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-pink" />
                                   </span>
-                                  <span className="text-[11px] font-semibold text-white">
+                                  <span className="text-xs font-semibold text-white">
                                     {s.available} {s.available === 1 ? "room" : "rooms"} available now
                                   </span>
                                 </div>
@@ -481,7 +481,7 @@ export default function HomePage() {
                               {s && s.available === 0 && s.nextAvailable && (
                                 <div className="mt-3 flex items-center gap-1.5">
                                   <span className="h-1.5 w-1.5 rounded-full bg-white/60" />
-                                  <span className="text-[11px] font-medium text-white/80">
+                                  <span className="text-xs font-medium text-white/80">
                                     Next available {new Date(s.nextAvailable).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
                                   </span>
                                 </div>
