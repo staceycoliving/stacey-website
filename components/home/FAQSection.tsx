@@ -25,7 +25,7 @@ const QUESTIONS: QA[] = [
             Short
           </span>
           <p className="text-sm leading-relaxed text-gray sm:text-base">
-            From 5 nights. Available at Alster and Downtown.
+            Up to 180 nights. Available at Alster and Downtown.
           </p>
         </div>
         <div className="flex items-start gap-3">
@@ -33,8 +33,9 @@ const QUESTIONS: QA[] = [
             Long
           </span>
           <p className="text-sm leading-relaxed text-gray sm:text-base">
-            From 3 months at all other STACEY homes. Notice period is 3 months;
-            you can transfer between STACEY cities anytime in between, no fees.
+            From 3 months at all other STACEY homes. Notice period is 3 months.
+            Want to switch cities later? Members get priority over external
+            applicants when a STACEY home opens up elsewhere.
           </p>
         </div>
       </div>
@@ -50,11 +51,11 @@ const QUESTIONS: QA[] = [
   },
   {
     q: "What about pets?",
-    a: "Sorry, no. STACEY homes are pet-free across the board. It keeps the shared kitchens, common areas, and the housemates with allergies all happy. We know that&rsquo;s a hard no for some, and we&rsquo;re sorry.",
+    a: "We love animals, and saying no to them isn&rsquo;t easy. STACEY homes are pet-free so the shared kitchens, common areas, and housemates with allergies stay comfortable for everyone. If your dog or cat is part of the family, we completely understand that STACEY may not be the right fit, and we wish you the best wherever you land.",
   },
   {
     q: "Why is this cheaper than renting alone?",
-    a: "Because we share fixed costs across more people: building, internet, cleaning, furniture, maintenance. The math is in our &lsquo;Do the math&rsquo; section above: roughly €685/month savings vs. solo Hamburg, €8,200/year. Plus you skip seven contracts and one Schufa.",
+    a: "Because we share fixed costs across more people: building, internet, cleaning, furniture, maintenance. The math is in our &lsquo;Do the math&rsquo; section above: roughly €685/month savings vs. solo Hamburg, €8,200/year. Plus you skip the extra contracts and admin headaches that come with renting solo.",
   },
 ];
 
