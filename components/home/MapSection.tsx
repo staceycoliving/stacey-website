@@ -25,7 +25,7 @@ const ORDERED_LOCATIONS = CITY_ORDER.flatMap((c) =>
   locations.filter((l) => l.city === c),
 );
 
-export default function MapSection() {
+export default function MapSection({ hideHeader = false }: { hideHeader?: boolean } = {}) {
   const [city, setCity] = useState<CityFilter>("all");
   const [active, setActive] = useState<string | null>(null);
   const itemRefs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -103,29 +103,33 @@ export default function MapSection() {
   return (
     <section className="bg-[#FAFAFA] px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
       <div className="mx-auto max-w-6xl">
-        {/* Editorial header, subtitle morphs to the active city */}
-        <div className="mb-8 text-center sm:mb-10">
-          <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-pink">
-            8 homes · 3 cities
-          </p>
-          <h2 className="mt-2 text-3xl font-black leading-tight tracking-tight sm:text-5xl">
-            Find us in{" "}
-            <span className="italic font-light">
-              {city === "all" ? "Hamburg, Berlin, Vallendar" : CITY_LABELS[city]}
-            </span>
-            .
-          </h2>
-          <p className="mx-auto mt-3 max-w-xl text-xs text-gray sm:text-sm">
-            {city === "all" &&
-              "Hover a marker, scroll the list. Click any home to check live availability."}
-            {city === "hamburg" &&
-              "Across the most-walkable neighbourhoods: canals, corner cafés, late-night ferment."}
-            {city === "berlin" &&
-              "Mitte. Two minutes from Museum Island, U2 and U8 at your door."}
-            {city === "vallendar" &&
-              "Quiet outpost on the Rhine, next door to WHU Otto Beisheim."}
-          </p>
-        </div>
+        {/* Editorial header, subtitle morphs to the active city.
+            Skipped when hideHeader is true (e.g. when a parent
+            DiscoverySection already provides the shared header). */}
+        {!hideHeader && (
+          <div className="mb-8 text-center sm:mb-10">
+            <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-pink">
+              8 homes · 3 cities
+            </p>
+            <h2 className="mt-2 text-3xl font-black leading-tight tracking-tight sm:text-5xl">
+              Find us in{" "}
+              <span className="italic font-light">
+                {city === "all" ? "Hamburg, Berlin, Vallendar" : CITY_LABELS[city]}
+              </span>
+              .
+            </h2>
+            <p className="mx-auto mt-3 max-w-xl text-xs text-gray sm:text-sm">
+              {city === "all" &&
+                "Hover a marker, scroll the list. Click any home to check live availability."}
+              {city === "hamburg" &&
+                "Across the most-walkable neighbourhoods: canals, corner cafés, late-night ferment."}
+              {city === "berlin" &&
+                "Mitte. Two minutes from Museum Island, U2 and U8 at your door."}
+              {city === "vallendar" &&
+                "Quiet outpost on the Rhine, next door to WHU Otto Beisheim."}
+            </p>
+          </div>
+        )}
 
         {/* City tabs, sit close under the header so they read as
             part of the same heading block rather than a detached row. */}
