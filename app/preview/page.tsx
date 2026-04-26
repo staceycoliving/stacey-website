@@ -1,61 +1,47 @@
 "use client";
 
-// Dev-only preview, three layouts that group the Locations cards and
-// the Map section under one shared editorial header. Open /preview.
+// Dev-only preview, four ways to place the editorial header BETWEEN
+// Locations cards and Map at the visual boundary between them.
 
 import dynamic from "next/dynamic";
 import Image from "next/image";
 import Link from "next/link";
-import { useMemo, useState } from "react";
-import { ArrowRight } from "lucide-react";
+import { useMemo } from "react";
+import { ArrowRight, MapPin } from "lucide-react";
 import { clsx } from "clsx";
 import { locations } from "@/lib/data";
 
 const MapSection = dynamic(() => import("@/components/home/MapSection"), { ssr: false });
 
-const CITY_LABELS: Record<string, string> = {
-  hamburg: "Hamburg",
-  berlin: "Berlin",
-  vallendar: "Vallendar",
-};
-const CITY_ORDER = ["hamburg", "berlin", "vallendar"] as const;
-type CityFilter = "all" | (typeof CITY_ORDER)[number];
+/* ─── Shared header copy ─────────────────────────────────────────── */
 
-/* ─── Shared header ──────────────────────────────────────────────── */
-
-function DiscoveryHeader({ city = "all" }: { city?: CityFilter }) {
+function DiscoveryHeading() {
   return (
-    <div className="mx-auto max-w-2xl text-center">
+    <>
       <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-pink">
         8 homes · 3 cities
       </p>
       <h2 className="mt-2 text-3xl font-black leading-tight tracking-tight sm:text-5xl">
         Find us in{" "}
-        <span className="italic font-light">
-          {city === "all" ? "Hamburg, Berlin, Vallendar" : CITY_LABELS[city]}
-        </span>
-        .
+        <span className="italic font-light">Hamburg, Berlin, Vallendar</span>.
       </h2>
       <p className="mx-auto mt-3 max-w-xl text-sm text-gray sm:text-base">
         Hover a marker, scroll the list. Click any home to check live availability.
       </p>
-    </div>
+    </>
   );
 }
 
-/* ─── Mock locations carousel (replicates the homepage cards) ──── */
+/* ─── Mock Locations carousel ────────────────────────────────────── */
 
-function LocationsCarousel({ city = "all" }: { city?: CityFilter }) {
-  const filtered = useMemo(() => {
-    if (city === "all") return locations;
-    return locations.filter((l) => l.city === city);
-  }, [city]);
+function LocationsCarousel() {
+  const list = useMemo(() => locations.slice(0, 6), []);
   return (
     <div
       className="-mx-4 flex gap-4 overflow-x-auto px-4 pb-4 snap-x snap-mandatory sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8"
       style={{ scrollbarWidth: "none" }}
     >
-      {filtered.map((loc) => (
+      {list.map((loc) => (
         <Link
           key={loc.slug}
           href={`/locations/${loc.slug}`}
@@ -86,15 +72,7 @@ function LocationsCarousel({ city = "all" }: { city?: CityFilter }) {
 
 /* ─── Variant labels ─────────────────────────────────────────────── */
 
-function VariantLabel({
-  n,
-  title,
-  desc,
-}: {
-  n: string;
-  title: string;
-  desc?: string;
-}) {
+function VariantLabel({ n, title, desc }: { n: string; title: string; desc?: string }) {
   return (
     <div className="bg-black px-6 py-4">
       <div className="mx-auto max-w-7xl">
@@ -109,105 +87,132 @@ function VariantLabel({
 }
 
 /* ================================================================== */
-/* V1, header band above, then Locations, then Map (3 sections)       */
-/*    Lightest touch. Sections stay structurally separate; the shared */
-/*    header above ties them visually. Map keeps its city tabs which */
-/*    only filter the map (not the cards).                            */
+/* V1, Straddle the boundary (two-tone bg)                             */
+/*    Cards on #FAFAFA, Map on white. Header sits centered on the     */
+/*    color seam so its top half is on grey, bottom half on white.    */
+/*    Subtle but readable since both bgs are light.                   */
 /* ================================================================== */
 function V1() {
   return (
     <>
-      <section className="bg-[#FAFAFA] px-4 pt-16 pb-6 sm:px-6 sm:pt-20 sm:pb-8 lg:px-8">
-        <div className="mx-auto max-w-6xl">
-          <DiscoveryHeader />
-        </div>
-      </section>
-      <section className="bg-[#FAFAFA] px-4 pb-12 sm:px-6 sm:pb-16 lg:px-8">
-        <div className="mx-auto max-w-6xl">
+      <section className="bg-[#FAFAFA] py-12">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <LocationsCarousel />
         </div>
       </section>
-      <MapSection />
+      <section className="bg-white">
+        <div className="mx-auto -mt-10 max-w-2xl px-4 pb-10 text-center sm:px-6 lg:px-8">
+          <DiscoveryHeading />
+        </div>
+        <MapSection hideHeader />
+      </section>
     </>
   );
 }
 
 /* ================================================================== */
-/* V2, single wrapper section, no breaks between cards and map        */
-/*    Header at top, cards below, map below that. All inside one     */
-/*    bg-#FAFAFA section so the three blocks read as one cluster.    */
-/*    Map renders without its own header (hideHeader prop).          */
+/* V2, Floating card stamp                                             */
+/*    Header lives in a white card with shadow + ring, sitting with   */
+/*    negative margins so it overlaps both Cards and Map. Reads as a  */
+/*    pull-quote stamp tying the two together.                        */
 /* ================================================================== */
 function V2() {
   return (
-    <section className="bg-[#FAFAFA] px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
-      <div className="mx-auto max-w-6xl">
-        <DiscoveryHeader />
-        <div className="mt-10">
+    <div className="relative">
+      <section className="bg-[#FAFAFA] py-12">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <LocationsCarousel />
         </div>
+      </section>
+      {/* Card stamp, overlaps both sections via negative margins */}
+      <div className="relative z-10 mx-auto -mt-16 mb-[-4rem] max-w-3xl px-4 sm:px-6 lg:px-8">
+        <div className="rounded-[5px] bg-white p-8 text-center shadow-[0_18px_50px_rgba(0,0,0,0.12)] ring-1 ring-black/5 sm:p-10">
+          <DiscoveryHeading />
+        </div>
       </div>
-      <div className="mt-4">
+      <section className="bg-[#FAFAFA] pt-24">
         <MapSection hideHeader />
-      </div>
-    </section>
+      </section>
+    </div>
   );
 }
 
 /* ================================================================== */
-/* V3, single wrapper + shared city filter at top                     */
-/*    City tabs lifted up, sit under the header, control both the    */
-/*    cards filter AND the map. Headline morphs based on selected    */
-/*    city. (Note: in this preview the embedded MapSection still     */
-/*    has its own internal city state, so the map below would also   */
-/*    need to be wired to the shared state in real implementation.   */
-/*    The cards filtering and headline morph demonstrate the idea.) */
+/* V3, Diagonal seam with header on the angle                          */
+/*    Cards section ends with a clip-path angle. Map section begins   */
+/*    with the same angle. The header sits centered on the angled    */
+/*    seam, with a thin pink hairline running through it.            */
 /* ================================================================== */
 function V3() {
-  const [city, setCity] = useState<CityFilter>("all");
   return (
-    <section className="bg-[#FAFAFA] px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
-      <div className="mx-auto max-w-6xl">
-        <DiscoveryHeader city={city} />
-        <div className="mt-6 flex justify-center">
-          <div className="inline-flex gap-1 rounded-[5px] border border-black/10 bg-white p-1 shadow-sm">
-            <button
-              type="button"
-              onClick={() => setCity("all")}
-              className={clsx(
-                "rounded-[3px] px-3 py-1.5 text-xs font-semibold transition-colors",
-                city === "all" ? "bg-black text-white" : "text-black/70 hover:bg-[#F5F5F5]",
-              )}
-            >
-              All
-            </button>
-            {CITY_ORDER.map((c) => (
-              <button
-                key={c}
-                type="button"
-                onClick={() => setCity(c)}
-                className={clsx(
-                  "rounded-[3px] px-3 py-1.5 text-xs font-semibold transition-colors",
-                  city === c ? "bg-black text-white" : "text-black/70 hover:bg-[#F5F5F5]",
-                )}
-              >
-                {CITY_LABELS[c]}
-              </button>
-            ))}
+    <div className="relative">
+      <section
+        className="bg-[#FAFAFA] py-12"
+        style={{ clipPath: "polygon(0 0, 100% 0, 100% calc(100% - 60px), 0 100%)" }}
+      >
+        <div className="mx-auto max-w-6xl px-4 pb-10 sm:px-6 lg:px-8">
+          <LocationsCarousel />
+        </div>
+      </section>
+      <div className="-mt-12 mb-12">
+        <div className="mx-auto max-w-2xl px-4 text-center sm:px-6 lg:px-8">
+          <DiscoveryHeading />
+          {/* Hairline that hints the section transition */}
+          <div
+            aria-hidden
+            className="mx-auto mt-6 h-px max-w-xs"
+            style={{
+              backgroundImage: "linear-gradient(to right, transparent, #FCB0C0 50%, transparent)",
+            }}
+          />
+        </div>
+      </div>
+      <section
+        className="bg-white pt-12"
+        style={{ clipPath: "polygon(0 60px, 100% 0, 100% 100%, 0 100%)" }}
+      >
+        <MapSection hideHeader />
+      </section>
+    </div>
+  );
+}
+
+/* ================================================================== */
+/* V4, Pin drop                                                        */
+/*    Header card with a MapPin icon. A dashed pink line drops from   */
+/*    the pin down into the Map section below, like a literal pin    */
+/*    trail leading the eye to the geography.                         */
+/* ================================================================== */
+function V4() {
+  return (
+    <div className="relative">
+      <section className="bg-[#FAFAFA] py-12">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+          <LocationsCarousel />
+        </div>
+      </section>
+      <div className="relative bg-white">
+        <div className="mx-auto max-w-2xl px-4 pt-12 pb-6 text-center sm:px-6 lg:px-8">
+          <DiscoveryHeading />
+          {/* Pin + dashed line connecting to map below */}
+          <div className="relative mx-auto mt-6 flex flex-col items-center">
+            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-pink text-black shadow-[0_6px_18px_rgba(252,176,192,0.5)]">
+              <MapPin size={18} strokeWidth={2.5} className="-translate-y-px fill-black" />
+            </span>
+            <div
+              aria-hidden
+              className="h-12 w-px"
+              style={{
+                backgroundImage: "linear-gradient(to bottom, #FCB0C0 50%, transparent 50%)",
+                backgroundSize: "1px 8px",
+                backgroundRepeat: "repeat-y",
+              }}
+            />
           </div>
         </div>
-        <div className="mt-8">
-          <LocationsCarousel city={city} />
-        </div>
-      </div>
-      <div className="mt-4">
         <MapSection hideHeader />
       </div>
-      <p className="mx-auto mt-6 max-w-md text-center text-[11px] italic text-gray">
-        (Preview note: cards filter live; the map below would also be wired to
-        the shared filter in real implementation.)
-      </p>
-    </section>
+    </div>
   );
 }
 
@@ -218,43 +223,50 @@ export default function PreviewPage() {
     <main className="bg-white">
       <div className="mx-auto max-w-3xl px-6 py-10">
         <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-pink">
-          Internal preview · take 7
+          Internal preview · take 8
         </p>
         <h1 className="mt-2 text-3xl font-black sm:text-4xl">
-          Discovery cluster,{" "}
-          <span className="italic font-light">three groupings</span>
+          Header at the seam,{" "}
+          <span className="italic font-light">four ways</span>
         </h1>
         <p className="mt-3 text-sm text-gray">
-          Drei Wege Locations Cards + Map unter einer gemeinsamen Editorial-
-          Überschrift zu bündeln. V1 = leichteste Trennung, V2 = single
-          wrapper, V3 = shared filter über beide Blöcke.
+          Locations Cards bleiben oben (peek-trigger vom Hero), Map drunter.
+          Der Editorial-Header sitzt zwischen beiden und nutzt die
+          Übergangsstelle visuell. Vier verschiedene Konzepte.
         </p>
       </div>
 
       <VariantLabel
         n="V1"
-        title="Header band above, sections stay separate"
-        desc="Shared header in eigener Section ganz oben. Locations + Map bleiben strukturell getrennt aber visuell durch den Header geclustert. Map behält ihren eigenen Header? Nein, der ist hier nur durch DiscoveryHeader ersetzt; die Map zeigt unten nur ihre City-Tabs + die Karte selbst."
+        title="Straddle the boundary, two-tone background"
+        desc="Cards auf #FAFAFA, Map auf weiß. Header sitzt zentriert auf der Farb-Naht, obere Hälfte auf grau, untere auf weiß. Subtil aber liest sich als visuelle Brücke."
       />
       <V1 />
 
       <VariantLabel
         n="V2"
-        title="Single wrapper, header + cards + map flow together"
-        desc="Eine Section umschließt alles. Header oben, Cards drunter, Map ohne eigenen Header drunter. Alles auf gleichem #FAFAFA Hintergrund, kein Section-Break dazwischen. Cleanste Lösung."
+        title="Floating card stamp, overlaps both sections"
+        desc="Header in einer weißen Card mit kräftigem Shadow + Ring, sitzt mit negativen Margins über der Naht zwischen Cards und Map. Wie ein Stempel oder Pull-Quote der die zwei Blöcke verklammert."
       />
       <V2 />
 
       <VariantLabel
         n="V3"
-        title="Single wrapper + shared city filter (cards + map)"
-        desc="V2 plus City-Tabs zwischen Header und Cards. Klick auf eine Stadt filtert Cards UND Map gleichzeitig. Headline morpht zur gewählten Stadt. (Im Preview ist das Map-Wiring stub'd — Cards filtern wirklich, Map-Sync würde in der echten Implementierung passieren.)"
+        title="Diagonal seam, header on the angle"
+        desc="Beide Sektionen haben eine schräge Kante (clip-path). Header sitzt zentriert auf dem Diagonal-Übergang mit einer dünnen pinken Hairline drunter. Magazin-Spread Vibe."
       />
       <V3 />
 
+      <VariantLabel
+        n="V4"
+        title="Pin drop, header with literal pin trail into the map"
+        desc="Header schließt mit einer pink-runden MapPin Marker, drunter eine gestrichelte vertikale Linie die in die Map hineinläuft. Zeigt buchstäblich 'wir markieren die Häuser auf der Karte unten'."
+      />
+      <V4 />
+
       <div className="mx-auto max-w-3xl px-6 py-16 text-center">
         <p className="text-sm text-gray">
-          Pick V1, V2, oder V3. Ich verdrahte die Wahl als neuen Default.
+          Pick V1, V2, V3 oder V4. Ich verdrahte die Wahl als neuen Default.
         </p>
         <Link
           href="/"
