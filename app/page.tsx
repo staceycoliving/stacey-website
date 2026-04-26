@@ -573,15 +573,14 @@ export default function HomePage() {
            Testimonials→ "can I trust this?"
            About       → "who's behind it?" */}
 
-      {/* VIDEO, placed between Locations and Map as a vibe-check.
-           Locations cards are visually dense; the cinematic Video
-           gives the eye a break before the equally-dense Map. */}
-      <VideoSection />
-
-      {/* MAP, interactive geographic discovery, lands after the
-           emotional warm-up so the "is there one in my neighbourhood?"
-           question reads in colour, not as a cold lookup. */}
+      {/* MAP first now: pairs with the Locations cards above as a
+           continued discovery beat (browse the cards, then scan them
+           on the map). */}
       <MapSection />
+
+      {/* VIDEO follows the discovery cluster as the cinematic break
+           before the convert sections (HowItWorks + Receipts). */}
+      <VideoSection />
 
       {/* HOWITWORKS, pulled up as a transition between Map (where) and
            Receipts (cost). The "boarding-pass / journey home" framing
