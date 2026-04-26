@@ -9,31 +9,52 @@ import { clsx } from "clsx";
 // FAQ accordion, answers the five conversion-blocking questions that
 // don't get covered elsewhere on the homepage. Sits between Receipts
 // (the math case) and the Closing Teasers (about + member stories).
-// Best practice for SEO + objection-handling: real specific answers,
-// no marketing fluff, link out to detailed pages where useful.
+// Q1 (length of stay) renders as a SHORT/LONG badge split so the two
+// stay types read at a glance, using the same badge palette as the
+// location cards and map markers.
 
-type QA = { q: string; a: string };
+type QA = { q: string; a?: string; node?: React.ReactNode };
 
 const QUESTIONS: QA[] = [
   {
     q: "How long do I have to stay?",
-    a: "Three months minimum for our long-stay homes (Mühlenkamp, Eimsbüttel, St. Pauli, Eppendorf, Berlin Mitte, Vallendar). Short-stay homes (Alster + Downtown) start at five nights. Notice period for ending a long stay is three months. You can move between STACEY cities anytime in between, no fees.",
+    node: (
+      <div className="space-y-3">
+        <div className="flex items-start gap-3">
+          <span className="mt-0.5 flex-shrink-0 rounded-[5px] bg-black px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.15em] text-white">
+            Short
+          </span>
+          <p className="text-sm leading-relaxed text-gray sm:text-base">
+            From 5 nights. Available at Alster and Downtown.
+          </p>
+        </div>
+        <div className="flex items-start gap-3">
+          <span className="mt-0.5 flex-shrink-0 rounded-[5px] bg-pink px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.15em] text-black">
+            Long
+          </span>
+          <p className="text-sm leading-relaxed text-gray sm:text-base">
+            From 3 months at all other STACEY homes. Notice period is 3 months;
+            you can transfer between STACEY cities anytime in between, no fees.
+          </p>
+        </div>
+      </div>
+    ),
   },
   {
     q: "What&rsquo;s actually included in the rent?",
-    a: "Furnished private suite, weekly cleaning of common areas, fibre-grade internet, all utilities (power, water, heating), maintenance on call, community events, and free transfers between STACEY cities. You bring clothes, a toothbrush, and yourself. The rest is on us.",
+    a: "Furnished private suite, weekly cleaning of common areas, internet, all utilities (power, water, heating), and community events. You bring clothes, a toothbrush, and your own towels (towels are provided only in our short-stay homes).",
   },
   {
     q: "Can I bring my partner?",
-    a: "Yes. Jumbo, Jumbo Balcony, Studio, and Premium+ Balcony rooms are couple-friendly and priced for two occupants. Other categories are single occupancy. Use the &lsquo;2 persons&rsquo; toggle on any location page to filter the available rooms.",
+    a: "Yes. Our Jumbo and Studio rooms are couple-friendly and priced for two occupants. Other categories are single occupancy. Use the &lsquo;2 persons&rsquo; toggle on any location page to filter the available rooms.",
   },
   {
     q: "What about pets?",
-    a: "We love dogs and cats, but communal living means we keep it case-by-case. Tell your community manager what you have, breed and size included; we&rsquo;ll see what fits the house. Some homes are pet-friendly, others aren&rsquo;t. Depends on the building and the housemates.",
+    a: "Sorry, no. STACEY homes are pet-free across the board. It keeps the shared kitchens, common areas, and the housemates with allergies all happy. We know that&rsquo;s a hard no for some, and we&rsquo;re sorry.",
   },
   {
     q: "Why is this cheaper than renting alone?",
-    a: "Because we share fixed costs across more people: building, fibre, cleaning, furniture, maintenance. The math is in our &lsquo;Do the math&rsquo; section above: roughly €685/month savings vs. solo Hamburg, €8,200/year. Plus you skip seven contracts, three deposits, and one Schufa.",
+    a: "Because we share fixed costs across more people: building, internet, cleaning, furniture, maintenance. The math is in our &lsquo;Do the math&rsquo; section above: roughly €685/month savings vs. solo Hamburg, €8,200/year. Plus you skip seven contracts and one Schufa.",
   },
 ];
 
@@ -98,10 +119,16 @@ export default function FAQSection() {
                     )}
                   >
                     <div className="overflow-hidden">
-                      <p
-                        className="px-5 pb-5 pl-14 text-sm leading-relaxed text-gray sm:px-6 sm:pb-6 sm:pl-16 sm:text-base"
-                        dangerouslySetInnerHTML={{ __html: qa.a }}
-                      />
+                      <div className="px-5 pb-5 pl-14 sm:px-6 sm:pb-6 sm:pl-16">
+                        {qa.node ? (
+                          qa.node
+                        ) : (
+                          <p
+                            className="text-sm leading-relaxed text-gray sm:text-base"
+                            dangerouslySetInnerHTML={{ __html: qa.a ?? "" }}
+                          />
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
