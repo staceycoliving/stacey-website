@@ -7,29 +7,23 @@ import { ArrowRight, Check } from "lucide-react";
 import { clsx } from "clsx";
 import FadeIn from "@/components/ui/FadeIn";
 
-// Variant C, side-by-side product walkthrough. Three laptop frames
-// in a row on desktop, stacked on mobile. Inside each frame: a real
-// screenshot of the live STACEY UI for that step, captured via
-// headless Chrome from /move-in (Step 01) and dedicated snap routes
-// at /preview/snap/* (Step 02 SHORT, Step 02 LONG, Step 03 email).
-// Step 02 has a SHORT vs LONG toggle so a visitor sees both flows.
-// To re-capture: see scripts/howitworks-screenshots.sh (or the
-// Chrome --headless commands documented in the section's commit).
+// Variant C, side-by-side product walkthrough. Real screenshots of
+// the live STACEY UI inside breakpoint-aware device frames: LaptopFrame
+// at lg+ with the desktop captures, PhoneFrame on smaller screens with
+// the mobile captures. Step 02 has a SHORT/LONG toggle. Step 03 swaps
+// the device for a FramedPrint (clean photo card with caption) since
+// move-in is the physical moment, not a screen.
+//
+// To re-capture screenshots:
+// - Step 01 desktop: headless-chrome /move-in?stayType=LONG&city=hamburg&persons=1&moveIn=YYYY-MM-DD
+// - Step 02 SHORT mobile: headless-chrome /preview/snap/sign-short at 400x820
+// - Step 02 SHORT desktop: same route at 1280x800
+// - Step 02 LONG and Step 01 mobile: captured manually for proper
+//   responsive rendering. Stored in public/images/howitworks/.
 
-/* ─── Device frame + screenshot helper ───────────────────────────── */
+/* ─── Frames: Laptop (lg+) and Phone (mobile) ───────────────────── */
 
-function LaptopFrame({
-  src,
-  alt,
-  position = "top",
-}: {
-  src: string;
-  alt: string;
-  // Where to anchor the cover crop. The 1280x800 captures have content
-  // that lands near the top, so we anchor there to avoid losing the
-  // primary subject when the frame's aspect 16:10 trims the edges.
-  position?: "top" | "center";
-}) {
+function LaptopFrame({ src, alt, position = "top" }: { src: string; alt: string; position?: "top" | "center" }) {
   return (
     <div className="mx-auto w-full max-w-[440px]">
       <div className="rounded-[8px] border-[6px] border-[#1A1A1A] bg-[#1A1A1A] shadow-[0_24px_50px_rgba(0,0,0,0.22)]">
@@ -46,6 +40,98 @@ function LaptopFrame({
       </div>
       <div className="mx-auto h-1.5 w-[107%] -translate-x-[3.27%] rounded-b-[8px] bg-gradient-to-b from-[#2a2a2a] to-[#0d0d0d] shadow-[0_6px_14px_rgba(0,0,0,0.15)]" />
     </div>
+  );
+}
+
+function PhoneFrame({ src, alt }: { src: string; alt: string }) {
+  return (
+    <div className="mx-auto w-[230px]">
+      <div className="overflow-hidden rounded-[28px] border-[7px] border-[#1A1A1A] bg-[#1A1A1A] shadow-[0_22px_44px_rgba(0,0,0,0.25)]">
+        <div className="relative aspect-[9/19] bg-white">
+          <span className="absolute left-1/2 top-1.5 z-10 h-3 w-14 -translate-x-1/2 rounded-full bg-[#1A1A1A]" />
+          <Image
+            src={src}
+            alt={alt}
+            fill
+            className="object-cover"
+            style={{ objectPosition: "top center" }}
+            sizes="230px"
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Responsive mockup: phone on mobile, laptop on desktop. Same total
+// visual footprint as the row above so the three steps line up.
+function ResponsiveMockup({
+  desktop,
+  mobile,
+  alt,
+  position = "top",
+}: {
+  desktop: string;
+  mobile: string;
+  alt: string;
+  position?: "top" | "center";
+}) {
+  return (
+    <>
+      <div className="hidden lg:block">
+        <LaptopFrame src={desktop} alt={alt} position={position} />
+      </div>
+      <div className="lg:hidden">
+        <PhoneFrame src={mobile} alt={alt} />
+      </div>
+    </>
+  );
+}
+
+// Step 03: clean framed-print card (no device bezel). Same outer
+// dimensions and shadow profile as the laptop/phone frames so the
+// row reads as visual triplets. The white print margin + mono caption
+// signals "physical photo" not "screen".
+function FramedPrint({ src, alt, caption }: { src: string; alt: string; caption: string }) {
+  return (
+    <>
+      {/* Desktop: 16:10 framed photo, matches laptop footprint */}
+      <div className="hidden lg:block">
+        <div className="mx-auto w-full max-w-[440px]">
+          <div className="rounded-[8px] bg-white p-2.5 shadow-[0_24px_50px_rgba(0,0,0,0.22)] ring-1 ring-black/5">
+            <div className="relative aspect-[16/10] overflow-hidden rounded-[3px] bg-black">
+              <Image
+                src={src}
+                alt={alt}
+                fill
+                className="object-cover"
+                sizes="(min-width: 1024px) 440px, 100vw"
+              />
+            </div>
+            <p className="mt-2 px-1 pb-0.5 text-center font-mono text-[10px] font-bold uppercase tracking-[0.25em] text-gray">
+              {caption}
+            </p>
+          </div>
+        </div>
+      </div>
+      {/* Mobile: 9:19 framed photo, matches phone footprint */}
+      <div className="mx-auto w-[230px] lg:hidden">
+        <div className="rounded-[16px] bg-white p-2 shadow-[0_22px_44px_rgba(0,0,0,0.25)] ring-1 ring-black/5">
+          <div className="relative aspect-[9/19] overflow-hidden rounded-[10px] bg-black">
+            <Image
+              src={src}
+              alt={alt}
+              fill
+              className="object-cover"
+              sizes="230px"
+            />
+          </div>
+          <p className="mt-1.5 px-1 pb-0.5 text-center font-mono text-[8px] font-bold uppercase tracking-[0.25em] text-gray">
+            {caption}
+          </p>
+        </div>
+      </div>
+    </>
   );
 }
 
@@ -131,10 +217,11 @@ export default function HowItWorksSection() {
               Each step has its real STACEY UI mocked up inside the
               device frame, plus the editorial caption underneath. */}
           <div className="mt-12 grid gap-12 sm:mt-16 lg:grid-cols-3 lg:gap-8">
-            {/* Step 01: real screenshot of /move-in (Hamburg LONG, 1 person) */}
+            {/* Step 01: laptop on desktop, phone on mobile */}
             <article className="text-center">
-              <LaptopFrame
-                src="/images/howitworks/01-browse.webp"
+              <ResponsiveMockup
+                desktop="/images/howitworks/01-browse.webp"
+                mobile="/images/howitworks/01-browse-mobile.webp"
                 alt="STACEY move-in page showing Hamburg long-stay rooms"
                 position="top"
               />
@@ -151,7 +238,8 @@ export default function HowItWorksSection() {
               </div>
             </article>
 
-            {/* Step 02 with SHORT/LONG toggle, swaps the laptop screenshot */}
+            {/* Step 02 with SHORT/LONG toggle, swaps the screenshot. Both
+                desktop and mobile sources update together. */}
             <article className="text-center">
               <div className="mb-3 flex justify-center">
                 <div className="inline-flex rounded-[5px] bg-[#FAFAFA] p-1 ring-1 ring-black/10">
@@ -178,18 +266,23 @@ export default function HowItWorksSection() {
                 </div>
               </div>
 
-              <LaptopFrame
-                src={
+              <ResponsiveMockup
+                desktop={
                   step02StayType === "SHORT"
                     ? "/images/howitworks/02-short.webp"
                     : "/images/howitworks/02-long.webp"
+                }
+                mobile={
+                  step02StayType === "SHORT"
+                    ? "/images/howitworks/02-short-mobile.webp"
+                    : "/images/howitworks/02-long-mobile.webp"
                 }
                 alt={
                   step02StayType === "SHORT"
                     ? "STACEY short-stay booking summary before payment"
                     : "STACEY long-stay lease signing screen"
                 }
-                position="center"
+                position="top"
               />
               <div className="mt-6">
                 <p className="font-mono text-[10px] font-bold uppercase tracking-[0.25em] text-pink">
@@ -204,12 +297,13 @@ export default function HowItWorksSection() {
               </div>
             </article>
 
-            {/* Step 03: real welcome email screenshot */}
+            {/* Step 03: framed photo print, no device frame. Move-in is
+                the physical moment, not a screen. */}
             <article className="text-center">
-              <LaptopFrame
-                src="/images/howitworks/03-email.webp"
-                alt="STACEY welcome email with check-in details"
-                position="top"
+              <FramedPrint
+                src="/images/locations/eimsbuettel/community/001-community-ei.webp"
+                alt="STACEY move-in day, common space"
+                caption="Day one · welcome home"
               />
               <div className="mt-6">
                 <p className="font-mono text-[10px] font-bold uppercase tracking-[0.25em] text-pink">
