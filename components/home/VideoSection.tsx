@@ -174,7 +174,7 @@ export default function VideoSection() {
           Life at STACEY
         </p>
         <h2
-          className="mt-3 text-4xl font-black leading-[1.05] tracking-tight text-white sm:text-6xl lg:text-7xl"
+          className="mt-3 text-3xl font-extrabold tracking-tight text-white sm:text-5xl lg:text-6xl"
           style={{ textShadow: "0 2px 16px rgba(0,0,0,0.5)" }}
         >
           More than a place to <span className="italic font-light">sleep.</span>

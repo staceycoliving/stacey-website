@@ -204,7 +204,7 @@ export default function HowItWorksSection() {
             <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-pink">
               How it works
             </p>
-            <h2 className="mt-2 text-3xl font-black leading-tight tracking-tight sm:text-5xl">
+            <h2 className="mt-2 text-3xl font-extrabold tracking-tight sm:text-4xl">
               Three steps to <span className="italic font-light">home</span>.
             </h2>
             <p className="mt-3 text-sm text-gray sm:text-base">
@@ -229,7 +229,7 @@ export default function HowItWorksSection() {
                 <p className="font-mono text-[10px] font-bold uppercase tracking-[0.25em] text-pink">
                   Step {STEPS[0].num} · {STEPS[0].time}
                 </p>
-                <h3 className="mt-2 text-2xl font-black leading-tight tracking-tight sm:text-3xl">
+                <h3 className="mt-2 text-2xl font-extrabold tracking-tight sm:text-3xl">
                   {STEPS[0].title}
                 </h3>
                 <div className="mx-auto mt-3 max-w-sm text-left">
@@ -288,7 +288,7 @@ export default function HowItWorksSection() {
                 <p className="font-mono text-[10px] font-bold uppercase tracking-[0.25em] text-pink">
                   Step {STEPS[1].num} · {STEPS[1].time}
                 </p>
-                <h3 className="mt-2 text-2xl font-black leading-tight tracking-tight sm:text-3xl">
+                <h3 className="mt-2 text-2xl font-extrabold tracking-tight sm:text-3xl">
                   {STEPS[1].title}
                 </h3>
                 <div className="mx-auto mt-3 max-w-sm text-left">
@@ -309,7 +309,7 @@ export default function HowItWorksSection() {
                 <p className="font-mono text-[10px] font-bold uppercase tracking-[0.25em] text-pink">
                   Step {STEPS[2].num} · {STEPS[2].time}
                 </p>
-                <h3 className="mt-2 text-2xl font-black leading-tight tracking-tight sm:text-3xl">
+                <h3 className="mt-2 text-2xl font-extrabold tracking-tight sm:text-3xl">
                   {STEPS[2].title}
                 </h3>
                 <div className="mx-auto mt-3 max-w-sm text-left">

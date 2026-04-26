@@ -54,7 +54,7 @@ export default function TestimonialsSection() {
           <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-pink">
             Member stories
           </p>
-          <h2 className="mt-2 text-3xl font-black leading-tight tracking-tight text-white sm:text-5xl">
+          <h2 className="mt-2 text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
             One story.{" "}
             <span className="italic font-light">In her own words.</span>
           </h2>

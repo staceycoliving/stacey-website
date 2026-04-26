@@ -31,7 +31,7 @@ export default function AboutSection() {
               <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-pink">
                 Hamburg, since 2019
               </p>
-              <h3 className="mt-2 text-xl font-black leading-tight tracking-tight sm:text-2xl">
+              <h3 className="mt-2 text-xl font-extrabold tracking-tight sm:text-2xl">
                 Coliving for people who&rsquo;d{" "}
                 <span className="italic font-light">rather meet someone</span>.
               </h3>
@@ -75,7 +75,7 @@ export default function AboutSection() {
               <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-pink">
                 Member stories
               </p>
-              <h3 className="mt-2 text-xl font-black leading-tight tracking-tight sm:text-2xl">
+              <h3 className="mt-2 text-xl font-extrabold tracking-tight sm:text-2xl">
                 <span className="italic font-light">&ldquo;Strangers became</span>{" "}
                 neighbors.&rdquo;
               </h3>
