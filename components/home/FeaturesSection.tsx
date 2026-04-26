@@ -73,7 +73,7 @@ export default function FeaturesSection() {
           <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-pink">
             Do the math
           </p>
-          <h2 className="mt-2 text-3xl font-extrabold tracking-tight sm:text-4xl">
+          <h2 className="mt-2 text-3xl font-black leading-tight tracking-tight sm:text-5xl">
             Almost everything <span className="italic font-light">included</span>.
           </h2>
           <p className="mt-3 text-sm text-gray sm:text-base">

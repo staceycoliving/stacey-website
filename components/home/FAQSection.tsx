@@ -48,7 +48,7 @@ export default function FAQSection() {
             <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-pink">
               Five questions
             </p>
-            <h2 className="mt-2 text-3xl font-extrabold tracking-tight sm:text-4xl">
+            <h2 className="mt-2 text-3xl font-black leading-tight tracking-tight sm:text-5xl">
               The things people{" "}
               <span className="italic font-light">actually</span> ask.
             </h2>

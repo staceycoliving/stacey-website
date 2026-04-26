@@ -111,7 +111,7 @@ export default function MapSection({ hideHeader = false }: { hideHeader?: boolea
             <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-pink">
               8 homes · 3 cities
             </p>
-            <h2 className="mt-2 text-3xl font-extrabold tracking-tight sm:text-4xl">
+            <h2 className="mt-2 text-3xl font-black leading-tight tracking-tight sm:text-5xl">
               Find us in{" "}
               <span className="italic font-light">
                 {city === "all" ? "Hamburg, Berlin, Vallendar" : CITY_LABELS[city]}
