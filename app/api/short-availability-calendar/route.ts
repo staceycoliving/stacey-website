@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getShortStayCalendarAvailability } from "@/lib/apaleo";
 
-// Per-day availability for the entire SHORT portfolio, 180 days ahead.
+// Per-day availability for the entire SHORT portfolio, 365 days ahead.
 // Frontend uses this to grey out fully-booked dates in the calendar.
+// 365d covers the typical "book a year out" pattern; apaleo rate plans
+// drive the actual cutoffs per property/category, the frontend just
+// needs enough window to reach them.
 //
 // Cache at the edge for 30 minutes, apaleo availability changes slowly
 // and we don't need to re-fetch on every calendar open.
@@ -27,7 +30,7 @@ export async function GET(req: NextRequest) {
   // inventory / restrictions. Omitted = portfolio-wide (homepage/move-in).
   const slug = req.nextUrl.searchParams.get("slug") || undefined;
   const from = todayLocal();
-  const to = addDays(from, 180);
+  const to = addDays(from, 365);
 
   try {
     const { availableSlotsPerDate, minNights, maxNights, dateRestrictions } =

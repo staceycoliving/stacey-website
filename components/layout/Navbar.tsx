@@ -25,10 +25,16 @@ export default function Navbar({
   transparent = false,
   locationName,
   stayType,
+  searchTrigger,
 }: {
   transparent?: boolean;
   locationName?: string;
   stayType?: "SHORT" | "LONG";
+  // When set, the navbar swaps its city links + activity badge + CTA for
+  // this slot. Used on /move-in where the user is already in search
+  // mode, so we merge the search chip directly into the navbar pill,
+  // Airbnb-style, instead of stacking a second sticky bar underneath.
+  searchTrigger?: React.ReactNode;
 }) {
   const pathname = usePathname();
   const [scrolled, setScrolled] = useState(false);
@@ -156,6 +162,11 @@ export default function Navbar({
               />
             </Link>
 
+            {searchTrigger ? (
+              <div className="flex flex-1 items-center justify-end pl-4">
+                {searchTrigger}
+              </div>
+            ) : (<>
             {/* City links + mega menu */}
             <div className="flex items-center gap-1">
               {navCities.map((city) => (
@@ -291,22 +302,27 @@ export default function Navbar({
                 />
               </Link>
             )}
+            </>)}
           </div>
         </div>
 
-        {/* Mobile bar, pill morph matching desktop. Wrapper is fixed
-            h-16 so the drawer's top-16 anchor stays aligned. Inside, an
-            h-12 inner pill picks up dark-glass chrome when chromed,
-            stays transparent over the hero. CTA appears once chromed
-            so the hero stays minimal but every scrolled view has a
-            one-tap booking action. */}
+        {/* Mobile bar, pill morph matching desktop. Wrapper is h-16 so
+            the drawer's top-16 anchor stays aligned. Inside, an inner
+            pill picks up dark-glass chrome when chromed.
+            When searchTrigger is set: logo (smaller, taps home) + chip
+            (flex-1) + hamburger. The hamburger stays so the user can
+            still reach FAQ/contact/etc., matching Airbnb/Booking
+            mobile pattern (chip is primary, menu is secondary). The
+            stand-alone "Move in" CTA is hidden because it's redundant
+            when the chip is the booking interface. */}
         <div className="flex h-16 items-center px-3 lg:hidden">
           <div
             className={clsx(
-              "flex h-12 w-full items-center justify-between rounded-[5px] px-3 transition-all duration-500 ease-out",
+              "flex h-12 w-full items-center gap-2 rounded-[5px] transition-all duration-500 ease-out",
               chromed
                 ? "bg-black/60 shadow-[0_4px_24px_rgba(0,0,0,0.25)] ring-1 ring-white/10 backdrop-blur-xl"
                 : "bg-transparent shadow-none ring-0",
+              searchTrigger ? "px-2" : "px-3",
             )}
           >
             <Link
@@ -318,19 +334,25 @@ export default function Navbar({
                   window.scrollTo({ top: 0, behavior: "smooth" });
                 }
               }}
-              className="relative h-10 w-32 transition-transform duration-300 hover:scale-[1.03]"
+              className={clsx(
+                "relative flex-shrink-0 transition-transform duration-300 hover:scale-[1.03]",
+                searchTrigger ? "h-7 w-16" : "h-10 w-32",
+              )}
             >
               <Image
                 src="/images/stacey-logo-new-white-001.webp"
                 alt="STACEY"
                 fill
                 className="object-contain object-left"
-                sizes="100px"
+                sizes={searchTrigger ? "64px" : "100px"}
                 priority
               />
             </Link>
-            <div className="flex items-center gap-2">
-              {chromed && !mobileOpen && (
+            {searchTrigger && (
+              <div className="min-w-0 flex-1">{searchTrigger}</div>
+            )}
+            <div className="ml-auto flex flex-shrink-0 items-center gap-2">
+              {chromed && !mobileOpen && !searchTrigger && (
                 <Link
                   href="/move-in"
                   className="rounded-[5px] bg-pink px-5 py-2.5 text-sm font-bold text-black transition-all duration-300 hover:scale-[1.04] hover:shadow-[0_4px_24px_rgba(252,176,192,0.4)]"

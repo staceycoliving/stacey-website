@@ -481,30 +481,48 @@ export async function getShortStayCalendarAvailability(
     }),
   );
 
-  // Portfolio-wide worst-case min/max across all properties. If any
-  // property's rate plan requires more nights, that becomes the floor.
-  // Defaults fall through to conservative values if apaleo is unreachable.
-  let minNights = 1;
-  let maxNights = 365;
+  // Portfolio-wide BEST-case min/max across all properties: a stay is
+  // bookable if at least one property+category supports the requested
+  // length, so we surface the most-permissive shortest minimum and the
+  // most-permissive longest maximum. The actual booking endpoint
+  // re-validates against the picked unit's rate plan, so the frontend
+  // calendar should never artificially narrow what apaleo allows.
+  let minNights = Number.POSITIVE_INFINITY;
+  let maxNights = 0;
   const dateRestrictions: Record<string, DateRestrictions> = {};
   for (const { dateRestr } of results) {
     for (const [date, r] of Object.entries(dateRestr)) {
-      // Merge conservatively: max of mins, min of maxes, OR of closed flags.
+      // Merge permissively per date: shortest min, longest max, AND on
+      // the closed flags (only mark as closed when every property says
+      // closed, otherwise at least one property is still bookable).
       const prev = dateRestrictions[date] ?? {};
       dateRestrictions[date] = {
-        minLengthOfStay: Math.max(prev.minLengthOfStay ?? 1, r.minLengthOfStay ?? 1),
-        maxLengthOfStay: Math.min(
-          prev.maxLengthOfStay ?? Number.POSITIVE_INFINITY,
-          r.maxLengthOfStay ?? Number.POSITIVE_INFINITY,
+        minLengthOfStay: Math.min(
+          prev.minLengthOfStay ?? Number.POSITIVE_INFINITY,
+          r.minLengthOfStay ?? Number.POSITIVE_INFINITY,
         ),
-        closed: (prev.closed ?? false) || (r.closed ?? false),
-        closedOnArrival: (prev.closedOnArrival ?? false) || (r.closedOnArrival ?? false),
-        closedOnDeparture: (prev.closedOnDeparture ?? false) || (r.closedOnDeparture ?? false),
+        maxLengthOfStay: Math.max(prev.maxLengthOfStay ?? 0, r.maxLengthOfStay ?? 0),
+        closed:
+          prev.closed === undefined
+            ? r.closed ?? false
+            : (prev.closed ?? false) && (r.closed ?? false),
+        closedOnArrival:
+          prev.closedOnArrival === undefined
+            ? r.closedOnArrival ?? false
+            : (prev.closedOnArrival ?? false) && (r.closedOnArrival ?? false),
+        closedOnDeparture:
+          prev.closedOnDeparture === undefined
+            ? r.closedOnDeparture ?? false
+            : (prev.closedOnDeparture ?? false) && (r.closedOnDeparture ?? false),
       };
-      if (r.minLengthOfStay) minNights = Math.max(minNights, r.minLengthOfStay);
-      if (r.maxLengthOfStay) maxNights = Math.min(maxNights, r.maxLengthOfStay);
+      if (r.minLengthOfStay) minNights = Math.min(minNights, r.minLengthOfStay);
+      if (r.maxLengthOfStay) maxNights = Math.max(maxNights, r.maxLengthOfStay);
     }
   }
+  // Fall back to conservative defaults if apaleo returned no
+  // restrictions at all (network failure, missing rate plan, etc).
+  if (!Number.isFinite(minNights)) minNights = 1;
+  if (maxNights === 0) maxNights = 365;
 
   const availableSlotsPerDate: Record<string, string[]> = {};
   for (const { slug, slices, restrictions } of results) {

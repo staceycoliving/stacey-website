@@ -18,6 +18,7 @@ export default function SearchFields({
   moveInOptions, loadingDates,
   nightCount, tooShort,
   variant,
+  tone = "light",
   calendarOpenExternal,
   setCalendarOpenExternal,
   onSubmit,
@@ -31,6 +32,10 @@ export default function SearchFields({
   moveInOptions: { value: string; label: string }[]; loadingDates: boolean;
   nightCount: number; tooShort: boolean;
   variant: "full" | "compact";
+  // "dark" = pills repaint for dark-glass surfaces (used inside the
+  // navbar's slide-down editor panel on /move-in). Default "light"
+  // keeps the existing on-white treatment everywhere else.
+  tone?: "light" | "dark";
   calendarOpenExternal?: boolean;
   setCalendarOpenExternal?: (open: boolean) => void;
   onSubmit?: () => void;
@@ -46,20 +51,35 @@ export default function SearchFields({
   //   SHORT: auto-focus only (no scroll), because the calendar pops up
   //         as a panel right above the form and the button is already
   //         in view when the user closes the calendar.
-  // The shared `prevReadyRef` flag fires the effect once when the form
-  // transitions to "ready", not on every key/state change after that.
+  // We track the previous date values and re-trigger the scroll/focus
+  // every time the user picks a different date while the form is
+  // ready, not just on the initial transition. Otherwise repicking a
+  // move-in date (or check-in/out for SHORT) would fail to re-scroll
+  // the user back to the submit button.
   const submitButtonRef = useRef<HTMLButtonElement | null>(null);
-  const prevReadyRef = useRef(false);
+  const prevMoveInRef = useRef<string | null>(null);
+  const prevCheckInRef = useRef<string | null>(null);
+  const prevCheckOutRef = useRef<string | null>(null);
   useEffect(() => {
+    // Snapshot what changed since the last run before updating refs,
+    // otherwise the comparison would always evaluate false.
+    const moveInChanged = prevMoveInRef.current !== moveInDate;
+    const checkInChanged = prevCheckInRef.current !== checkIn;
+    const checkOutChanged = prevCheckOutRef.current !== checkOut;
+    prevMoveInRef.current = moveInDate;
+    prevCheckInRef.current = checkIn;
+    prevCheckOutRef.current = checkOut;
+
     const ready =
       (stayType === "SHORT" && !!checkIn && !!checkOut && !tooShort) ||
       (stayType === "LONG" && !!city && !!moveInDate);
-    if (!ready) {
-      prevReadyRef.current = false;
-      return;
-    }
-    if (prevReadyRef.current) return;
-    prevReadyRef.current = true;
+    if (!ready) return;
+
+    const dateChanged =
+      (stayType === "LONG" && moveInChanged) ||
+      (stayType === "SHORT" && (checkInChanged || checkOutChanged));
+    if (!dateChanged) return;
+
     const btn = submitButtonRef.current;
     if (!btn) return;
     if (stayType === "LONG") {
@@ -109,114 +129,221 @@ export default function SearchFields({
   if (isCompact) {
     // ─── Compact: iOS-style segmented pill groups ───
     // Each filter is a segmented control (group of pills sharing a rounded
-    // track). Selected option gets a white pill with subtle shadow; inactive
-    // options read as gray text. One-row layout on desktop, horizontal
-    // scroll on mobile so height stays constant.
-    const segmentTrack =
-      "flex shrink-0 gap-1 rounded-[5px] bg-[#F5F5F5] p-1";
-    const segmentBtn = (active: boolean) =>
+    // track). Stay-type buttons surface the page-wide colour identity
+    // when active (LONG = pink, SHORT = black) so the filter bar reads
+    // the same language as the badges on Locations / Map / FAQ. Other
+    // filters keep the neutral white-on-grey active treatment.
+    const isDark = tone === "dark";
+    const segmentTrack = clsx(
+      "flex shrink-0 gap-1 rounded-[5px] p-1",
+      isDark ? "bg-white/10 ring-1 ring-white/10" : "bg-[#F5F5F5]",
+    );
+    const segmentBtn = (active: boolean, accent: "neutral" | "pink" | "black" = "neutral") =>
       clsx(
         "rounded-[4px] px-3 py-1.5 text-xs font-semibold transition-all duration-150",
         active
-          ? "bg-white text-black shadow-sm"
-          : "text-gray hover:text-black",
+          ? accent === "pink"
+            ? "bg-pink text-black shadow-sm"
+            : accent === "black"
+              ? isDark
+                ? "bg-white text-black shadow-sm"
+                : "bg-black text-white shadow-sm"
+              : isDark
+                ? "bg-white text-black shadow-sm"
+                : "bg-white text-black shadow-sm"
+          : isDark
+            ? "text-white/70 hover:text-white"
+            : "text-gray hover:text-black",
       );
 
+    const labelCls = clsx(
+      "block text-[10px] font-bold uppercase tracking-[0.18em]",
+      isDark ? "text-white/50" : "text-gray",
+    );
+
     return (
-      <div className="-mx-1 flex items-center gap-2 overflow-x-auto px-1 pb-1 sm:gap-3 sm:overflow-x-visible sm:pb-0">
-        {/* Stay type */}
-        <div role="radiogroup" aria-label="Stay type" className={segmentTrack}>
-          {(["SHORT", "LONG"] as StayType[]).map((t) => (
-            <button
-              key={t}
-              type="button"
-              role="radio"
-              aria-checked={stayType === t}
-              onClick={() => onStayType(t)}
-              className={segmentBtn(stayType === t)}
-            >
-              {t === "SHORT" ? "Short" : "Long"}
-            </button>
-          ))}
+      <div className="grid grid-cols-1 gap-x-5 gap-y-4 sm:grid-cols-2">
+        {/* Stay length */}
+        <div>
+          <p className={clsx(labelCls, "mb-1.5")}>Stay length</p>
+          <div role="radiogroup" aria-label="Stay type" className={segmentTrack}>
+            {(["SHORT", "LONG"] as StayType[]).map((t) => (
+              <button
+                key={t}
+                type="button"
+                role="radio"
+                aria-checked={stayType === t}
+                onClick={() => onStayType(t)}
+                className={clsx(segmentBtn(stayType === t, t === "SHORT" ? "black" : "pink"), "flex-1")}
+              >
+                {t === "SHORT" ? "Short" : "Long"}
+              </button>
+            ))}
+          </div>
         </div>
 
-        {/* Persons */}
-        <div role="radiogroup" aria-label="Persons" className={segmentTrack}>
-          {([1, 2] as const).map((p) => (
-            <button
-              key={p}
-              type="button"
-              role="radio"
-              aria-checked={persons === p}
-              onClick={() => onPersons(p)}
-              className={segmentBtn(persons === p)}
-            >
-              {p} {p === 1 ? "person" : "persons"}
-            </button>
-          ))}
+        {/* Who */}
+        <div>
+          <p className={clsx(labelCls, "mb-1.5")}>Who</p>
+          <div role="radiogroup" aria-label="Persons" className={segmentTrack}>
+            {([1, 2] as const).map((p) => (
+              <button
+                key={p}
+                type="button"
+                role="radio"
+                aria-checked={persons === p}
+                onClick={() => onPersons(p)}
+                className={clsx(segmentBtn(persons === p), "flex-1")}
+              >
+                {p} {p === 1 ? "person" : "persons"}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* City (LONG only) */}
         {stayType === "LONG" && (
-          <div role="radiogroup" aria-label="City" className={segmentTrack}>
-            {[
-              { value: "hamburg", label: "Hamburg" },
-              { value: "berlin", label: "Berlin" },
-              { value: "vallendar", label: "Vallendar" },
-            ].map((c) => (
-              <button
-                key={c.value}
-                type="button"
-                role="radio"
-                aria-checked={city === c.value}
-                onClick={() => onCity(c.value)}
-                className={segmentBtn(city === c.value)}
-              >
-                {c.label}
-              </button>
-            ))}
+          <div>
+            <p className={clsx(labelCls, "mb-1.5")}>Where</p>
+            <div role="radiogroup" aria-label="City" className={segmentTrack}>
+              {[
+                { value: "hamburg", label: "Hamburg" },
+                { value: "berlin", label: "Berlin" },
+                { value: "vallendar", label: "Vallendar" },
+              ].map((c) => (
+                <button
+                  key={c.value}
+                  type="button"
+                  role="radio"
+                  aria-checked={city === c.value}
+                  onClick={() => onCity(c.value)}
+                  className={clsx(segmentBtn(city === c.value), "flex-1")}
+                >
+                  {c.label}
+                </button>
+              ))}
+            </div>
           </div>
         )}
 
-        {/* Date, standalone pill-button */}
-        <div className="relative shrink-0">
+        {/* When */}
+        <div className="relative">
+          <p className={clsx(labelCls, "mb-1.5")}>{stayType === "SHORT" ? "Dates" : "Move-in"}</p>
           {stayType === "SHORT" ? (
             <>
               <button
                 type="button"
                 onClick={() => setCalendarOpen(!calendarOpen)}
                 className={clsx(
-                  "inline-flex items-center gap-2 rounded-[5px] px-3 py-2 text-xs font-semibold transition-colors",
+                  "flex w-full items-center justify-between gap-2 rounded-[5px] px-3 py-2 text-xs font-semibold transition-colors",
                   checkIn && checkOut
-                    ? "bg-black text-white"
-                    : "bg-[#F5F5F5] text-black hover:bg-[#E8E6E0]",
+                    ? isDark
+                      ? "bg-white text-black"
+                      : "bg-black text-white"
+                    : isDark
+                      ? "bg-white/10 text-white ring-1 ring-white/10 hover:bg-white/15"
+                      : "bg-[#F5F5F5] text-black hover:bg-[#E8E6E0]",
                 )}
               >
                 {checkIn && checkOut
                   ? `${formatDateShort(checkIn)} → ${formatDateShort(checkOut)}`
                   : "Pick dates"}
               </button>
-              {calendarOpen && (
-                <>
-                  <div className="fixed inset-0 z-20" onClick={() => setCalendarOpen(false)} />
-                  <div className="absolute right-0 top-full z-30 mt-2 w-[280px] rounded-[5px] bg-white p-4 shadow-xl ring-1 ring-lightgray min-[420px]:w-[340px]">
-                    <DualCalendar checkIn={checkIn} checkOut={checkOut} onSelect={onCalendarSelect} onClear={onCalendarClear} availableSlotsPerDate={availableSlotsPerDate} minNights={apaleoMinNights} maxNights={apaleoMaxNights} />
-                    {checkIn && checkOut && (
-                      <div className="mt-3 flex items-center justify-between border-t border-lightgray pt-3">
-                        <p className="text-sm font-semibold">{nightCount} nights</p>
+              {/* Fullscreen portal modal. Necessary because the compact
+                  variant lives inside the navbar's slide-down editor
+                  panel, which has overflow-hidden ancestors that would
+                  clip an inline absolute popover. Portal renders into
+                  document.body so the modal escapes both the clipping
+                  and the navbar's stacking context. */}
+              {calendarOpen && typeof document !== "undefined" && createPortal(
+                <div className="fixed inset-0 z-[100] flex flex-col bg-white">
+                  <div className="flex flex-shrink-0 items-center gap-3 border-b border-[#E8E6E0] px-5 py-4">
+                    <p className="flex-1 truncate text-base font-bold text-black">
+                      {!checkIn
+                        ? "Pick your check-in"
+                        : !checkOut
+                          ? "Pick your check-out"
+                          : `${formatDateShort(checkIn)} → ${formatDateShort(checkOut)}`}
+                    </p>
+                    {onCalendarClear && (checkIn || checkOut) && (
+                      <button
+                        type="button"
+                        onClick={onCalendarClear}
+                        aria-label="Clear selected dates"
+                        className="group inline-flex flex-shrink-0 items-center gap-1.5 rounded-[5px] bg-black px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-[0.15em] text-white shadow-sm transition-all duration-200 active:scale-95"
+                      >
+                        <svg viewBox="0 0 12 12" className="h-2.5 w-2.5 transition-transform duration-200 group-active:rotate-90" aria-hidden>
+                          <path d="M3 3 L9 9 M9 3 L3 9" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                        </svg>
+                        Clear
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      aria-label="Close"
+                      onClick={() => setCalendarOpen(false)}
+                      className="group inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-black text-white transition-all duration-200 active:scale-95"
+                    >
+                      <svg viewBox="0 0 12 12" className="h-3 w-3 transition-transform duration-200 group-active:rotate-90" aria-hidden>
+                        <path d="M3 3 L9 9 M9 3 L3 9" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                      </svg>
+                    </button>
+                  </div>
+
+                  <div className="flex-1 overflow-y-auto px-5 py-5">
+                    <div className="mx-auto max-w-md">
+                      <DualCalendar
+                        checkIn={checkIn}
+                        checkOut={checkOut}
+                        onSelect={onCalendarSelect}
+                        availableSlotsPerDate={availableSlotsPerDate}
+                        minNights={apaleoMinNights}
+                        maxNights={apaleoMaxNights}
+                        scrollMonths
+                      />
+                    </div>
+                  </div>
+
+                  {checkIn && checkOut && (
+                    <div className="flex-shrink-0 border-t border-[#E8E6E0] bg-white px-5 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+                      <div className="flex items-center justify-between gap-3">
                         {tooShort ? (
-                          <p className="text-xs font-medium text-pink">
-                            Too short{apaleoMinNights ? ` (min ${apaleoMinNights})` : ""}
-                          </p>
+                          <>
+                            <p className="text-base font-bold">{nightCount} nights</p>
+                            <p className="text-sm font-semibold text-pink">
+                              Stay is too short
+                              {apaleoMinNights ? ` (min ${apaleoMinNights})` : ""}
+                            </p>
+                          </>
                         ) : (
-                          <button onClick={() => setCalendarOpen(false)} className="text-xs font-semibold hover:opacity-60">
-                            Done
-                          </button>
+                          <>
+                            <span className="flex items-center gap-2">
+                              <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-pink">
+                                <svg viewBox="0 0 12 12" className="h-3 w-3" aria-hidden>
+                                  <path d="M2.5 6.5L5 9L9.5 3.5" stroke="black" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+                                </svg>
+                              </span>
+                              <p className="text-sm font-bold text-black">
+                                {formatDateShort(checkIn)} <span className="text-pink">&rarr;</span> {formatDateShort(checkOut)}
+                              </p>
+                            </span>
+                            <p className="text-sm font-medium text-gray">{nightCount} nights</p>
+                          </>
                         )}
                       </div>
-                    )}
-                  </div>
-                </>
+                      {!tooShort && (
+                        <button
+                          type="button"
+                          onClick={() => setCalendarOpen(false)}
+                          className="mt-4 block w-full rounded-[5px] bg-black py-3.5 text-center text-base font-bold text-white shadow-[0_8px_24px_rgba(0,0,0,0.25)] active:opacity-90"
+                        >
+                          Done
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>,
+                document.body,
               )}
             </>
           ) : (
@@ -225,10 +352,12 @@ export default function SearchFields({
               onChange={(e) => onMoveInDate(e.target.value || null)}
               disabled={loadingDates}
               className={clsx(
-                "appearance-none rounded-[5px] px-3 py-2 text-xs font-semibold outline-none transition-colors disabled:opacity-50",
+                "block w-full appearance-none rounded-[5px] px-3 py-2 text-xs font-semibold outline-none transition-colors disabled:opacity-50",
                 moveInDate
-                  ? "bg-black text-white"
-                  : "bg-[#F5F5F5] text-black hover:bg-[#E8E6E0]",
+                  ? "bg-pink text-black"
+                  : isDark
+                    ? "bg-white/10 text-white ring-1 ring-white/10 hover:bg-white/15"
+                    : "bg-[#F5F5F5] text-black hover:bg-[#E8E6E0]",
               )}
             >
               <option value="" className="bg-white text-black">

@@ -140,6 +140,12 @@ function MoveInFlow() {
   const [showResults, setShowResults] = useState(false);
   // (defined later; used below for the URL-mirror effect)
   const [filterCalendarOpen, setFilterCalendarOpen] = useState(false);
+  // Sticky search chip starts collapsed on /move-in: shows the user's
+  // current search ("Long stay · Hamburg · May 1 · 1 person"). Click
+  // the chip to slide down a full editor with the existing compact
+  // SearchFields, click again or "Apply" to close. Mirrors Airbnb /
+  // Booking's mobile pattern.
+  const [searchEditorOpen, setSearchEditorOpen] = useState(false);
   const [expandedRoomId, setExpandedRoomId] = useState<string | null>(null);
   const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
   const [roomCollapsed, setRoomCollapsed] = useState(false);
@@ -623,11 +629,17 @@ function MoveInFlow() {
   const formatDateShort = (d: string) =>
     new Date(d + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
 
-  // Search summary text
+  // Search summary text. Long version is used on desktop and the
+  // empty-state message; short version drops persons + stay-type label
+  // so the mobile chip fits on a single line next to logo and hamburger
+  // without truncation.
   const cityLabel = city ? city.charAt(0).toUpperCase() + city.slice(1) : "";
   const searchSummary = stayType === "SHORT"
     ? `Short stay · ${persons === 2 ? "2 persons" : "1 person"}${checkIn && checkOut ? ` · ${formatDateShort(checkIn)} → ${formatDateShort(checkOut)}` : ""}`
     : `Long stay${cityLabel ? ` · ${cityLabel}` : ""} · ${persons === 2 ? "2 persons" : "1 person"}${moveInDate ? ` · from ${formatDate(moveInDate)}` : ""}`;
+  const searchSummaryShort = stayType === "SHORT"
+    ? (checkIn && checkOut ? `${formatDateShort(checkIn)} → ${formatDateShort(checkOut)}` : "Pick dates")
+    : (cityLabel && moveInDate ? `${cityLabel}, ${formatDateShort(moveInDate)}` : cityLabel || "Pick city");
 
   // ════════════════════════════════════════
   //  PAYMENT CONFIRMING / ERROR
@@ -767,9 +779,90 @@ function MoveInFlow() {
   // ════════════════════════════════════════
   //  BOOKING FLOW
   // ════════════════════════════════════════
+
+  // Search-summary chip. Lives inside the navbar dark-glass pill on
+  // both viewports, so it inherits the navbar's dark visual language
+  // (white/10 surface, pink accents, white text) instead of bolting in
+  // a contrasting white card. Editor panel below stays white because
+  // it's a content panel, not navbar continuation.
+  const chipButton = (
+    <button
+      type="button"
+      onClick={() => setSearchEditorOpen((o) => !o)}
+      aria-expanded={searchEditorOpen}
+      aria-controls="search-editor-panel"
+      className={clsx(
+        "group flex w-full items-center gap-2.5 rounded-[4px] px-3 py-1.5 ring-1 transition-all duration-200",
+        searchEditorOpen
+          ? "bg-white/15 ring-pink/60"
+          : "bg-white/10 ring-white/15 hover:bg-white/15 hover:ring-white/25",
+      )}
+    >
+      <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-pink/20 text-pink">
+        <Search size={13} strokeWidth={2.4} />
+      </span>
+      <span className="min-w-0 flex-1 text-left leading-tight">
+        {/* Mobile: single-line short summary, no eyebrow, no truncation. */}
+        <span className="block whitespace-nowrap text-[13px] font-bold text-white lg:hidden">
+          {searchSummaryShort}
+        </span>
+        {/* Desktop: full summary + Tap-to-refine eyebrow. */}
+        <span className="hidden text-sm font-bold text-white lg:block">
+          {searchSummary}
+        </span>
+        <span className="hidden text-[10px] font-medium uppercase tracking-[0.18em] text-pink lg:block">
+          {searchEditorOpen ? "Tap to close" : "Tap to refine"}
+        </span>
+      </span>
+      <span className="hidden flex-shrink-0 items-center gap-1.5 rounded-[4px] bg-pink px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-[0.15em] text-black sm:inline-flex">
+        <Pencil size={11} strokeWidth={2.4} />
+        Edit
+      </span>
+      <ChevronDown
+        size={14}
+        className={clsx(
+          "flex-shrink-0 transition-transform duration-300",
+          searchEditorOpen ? "rotate-180 text-pink" : "text-white/60",
+        )}
+      />
+    </button>
+  );
+
+  // Slide-down editor panel, opens on chip tap. Dark-glass surface so
+  // it reads as a continuation of the navbar (same chrome language)
+  // instead of a contrasting white card. SearchFields gets tone="dark"
+  // so its segmented controls repaint for the dark background.
+  const editorPanel = (
+    <div className="rounded-[5px] bg-black/85 p-4 ring-1 ring-white/10 shadow-[0_12px_32px_rgba(0,0,0,0.45)] backdrop-blur-xl">
+      <SearchFields
+        stayType={stayType} onStayType={handleStayTypeChangeLive}
+        persons={persons} onPersons={handlePersonsChangeLive}
+        city={city} onCity={handleCityChangeLive}
+        checkIn={checkIn} checkOut={checkOut} onCalendarSelect={handleCalendarSelect}
+        onCalendarClear={handleCalendarClear}
+        moveInDate={moveInDate} onMoveInDate={(d) => { setMoveInDate(d); setSelectedRoomId(null); setExpandedRoomId(null); setRoomCollapsed(false); }}
+        moveInOptions={moveInOptions} loadingDates={loadingAvailability}
+        nightCount={nightCount} tooShort={tooShort}
+        variant="compact"
+        tone="dark"
+        calendarOpenExternal={filterCalendarOpen}
+        setCalendarOpenExternal={setFilterCalendarOpen}
+      />
+      <button
+        type="button"
+        onClick={() => setSearchEditorOpen(false)}
+        className="mt-5 flex w-full items-center justify-center gap-2 rounded-[5px] bg-pink px-5 py-3 text-xs font-bold uppercase tracking-wider text-black shadow-sm transition-all duration-200 hover:scale-[1.01] hover:shadow-md"
+      >
+        Apply
+      </button>
+    </div>
+  );
+
+  const navbarSearchSlot = showResults && !showLease && !roomCollapsed ? chipButton : undefined;
+
   return (
     <>
-      <Navbar transparent={!showResults} />
+      <Navbar transparent={!showResults} searchTrigger={navbarSearchSlot} />
 
       <main className="min-h-screen bg-white">
         {/* ── INTRO, hero image background, like homepage ──
@@ -795,13 +888,13 @@ function MoveInFlow() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
-              className="relative z-10 w-full max-w-md text-center"
+              className="relative z-10 w-full max-w-xl text-center lg:max-w-2xl"
             >
               <p className="text-sm font-bold uppercase tracking-[0.2em] text-white/60">Move in with STACEY</p>
-              <h1 className="mt-4 text-4xl font-extrabold leading-tight text-white sm:text-5xl lg:text-6xl">
+              <h1 className="mt-4 text-5xl font-black leading-[0.95] tracking-tight text-white sm:text-6xl lg:text-7xl">
                 Find your new <em className="font-light italic">home</em>
               </h1>
-              <p className="mt-3 text-sm text-white/50">
+              <p className="mt-4 text-base font-medium leading-snug text-white/70 sm:text-lg lg:text-xl">
                 Almost everything included · fully furnished · 9 locations · 3 cities
               </p>
 
@@ -838,25 +931,26 @@ function MoveInFlow() {
 
           </section>
         ) : (
-          /* ── STICKY FILTER PILL (floating, centered, not a full-width bar) ──
-             pointer-events-none on the outer sticky band so the parts of
-             the page to the LEFT/RIGHT of the pill stay clickable and
-             scrollable. The pill itself re-enables pointer events. */
-          <div className={clsx("pointer-events-none sticky top-16 z-30 flex justify-center px-4 py-3", (roomCollapsed || showLease) && "hidden")}>
-            <div className="pointer-events-auto max-w-[calc(100vw-2rem)] rounded-[5px] bg-white px-3 py-2 shadow-[0_4px_16px_rgba(0,0,0,0.08)] ring-1 ring-black/5">
-              <SearchFields
-                stayType={stayType} onStayType={handleStayTypeChangeLive}
-                persons={persons} onPersons={handlePersonsChangeLive}
-                city={city} onCity={handleCityChangeLive}
-                checkIn={checkIn} checkOut={checkOut} onCalendarSelect={handleCalendarSelect}
-                onCalendarClear={handleCalendarClear}
-                moveInDate={moveInDate} onMoveInDate={(d) => { setMoveInDate(d); setSelectedRoomId(null); setExpandedRoomId(null); setRoomCollapsed(false); }}
-                moveInOptions={moveInOptions} loadingDates={loadingAvailability}
-                nightCount={nightCount} tooShort={tooShort}
-                variant="compact"
-                calendarOpenExternal={filterCalendarOpen}
-                setCalendarOpenExternal={setFilterCalendarOpen}
-              />
+          /* ── SLIDE-DOWN EDITOR (Airbnb pattern) ──
+             Chip lives inline inside the navbar (desktop pill + mobile
+             bar) via the `searchTrigger` prop. Editor panel slides down
+             below the navbar when open. No permanent banner stacking.
+             top offsets clear the respective navbar heights:
+             mobile  ≈ 64px  (h-16 bar)                            → top-16
+             desktop ≈ 88px  (pt-3 + py-2 + h-12 + py-2 + pb-3)    → top-24 */
+          <div className={clsx("pointer-events-none sticky top-16 z-30 flex justify-center px-4 lg:top-24", (roomCollapsed || showLease) && "hidden")}>
+            <div className="pointer-events-auto w-full max-w-3xl lg:max-w-4xl">
+              <div
+                id="search-editor-panel"
+                className={clsx(
+                  "grid overflow-hidden transition-all duration-300 ease-out",
+                  searchEditorOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0",
+                )}
+              >
+                <div className="overflow-hidden">
+                  {editorPanel}
+                </div>
+              </div>
             </div>
           </div>
         )}
@@ -889,7 +983,22 @@ function MoveInFlow() {
               {/* Header */}
               <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                 <div>
-                  <h2 className="text-3xl font-extrabold tracking-tight sm:text-4xl">
+                  {/* Stay-type indicator badge, identical to the SHORT/
+                      LONG badges on Locations cards / Map / FAQ. Single
+                      word, font-black uppercase tracking-wider. */}
+                  {stayType && !loadingAvailability && (
+                    <span
+                      className={clsx(
+                        "mb-3 inline-block rounded-[5px] px-3 py-1.5 text-xs font-black uppercase tracking-wider",
+                        stayType === "SHORT"
+                          ? "bg-black text-white"
+                          : "bg-pink text-white",
+                      )}
+                    >
+                      {stayType}
+                    </span>
+                  )}
+                  <h2 className="text-3xl font-black leading-tight tracking-tight sm:text-4xl lg:text-5xl">
                     {loadingAvailability ? (
                       <span className="inline-flex items-center gap-3">
                         <Loader2 size={22} className="animate-spin" /> Checking availability…
@@ -903,13 +1012,13 @@ function MoveInFlow() {
                       <>No rooms <span className="italic font-light">match</span></>
                     )}
                   </h2>
-                  <p className="mt-2 text-sm text-gray">{searchSummary}</p>
+                  <p className="mt-3 text-base text-gray sm:text-lg">{searchSummary}</p>
                 </div>
 
                 {/* Sort chips, only if there are results */}
                 {totalRooms > 0 && (
                   <div className="flex items-center gap-2 overflow-x-auto">
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-gray">
+                    <span className="text-xs font-semibold text-gray">
                       Sort
                     </span>
                     {([
@@ -922,10 +1031,10 @@ function MoveInFlow() {
                         key={opt.key}
                         onClick={() => setSortBy(opt.key)}
                         className={clsx(
-                          "shrink-0 rounded-[5px] px-3 py-1.5 text-xs font-semibold transition-colors",
+                          "shrink-0 rounded-[5px] px-3 py-1.5 text-xs font-semibold transition-all",
                           sortBy === opt.key
-                            ? "bg-black text-white"
-                            : "bg-white text-black ring-1 ring-lightgray hover:bg-[#F0F0F0]",
+                            ? "bg-black text-white shadow-sm"
+                            : "bg-white text-black ring-1 ring-black/8 hover:scale-[1.02] hover:ring-black/15",
                         )}
                       >
                         {opt.label}
@@ -951,7 +1060,7 @@ function MoveInFlow() {
                         {/* Location banner card */}
                         <Link
                           href={`/locations/${loc.slug}`}
-                          className="group flex items-center gap-4 rounded-[5px] bg-white p-4 shadow-sm ring-1 ring-lightgray transition-all hover:shadow-md sm:p-5"
+                          className="group flex items-center gap-4 rounded-[5px] bg-white p-4 ring-1 ring-black/8 shadow-[0_4px_18px_rgba(0,0,0,0.05)] transition-all hover:-translate-y-0.5 hover:ring-black/15 hover:shadow-[0_12px_30px_rgba(0,0,0,0.08)] sm:p-5"
                         >
                           <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-[5px] sm:h-20 sm:w-20">
                             <Image
@@ -963,10 +1072,10 @@ function MoveInFlow() {
                             />
                           </div>
                           <div className="min-w-0 flex-1">
-                            <h3 className="text-lg font-extrabold tracking-tight sm:text-xl">
+                            <h3 className="text-lg font-black leading-tight tracking-tight sm:text-xl">
                               STACEY {loc.name}
                             </h3>
-                            <p className="mt-0.5 text-xs text-gray sm:text-sm">
+                            <p className="mt-1 text-xs text-gray sm:text-sm">
                               {loc.neighborhood},{" "}
                               {loc.city.charAt(0).toUpperCase() + loc.city.slice(1)} · {loc.rooms.length}{" "}
                               {loc.rooms.length === 1 ? "room type" : "room types"}
@@ -988,7 +1097,7 @@ function MoveInFlow() {
                             return (
                               <div
                                 key={room.id}
-                                className="group flex flex-col overflow-hidden rounded-[5px] bg-white shadow-sm transition-all duration-200 hover:shadow-lg"
+                                className="group flex flex-col overflow-hidden rounded-[5px] bg-white ring-1 ring-black/8 shadow-[0_4px_18px_rgba(0,0,0,0.05)] transition-all duration-200 hover:-translate-y-0.5 hover:ring-black/15 hover:shadow-[0_12px_30px_rgba(0,0,0,0.08)]"
                               >
                                 <div className="relative aspect-[3/2] overflow-hidden">
                                   <Image
@@ -999,7 +1108,7 @@ function MoveInFlow() {
                                     sizes="(max-width: 768px) 100vw, 33vw"
                                   />
                                   {room.forCouples && (
-                                    <span className="absolute right-3 top-3 rounded-[5px] bg-pink px-2.5 py-1 text-[10px] font-bold text-white shadow-sm">
+                                    <span className="absolute right-3 top-3 rounded-[5px] bg-pink px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.15em] text-black shadow-sm">
                                       Couples OK
                                     </span>
                                   )}
@@ -1007,14 +1116,14 @@ function MoveInFlow() {
                                 <div className="flex flex-1 flex-col p-5">
                                   <div className="flex items-start justify-between gap-3">
                                     <div className="min-w-0">
-                                      <p className="text-base font-extrabold tracking-tight">
+                                      <p className="text-base font-black leading-tight tracking-tight lg:text-lg">
                                         {room.name}
                                       </p>
-                                      <p className="mt-0.5 text-[11px] text-gray">STACEY {loc.name}</p>
+                                      <p className="mt-1 text-xs text-gray">STACEY {loc.name}</p>
                                     </div>
-                                    <p className="shrink-0 text-right text-2xl font-extrabold leading-none">
+                                    <p className="shrink-0 text-right text-2xl font-black leading-none">
                                       €{price ?? room.priceMonthly}
-                                      <span className="ml-0.5 text-[11px] font-normal text-gray">
+                                      <span className="ml-0.5 text-xs font-normal text-gray">
                                         {unit}
                                       </span>
                                     </p>
@@ -1023,17 +1132,17 @@ function MoveInFlow() {
                                   {/* Amenity strip */}
                                   <div className="mt-4 flex flex-wrap gap-1.5">
                                     {room.sizeSqm && (
-                                      <span className="inline-flex items-center gap-1 rounded-[5px] bg-[#F5F5F5] px-2 py-1 text-[11px] font-semibold text-gray">
+                                      <span className="inline-flex items-center gap-1 rounded-[5px] bg-[#F5F5F5] px-2 py-1 text-xs font-semibold text-gray">
                                         <Ruler size={12} /> {room.sizeSqm} m²
                                       </span>
                                     )}
                                     {room.forCouples && (
-                                      <span className="inline-flex items-center gap-1 rounded-[5px] bg-[#F5F5F5] px-2 py-1 text-[11px] font-semibold text-gray">
+                                      <span className="inline-flex items-center gap-1 rounded-[5px] bg-[#F5F5F5] px-2 py-1 text-xs font-semibold text-gray">
                                         <Users size={12} /> 1-2 people
                                       </span>
                                     )}
                                     {room.name.toLowerCase().includes("balcony") && (
-                                      <span className="inline-flex items-center gap-1 rounded-[5px] bg-[#F5F5F5] px-2 py-1 text-[11px] font-semibold text-gray">
+                                      <span className="inline-flex items-center gap-1 rounded-[5px] bg-[#F5F5F5] px-2 py-1 text-xs font-semibold text-gray">
                                         🌿 Balcony
                                       </span>
                                     )}
@@ -1048,10 +1157,10 @@ function MoveInFlow() {
                                     onClick={() => handleRoomSelect(room.id)}
                                     disabled={loadingAvailability}
                                     className={clsx(
-                                      "mt-5 flex w-full items-center justify-center gap-2 rounded-[5px] px-6 py-3 text-sm font-semibold transition-all duration-200",
+                                      "mt-5 inline-flex w-full items-center justify-center gap-2 rounded-[5px] px-8 py-3.5 text-sm font-semibold transition-all duration-200",
                                       loadingAvailability
                                         ? "cursor-not-allowed bg-[#F5F5F5] text-gray"
-                                        : "bg-black text-white hover:opacity-80",
+                                        : "bg-black text-white shadow-[0_4px_18px_rgba(0,0,0,0.10)] hover:scale-[1.02] hover:shadow-[0_8px_24px_rgba(0,0,0,0.18)]",
                                     )}
                                   >
                                     {loadingAvailability ? (
@@ -1077,14 +1186,14 @@ function MoveInFlow() {
 
               {/* Empty state, prominent, action-oriented */}
               {!loadingAvailability && totalRooms === 0 && (
-                <div className="mt-10 rounded-[5px] bg-white p-8 text-center shadow-sm sm:p-12">
+                <div className="mt-10 rounded-[5px] bg-white p-8 ring-1 ring-black/8 shadow-[0_4px_18px_rgba(0,0,0,0.05)] text-center sm:p-12">
                   <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-pink/20 text-black">
                     <Search size={22} />
                   </div>
-                  <h3 className="mt-5 text-xl font-extrabold tracking-tight">
+                  <h3 className="mt-5 text-xl font-black tracking-tight sm:text-2xl">
                     Nothing matches <span className="italic font-light">these filters</span>
                   </h3>
-                  <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-gray">
+                  <p className="mx-auto mt-3 max-w-md text-base leading-relaxed text-gray sm:text-lg">
                     Your chosen combination is unusually specific. Try a nearby move-in date or
                     a different city, coliving availability changes weekly.
                   </p>
@@ -1100,7 +1209,7 @@ function MoveInFlow() {
                         }
                         setShowResults(false);
                       }}
-                      className="rounded-[5px] bg-black px-6 py-3 text-sm font-semibold text-white hover:opacity-80"
+                      className="inline-flex items-center justify-center gap-2 rounded-[5px] bg-black px-8 py-3.5 text-sm font-semibold text-white shadow-[0_4px_18px_rgba(0,0,0,0.10)] transition-all hover:scale-[1.02] hover:shadow-[0_8px_24px_rgba(0,0,0,0.18)]"
                     >
                       Try a different date
                     </button>
@@ -1111,7 +1220,7 @@ function MoveInFlow() {
                         setMoveInDate(null);
                         setShowResults(false);
                       }}
-                      className="rounded-[5px] bg-white px-6 py-3 text-sm font-semibold text-black ring-1 ring-lightgray hover:bg-[#F5F5F5]"
+                      className="inline-flex items-center justify-center gap-2 rounded-[5px] bg-white px-8 py-3.5 text-sm font-semibold text-black ring-1 ring-black/8 transition-all hover:scale-[1.02] hover:ring-black/15 hover:bg-[#F5F5F5]"
                     >
                       Pick another city
                     </button>
