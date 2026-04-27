@@ -26,6 +26,7 @@ export default function Navbar({
   locationName,
   stayType,
   searchTrigger,
+  hideCta = false,
 }: {
   transparent?: boolean;
   locationName?: string;
@@ -35,6 +36,11 @@ export default function Navbar({
   // mode, so we merge the search chip directly into the navbar pill,
   // Airbnb-style, instead of stacking a second sticky bar underneath.
   searchTrigger?: React.ReactNode;
+  // Suppresses the Move-in / Book CTA on every breakpoint. Use this on
+  // pages where the user is already inside the booking flow, e.g.
+  // /move-in itself, where pointing them at "Move in" is a redundant
+  // no-op that still eats real estate.
+  hideCta?: boolean;
 }) {
   const pathname = usePathname();
   const [scrolled, setScrolled] = useState(false);
@@ -276,8 +282,10 @@ export default function Navbar({
               </span>
             )}
 
-            {/* CTA, pink, with arrow translate on hover */}
-            {locationName ? (
+            {/* CTA, pink, with arrow translate on hover. Suppressed
+                when the page is already inside the booking flow
+                (hideCta=true on /move-in). */}
+            {!hideCta && (locationName ? (
               <button
                 onClick={() =>
                   document.getElementById("rooms")?.scrollIntoView({ behavior: "smooth" })
@@ -301,7 +309,7 @@ export default function Navbar({
                   className="transition-transform duration-300 group-hover:translate-x-0.5"
                 />
               </Link>
-            )}
+            ))}
             </>)}
           </div>
         </div>
@@ -352,7 +360,7 @@ export default function Navbar({
               <div className="min-w-0 flex-1">{searchTrigger}</div>
             )}
             <div className="ml-auto flex flex-shrink-0 items-center gap-2">
-              {chromed && !mobileOpen && !searchTrigger && (
+              {chromed && !mobileOpen && !searchTrigger && !hideCta && (
                 <Link
                   href="/move-in"
                   className="rounded-[5px] bg-pink px-5 py-2.5 text-sm font-bold text-black transition-all duration-300 hover:scale-[1.04] hover:shadow-[0_4px_24px_rgba(252,176,192,0.4)]"
@@ -497,24 +505,28 @@ export default function Navbar({
       </div>
 
       {/* Mobile drawer bottom-fixed CTA, pink to pop against the
-          dark-glass drawer body. */}
-      <div
-        className={clsx(
-          "fixed inset-x-0 bottom-0 z-50 border-t border-white/10 bg-black/95 p-4 backdrop-blur-xl transition-transform duration-300 lg:hidden",
-          drawerVisible && mobileOpen ? "translate-y-0" : "translate-y-full",
-        )}
-        aria-hidden={!mobileOpen}
-      >
-        <div className="mx-auto max-w-md">
-          <Link
-            href="/move-in"
-            onClick={() => setMobileOpen(false)}
-            className="block w-full rounded-[5px] bg-pink px-8 py-4 text-center text-base font-bold text-black shadow-[0_12px_30px_rgba(252,176,192,0.35)] transition-all duration-200 hover:scale-[1.04] hover:shadow-[0_16px_40px_rgba(252,176,192,0.45)] active:opacity-80"
-          >
-            {ctaLabel}
-          </Link>
+          dark-glass drawer body. Suppressed on pages already inside
+          the booking flow (hideCta=true) so we don't push users at a
+          CTA that just reloads the page they're on. */}
+      {!hideCta && (
+        <div
+          className={clsx(
+            "fixed inset-x-0 bottom-0 z-50 border-t border-white/10 bg-black/95 p-4 backdrop-blur-xl transition-transform duration-300 lg:hidden",
+            drawerVisible && mobileOpen ? "translate-y-0" : "translate-y-full",
+          )}
+          aria-hidden={!mobileOpen}
+        >
+          <div className="mx-auto max-w-md">
+            <Link
+              href="/move-in"
+              onClick={() => setMobileOpen(false)}
+              className="block w-full rounded-[5px] bg-pink px-8 py-4 text-center text-base font-bold text-black shadow-[0_12px_30px_rgba(252,176,192,0.35)] transition-all duration-200 hover:scale-[1.04] hover:shadow-[0_16px_40px_rgba(252,176,192,0.45)] active:opacity-80"
+            >
+              {ctaLabel}
+            </Link>
+          </div>
         </div>
-      </div>
+      )}
     </>
   );
 }

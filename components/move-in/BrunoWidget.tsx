@@ -61,42 +61,41 @@ export default function BrunoWidget() {
         )}
       </AnimatePresence>
 
+      {/* Pink chat-bubble button — Intercom/Crisp pattern. The icon
+          alone communicates the action; the "Need help?" text label
+          read awkwardly so we drop it. Pink + black is on-brand and
+          pops against any page background. */}
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-3"
+        aria-label={open ? "Close chat" : "Chat with us"}
+        className="relative flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-full bg-pink shadow-[0_8px_24px_rgba(252,176,192,0.4)] transition-all duration-200 hover:scale-110 hover:shadow-[0_12px_32px_rgba(252,176,192,0.5)]"
       >
-        {!open && (
-          <span className="text-xs font-semibold uppercase tracking-wider text-white/60">Need help?</span>
-        )}
-        <div className="relative flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-full bg-black shadow-lg transition-transform duration-200 hover:scale-110">
-
-        {/* Chat icon */}
+        {/* Chat bubble */}
         <svg
-          width="24"
-          height="24"
+          width="22"
+          height="22"
           viewBox="0 0 24 24"
           fill="none"
           className={clsx(
-            "absolute text-white transition-all duration-200",
-            open ? "scale-0 opacity-0" : "scale-100 opacity-100"
+            "absolute text-black transition-all duration-200",
+            open ? "scale-0 opacity-0" : "scale-100 opacity-100",
           )}
         >
-          <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
-        {/* Close icon */}
+        {/* Close X */}
         <svg
-          width="18"
-          height="18"
+          width="16"
+          height="16"
           viewBox="0 0 18 18"
           fill="none"
           className={clsx(
-            "absolute text-white transition-all duration-200",
-            open ? "scale-100 opacity-100" : "scale-0 opacity-0"
+            "absolute text-black transition-all duration-200",
+            open ? "scale-100 opacity-100" : "scale-0 opacity-0",
           )}
         >
-          <path d="M4 4l10 10M14 4L4 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          <path d="M4 4l10 10M14 4L4 14" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
         </svg>
-        </div>
       </button>
     </div>
   );

@@ -12,7 +12,6 @@ import {
   Check,
   Mail,
   MapPin,
-  Ruler,
   Users,
   Search,
   ChevronDown,
@@ -433,10 +432,12 @@ function MoveInFlow() {
   }, []);
 
   // ─── Room select ───
+  // No auto-scroll: keep the user where they were so the "change room"
+  // banner (which renders at the top of the now-collapsed results) stays
+  // in view alongside the about-you section. Users scroll naturally.
   const handleRoomSelect = (roomId: string) => {
     setSelectedRoomId(roomId);
     setRoomCollapsed(true);
-    scrollTo(aboutRef);
   };
 
   const editRoom = () => {
@@ -448,9 +449,15 @@ function MoveInFlow() {
   };
 
   // ─── About complete? ───
-  const isAboutComplete =
-    firstName.trim() !== "" && lastName.trim() !== "" && email.trim() !== "" && phone.trim() !== "" &&
-    dateOfBirth !== "" && street.trim() !== "" && zipCode.trim() !== "" && addressCity.trim() !== "" && country.trim() !== "";
+  // List the required fields so we can both check completeness and
+  // count how many are still missing for the "X fields left" hint
+  // above the CTA. Reason and message stay optional.
+  const aboutRequiredFields = [
+    firstName.trim(), lastName.trim(), email.trim(), phone.trim(),
+    dateOfBirth, street.trim(), zipCode.trim(), addressCity.trim(), country.trim(),
+  ];
+  const fieldsRemaining = aboutRequiredFields.filter((v) => !v).length;
+  const isAboutComplete = fieldsRemaining === 0;
 
   // ─── Submit / Next ───
   const handleSubmit = async () => {
@@ -647,7 +654,7 @@ function MoveInFlow() {
   if (confirmingPayment) {
     return (
       <>
-        <Navbar />
+        <Navbar hideCta />
         <main className="flex min-h-screen items-center justify-center bg-white pt-24">
           <div className="text-center">
             <Loader2 size={32} className="mx-auto animate-spin text-gray" />
@@ -661,7 +668,7 @@ function MoveInFlow() {
   if (confirmError) {
     return (
       <>
-        <Navbar />
+        <Navbar hideCta />
         <main className="flex min-h-screen items-center justify-center bg-white pt-24">
           <div className="mx-auto max-w-md px-4 text-center">
             <p className="text-lg font-bold">Something went wrong</p>
@@ -681,7 +688,7 @@ function MoveInFlow() {
     const cm = selectedLocation.communityManager;
     return (
       <>
-        <Navbar />
+        <Navbar hideCta />
         <main className="min-h-screen bg-white pt-24 pb-16 sm:pt-28">
           <div className="mx-auto max-w-2xl px-4 sm:px-6">
             <Reveal>
@@ -862,7 +869,7 @@ function MoveInFlow() {
 
   return (
     <>
-      <Navbar transparent={!showResults} searchTrigger={navbarSearchSlot} />
+      <Navbar transparent={!showResults} searchTrigger={navbarSearchSlot} hideCta />
 
       <main className="min-h-screen bg-white">
         {/* ── INTRO, hero image background, like homepage ──
@@ -1107,11 +1114,24 @@ function MoveInFlow() {
                                     className="object-cover transition-transform duration-500 group-hover:scale-105"
                                     sizes="(max-width: 768px) 100vw, 33vw"
                                   />
-                                  {room.forCouples && (
-                                    <span className="absolute right-3 top-3 rounded-[5px] bg-pink px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.15em] text-black shadow-sm">
-                                      Couples OK
-                                    </span>
-                                  )}
+                                  {/* Image overlay badges. Size is always
+                                      shown. Capacity is only surfaced when it
+                                      adds info: persons=1 + couple-capable
+                                      room → "Fits 2" pink hint. Otherwise the
+                                      badge would just repeat what the user
+                                      already picked in the search bar. */}
+                                  <div className="absolute left-3 top-3 flex gap-2">
+                                    {room.sizeSqm && (
+                                      <span className="rounded-[5px] bg-white/90 px-2 py-0.5 text-[10px] font-bold text-black backdrop-blur-sm">
+                                        {room.sizeSqm} m²
+                                      </span>
+                                    )}
+                                    {room.forCouples && persons === 1 && (
+                                      <span className="flex items-center gap-1 rounded-[5px] bg-pink px-2 py-0.5 text-[10px] font-bold text-white backdrop-blur-sm">
+                                        <Users size={10} /> Fits 2
+                                      </span>
+                                    )}
+                                  </div>
                                 </div>
                                 <div className="flex flex-1 flex-col p-5">
                                   <div className="flex items-start justify-between gap-3">
@@ -1129,24 +1149,16 @@ function MoveInFlow() {
                                     </p>
                                   </div>
 
-                                  {/* Amenity strip */}
-                                  <div className="mt-4 flex flex-wrap gap-1.5">
-                                    {room.sizeSqm && (
-                                      <span className="inline-flex items-center gap-1 rounded-[5px] bg-[#F5F5F5] px-2 py-1 text-xs font-semibold text-gray">
-                                        <Ruler size={12} /> {room.sizeSqm} m²
-                                      </span>
-                                    )}
-                                    {room.forCouples && (
-                                      <span className="inline-flex items-center gap-1 rounded-[5px] bg-[#F5F5F5] px-2 py-1 text-xs font-semibold text-gray">
-                                        <Users size={12} /> 1-2 people
-                                      </span>
-                                    )}
-                                    {room.name.toLowerCase().includes("balcony") && (
+                                  {/* Amenity strip. Size + capacity moved to
+                                      the image overlay; balcony stays here as
+                                      the only feature flag we surface inline. */}
+                                  {room.name.toLowerCase().includes("balcony") && (
+                                    <div className="mt-4 flex flex-wrap gap-1.5">
                                       <span className="inline-flex items-center gap-1 rounded-[5px] bg-[#F5F5F5] px-2 py-1 text-xs font-semibold text-gray">
                                         🌿 Balcony
                                       </span>
-                                    )}
-                                  </div>
+                                    </div>
+                                  )}
 
                                   <p className="mt-3 line-clamp-2 text-sm leading-relaxed text-gray">
                                     {room.description}
@@ -1231,36 +1243,98 @@ function MoveInFlow() {
           </section>
         )}
 
-        {/* ── Collapsed room bar (visible during checkout + lease) ── */}
-        {roomCollapsed && selectedRoom && selectedLocation && (
-          <div className="border-b border-[#E8E6E0] bg-white pt-20 pb-4 sm:pt-24">
-            <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-              <div className="flex items-center justify-between rounded-[5px] bg-[#F5F5F5] px-5 py-3">
-                <p className="text-sm">
-                  <span className="font-bold">{selectedRoom.name}</span>
-                  <span className="text-gray"> · STACEY {selectedLocation.name} · {(() => {
-                    if (stayType === "SHORT") {
-                      const price = getNightlyPrice(selectedRoom.name, selectedLocation.slug);
-                      if (price) return `€${price}/night`;
-                    }
-                    return `€${selectedRoom.priceMonthly}/mo`;
-                  })()}</span>
-                </p>
-                <button onClick={editRoom} className="flex items-center gap-1.5 text-xs font-medium text-gray transition-colors hover:text-black">
-                  <Pencil size={11} /> Change room
-                </button>
+        {/* ── Collapsed room bar with progress breadcrumb ──
+             Shows the user where they are in the flow (Search → Room →
+             About you → Lease/Payment). Past steps appear muted, the
+             current step is bold pink, future steps are gray. */}
+        {roomCollapsed && selectedRoom && selectedLocation && (() => {
+          const flow = stayType === "LONG"
+            ? ["Search", "Room", "About you", "Lease", "Payment"]
+            : ["Search", "Room", "About you", "Payment"];
+          const currentIdx = showLease
+            ? flow.length - (stayType === "LONG" ? 2 : 1)
+            : 2; // about-you step
+          // Past steps are navigable: clicking jumps back to that step.
+          // Future steps stay inert (gated by validation).
+          const goToStep = (idx: number) => {
+            if (idx >= currentIdx) return;
+            if (idx === 0) {
+              // Search: pop the search-editor open and uncollapse room.
+              setShowLease(false);
+              setRoomCollapsed(false);
+              setSearchEditorOpen(true);
+              window.scrollTo({ top: 0, behavior: "smooth" });
+            } else if (idx === 1) {
+              // Room: same effect as editRoom — back to results list.
+              editRoom();
+            } else if (idx === 2) {
+              // About you: only reachable when currentIdx > 2 (i.e., on
+              // lease/payment). Drop back into the about-you step.
+              setShowLease(false);
+              scrollTo(aboutRef);
+            }
+          };
+          return (
+            <div className="border-b border-[#E8E6E0] bg-white pt-20 pb-4 sm:pt-24">
+              <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+                {/* Breadcrumb row */}
+                <ol className="mb-3 flex flex-wrap items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.12em]">
+                  {flow.map((step, i) => {
+                    const isCurrent = i === currentIdx;
+                    const isPast = i < currentIdx;
+                    return (
+                      <li key={step} className="flex items-center gap-1.5">
+                        {isPast ? (
+                          <button
+                            type="button"
+                            onClick={() => goToStep(i)}
+                            className="rounded-[3px] px-1 -mx-1 text-black underline-offset-2 transition-colors hover:text-pink hover:underline"
+                          >
+                            {step}
+                          </button>
+                        ) : (
+                          <span
+                            className={clsx(
+                              "px-1 -mx-1",
+                              isCurrent ? "text-pink" : "text-gray/40",
+                            )}
+                            aria-current={isCurrent ? "step" : undefined}
+                          >
+                            {step}
+                          </span>
+                        )}
+                        {i < flow.length - 1 && <span className="text-gray/30">›</span>}
+                      </li>
+                    );
+                  })}
+                </ol>
+                <div className="flex items-center justify-between rounded-[5px] bg-[#F5F5F5] px-5 py-3">
+                  <p className="text-sm">
+                    <span className="font-bold">{selectedRoom.name}</span>
+                    <span className="text-gray"> · STACEY {selectedLocation.name} · {(() => {
+                      if (stayType === "SHORT") {
+                        const price = getNightlyPrice(selectedRoom.name, selectedLocation.slug);
+                        if (price) return `€${price}/night`;
+                      }
+                      return `€${selectedRoom.priceMonthly}/mo`;
+                    })()}</span>
+                  </p>
+                  <button onClick={editRoom} className="flex items-center gap-1.5 text-xs font-medium text-gray transition-colors hover:text-black">
+                    <Pencil size={11} /> Change room
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* ── CHECKOUT: Two-column layout (form left, booking card right) ── */}
         {roomCollapsed && selectedRoom && selectedLocation && !showLease && (
-          <section className="bg-[#FAFAFA] py-16">
+          <section className="bg-[#FAFAFA] py-12 sm:py-16">
             <div ref={aboutRef} className="mx-auto max-w-6xl scroll-mt-24 px-4 sm:px-6 lg:px-8">
               <Reveal>
                 <div className="lg:grid lg:grid-cols-3 lg:gap-10">
-                  {/* Left: Form (2/3) */}
+                  {/* Form (left, 2/3 on desktop). */}
                   <div className="lg:col-span-2">
                       <StepAboutYou
                         stayType={stayType!}
@@ -1278,15 +1352,20 @@ function MoveInFlow() {
                       />
                   </div>
 
-                  {/* Right: Sticky booking card (1/3) */}
-                  <div className="mt-6 lg:mt-0">
+                  {/* Booking summary card. Sticky right column on
+                      desktop. On mobile it stacks below the form so
+                      the user reads form → review → terms → submit
+                      in one natural top-to-bottom flow. */}
+                  <div className="mt-8 lg:mt-0">
                     <div className="lg:sticky lg:top-24">
                       <div className="rounded-[5px] bg-black p-6 text-white">
                         {/* Room image */}
                         <div className="relative aspect-[16/10] overflow-hidden rounded-[5px]">
                           <Image src={selectedRoom.image} alt={selectedRoom.name} fill className="object-cover" sizes="400px" />
-                          {selectedRoom.forCouples && (
-                            <span className="absolute right-2 top-2 rounded-[5px] bg-pink px-2 py-0.5 text-[10px] font-bold text-white">Couples</span>
+                          {selectedRoom.forCouples && persons === 1 && (
+                            <span className="absolute left-2 top-2 flex items-center gap-1 rounded-[5px] bg-pink px-2 py-0.5 text-[10px] font-bold text-white backdrop-blur-sm">
+                              <Users size={10} /> Fits 2
+                            </span>
                           )}
                         </div>
 
@@ -1299,6 +1378,41 @@ function MoveInFlow() {
                           </p>
                           {selectedRoom.sizeSqm && <p className="mt-0.5 text-sm text-white/40">{selectedRoom.sizeSqm} m²</p>}
                         </div>
+
+                        {/* What's included strip — mini reassurance
+                            list under the room details so the price
+                            below is read in the right context (it
+                            includes everything). */}
+                        <ul className="mt-4 grid grid-cols-2 gap-x-3 gap-y-1.5 text-[11px] text-white/70">
+                          <li className="flex items-center gap-1.5"><Check size={11} className="text-pink" /> Furnished</li>
+                          <li className="flex items-center gap-1.5"><Check size={11} className="text-pink" /> Wi-Fi</li>
+                          <li className="flex items-center gap-1.5"><Check size={11} className="text-pink" /> Utilities</li>
+                          <li className="flex items-center gap-1.5"><Check size={11} className="text-pink" /> Cleaning</li>
+                          <li className="flex items-center gap-1.5"><Check size={11} className="text-pink" /> Community</li>
+                          <li className="flex items-center gap-1.5"><Check size={11} className="text-pink" /> Events</li>
+                        </ul>
+
+                        {/* Community manager badge — puts a face to the
+                            booking, reduces the "what's behind this
+                            checkout" anxiety right before the user
+                            commits. */}
+                        {selectedLocation.communityManager && (
+                          <div className="mt-4 flex items-center gap-3 rounded-[5px] bg-white/5 p-3">
+                            <div className="relative h-10 w-10 flex-shrink-0 overflow-hidden rounded-full ring-1 ring-white/15">
+                              <Image
+                                src={selectedLocation.communityManager.image}
+                                alt={selectedLocation.communityManager.name}
+                                fill
+                                className="object-cover"
+                                sizes="40px"
+                              />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-xs font-bold text-white">{selectedLocation.communityManager.name}</p>
+                              <p className="text-[10px] text-white/50">Your community manager</p>
+                            </div>
+                          </div>
+                        )}
 
                         <div className="mt-4 border-t border-white/10 pt-4">
                           {(() => {
@@ -1419,6 +1533,15 @@ function MoveInFlow() {
                           </span>
                         </label>
 
+                        {/* "X fields left" hint, only when there is
+                            still something to fill in. Actionable
+                            feedback instead of a silently-disabled CTA. */}
+                        {!isAboutComplete && (
+                          <p className="mt-3 text-center text-[11px] font-semibold text-pink">
+                            {fieldsRemaining} {fieldsRemaining === 1 ? "field" : "fields"} left to fill in
+                          </p>
+                        )}
+
                         {/* CTA */}
                         <button
                           onClick={handleSubmit}
@@ -1433,11 +1556,19 @@ function MoveInFlow() {
                           {submitting ? (
                             <><Loader2 size={14} className="animate-spin" /> {stayType === "SHORT" ? "Redirecting to payment..." : "Generating..."}</>
                           ) : stayType === "LONG" ? (
-                            <>Next <ArrowRight size={14} /></>
+                            <>Continue to lease <ArrowRight size={14} /></>
                           ) : (
                             <>Continue to payment <ArrowRight size={14} /></>
                           )}
                         </button>
+
+                        {/* Trust signals next to the CTA — booking
+                            funnel research consistently shows social
+                            proof + secure-checkout cues lift conversion
+                            at the submit point. */}
+                        <p className="mt-3 text-center text-[10px] font-medium uppercase tracking-[0.15em] text-white/50">
+                          Secure checkout · 295+ members · Coliving since 2019
+                        </p>
                       </div>
 
                       {/* Change room link */}

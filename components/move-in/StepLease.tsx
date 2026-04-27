@@ -1,7 +1,16 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { AlertCircle, ArrowRight, Check, CreditCard, FileText, Key, Lock, Mail, Phone, Shield, Sparkles } from "lucide-react";
+import { AlertCircle, ArrowRight, Check, CreditCard, FileText, Key, Lock, Mail, Phone, Shield, Sparkles, X } from "lucide-react";
+
+// Iframe embed mode is gated by NEXT_PUBLIC_YOUSIGN_EMBEDDED. In sandbox
+// Yousign doesn't allow iframe rendering, so we keep the new-tab flow as
+// the default. Once production keys are wired we flip the env flag and
+// the same component renders an inline iframe (desktop) / full-screen
+// modal (mobile) instead.
+const IFRAME_MODE =
+  typeof process !== "undefined" &&
+  process.env.NEXT_PUBLIC_YOUSIGN_EMBEDDED === "true";
 
 export default function StepLease({
   signingUrl,
@@ -16,14 +25,38 @@ export default function StepLease({
 }) {
   const [signed, setSigned] = useState(false);
   const [opened, setOpened] = useState(false);
+  const [mobileModalOpen, setMobileModalOpen] = useState(false);
 
   // Derived from other state, no setState needed, which keeps the effect
   // below compliant with the react-hooks/set-state-in-effect rule.
-  const polling = opened && Boolean(signatureRequestId) && !signed;
+  const polling = (opened || IFRAME_MODE) && Boolean(signatureRequestId) && !signed;
+
+  // Listen for Yousign postMessage events while the iframe is mounted.
+  // Yousign posts `{ type: "yousign", event: "signature.done" }` (and
+  // a few other events) when the user finishes signing inside the
+  // iframe. We treat this as the fast-path completion signal; polling
+  // below remains the source of truth in case the message is missed
+  // (cross-origin postMessage can be flaky).
+  useEffect(() => {
+    if (!IFRAME_MODE || signed) return;
+    const onMessage = (e: MessageEvent) => {
+      const data = e.data as { type?: string; event?: string } | string | undefined;
+      if (typeof data !== "object" || !data) return;
+      if (data.type !== "yousign") return;
+      if (data.event === "signature.done" || data.event === "success") {
+        setSigned(true);
+        setMobileModalOpen(false);
+      }
+    };
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, [signed]);
 
   // Poll Yousign for signature status after user opens the signing page
+  // (or, in iframe mode, as soon as the request id is available).
   useEffect(() => {
-    if (!opened || !signatureRequestId || signed) return;
+    if (!signatureRequestId || signed) return;
+    if (!IFRAME_MODE && !opened) return;
 
     const interval = setInterval(async () => {
       try {
@@ -32,6 +65,7 @@ export default function StepLease({
         const status = body?.ok ? body.data.status : null;
         if (status === "done" || status === "signed" || status === "completed") {
           setSigned(true);
+          setMobileModalOpen(false);
           clearInterval(interval);
         }
       } catch {
@@ -45,7 +79,16 @@ export default function StepLease({
   }, [opened, signatureRequestId, signed, setSigned]);
 
   const openSigning = useCallback(() => {
-    if (signingUrl) {
+    if (!signingUrl) return;
+    if (IFRAME_MODE) {
+      // Iframe mode: open the full-screen modal on mobile so the
+      // signing UI gets the whole viewport. On desktop the embedded
+      // iframe is already rendered inline, so we just flag opened.
+      if (window.matchMedia("(max-width: 1023px)").matches) {
+        setMobileModalOpen(true);
+      }
+      setOpened(true);
+    } else {
       window.open(signingUrl, "_blank", "noopener,noreferrer");
       setOpened(true);
     }
@@ -55,8 +98,7 @@ export default function StepLease({
   if (devMode || !signingUrl) {
     return (
       <div>
-        <Header step={2} />
-        <h2 className="mt-6 text-2xl font-bold sm:text-3xl">
+        <h2 className="text-2xl font-bold sm:text-3xl">
           Your <em className="font-bold italic">lease agreement</em>
         </h2>
         <p className="mt-2 text-sm text-gray">
@@ -87,9 +129,8 @@ export default function StepLease({
   if (signed) {
     return (
       <div>
-        <Header step={2} signed />
-        <h2 className="mt-6 text-2xl font-bold sm:text-3xl">
-          Your <em className="font-bold italic">lease agreement</em>
+        <h2 className="text-2xl font-bold sm:text-3xl">
+          Lease <em className="font-bold italic">signed</em>
         </h2>
 
         <div className="mt-8 overflow-hidden rounded-[5px] border border-[#E8E6E0] bg-white">
@@ -113,12 +154,10 @@ export default function StepLease({
     );
   }
 
-  // ─── Default: not yet opened OR waiting for signature ───
+  // ─── Default: pre-sign / signing in progress ───
   return (
     <div>
-      <Header step={2} />
-
-      <h2 className="mt-6 text-2xl font-bold sm:text-3xl">
+      <h2 className="text-2xl font-bold sm:text-3xl">
         Let&apos;s make it <em className="font-bold italic">official</em>
       </h2>
       <p className="mt-2 text-sm text-gray">
@@ -126,75 +165,113 @@ export default function StepLease({
         minutes, nothing to print, no wet ink.
       </p>
 
-      {/* Main action card, document metadata + CTA + trust row. The doc
-          metadata line anchors the CTA as a real artefact, not a vague
-          "click to proceed" link. */}
+      {/* Main signing surface. Iframe-shaped container — sized for the
+          embedded Yousign UI in production. While we're on the new-tab
+          flow (sandbox), the same container hosts a centred CTA so the
+          visual budget is identical and swapping in the iframe later is
+          a content-only change. */}
       <div className="mt-8 overflow-hidden rounded-[5px] border border-[#E8E6E0] bg-white shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
         {/* Doc header */}
         <div className="flex items-center gap-3 border-b border-[#F0F0F0] bg-[#FAFAFA] px-6 py-4">
           <div className="flex h-10 w-8 shrink-0 items-center justify-center rounded-[3px] bg-white ring-1 ring-[#E8E6E0]">
             <FileText size={16} className="text-black" />
           </div>
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-semibold">Lease agreement · PDF</p>
             <p className="text-xs text-gray">Personalized for your tenancy · generated just now</p>
           </div>
+          {/* Always-available "open in new tab" escape hatch, even in
+              iframe mode. Some users prefer the full-tab signing UX. */}
+          <a
+            href={signingUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hidden flex-shrink-0 text-xs font-medium text-gray transition-colors hover:text-black sm:inline-flex"
+          >
+            Open in new tab ↗
+          </a>
         </div>
 
-        {/* Body */}
-        <div className="px-6 py-8 text-center">
-          {!opened ? (
-            <>
-              <p className="text-lg font-bold">Your lease is ready</p>
-              <p className="mx-auto mt-2 max-w-md text-sm text-gray">
-                Open the signing page to review the full agreement, then sign
-                with one click. The document opens in a new tab so you can
-                compare with this page.
+        {/* Body — iframe on desktop in iframe-mode, otherwise a centred
+            CTA that opens the signing page (new tab on desktop, full-
+            screen modal on mobile). The container holds a fixed visual
+            budget either way: ~640px tall on desktop, viewport-tall on
+            mobile when actively signing. */}
+        {IFRAME_MODE && opened ? (
+          <>
+            {/* Desktop iframe (>=lg). Mobile uses the modal below. */}
+            <iframe
+              src={signingUrl}
+              title="Sign lease"
+              className="hidden h-[640px] w-full lg:block"
+              allow="camera; microphone; clipboard-read; clipboard-write"
+            />
+            {/* Mobile placeholder while modal is closed. Tapping the
+                button reopens the full-screen modal. */}
+            <div className="px-6 py-8 text-center lg:hidden">
+              <p className="text-sm font-bold">Signing in progress</p>
+              <p className="mx-auto mt-2 max-w-md text-xs text-gray">
+                Reopen the signing screen to continue, or wait for the
+                confirmation to land here automatically.
               </p>
               <button
-                onClick={openSigning}
-                className="mt-6 inline-flex items-center gap-2 rounded-[5px] bg-black px-8 py-3.5 text-sm font-bold text-white transition-all duration-200 hover:opacity-80"
+                onClick={() => setMobileModalOpen(true)}
+                className="mt-5 inline-flex items-center gap-2 rounded-[5px] bg-black px-6 py-2.5 text-sm font-bold text-white transition-all duration-200 hover:opacity-80"
               >
-                Review &amp; sign lease <ArrowRight size={14} />
+                Reopen signing <ArrowRight size={13} />
               </button>
-            </>
-          ) : (
-            <>
-              {/* Pulsing dot = polling, feels more alive than a spinner */}
-              <div className="mx-auto flex h-12 w-12 items-center justify-center">
-                <span className="relative flex h-3 w-3">
-                  {polling && (
-                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-pink opacity-60" />
-                  )}
-                  <span className="relative inline-flex h-3 w-3 rounded-full bg-pink" />
-                </span>
-              </div>
-              <p className="mt-2 text-lg font-bold">Waiting for your signature</p>
-              <p className="mx-auto mt-1 max-w-md text-sm text-gray">
-                Complete the signing in the tab we just opened. This page
-                updates automatically the moment you&apos;re done.
-              </p>
-              <button
-                onClick={openSigning}
-                className="mt-5 inline-flex items-center gap-2 text-sm font-medium text-gray transition-colors hover:text-black"
-              >
-                Open signing page again <ArrowRight size={12} />
-              </button>
-              <div className="mt-6 border-t border-[#F0F0F0] pt-4">
+            </div>
+          </>
+        ) : (
+          <div className="flex min-h-[280px] flex-col items-center justify-center px-6 py-10 text-center sm:min-h-[360px]">
+            {!opened ? (
+              <>
+                <p className="text-lg font-bold">Your lease is ready</p>
+                <p className="mx-auto mt-2 max-w-md text-sm text-gray">
+                  {IFRAME_MODE
+                    ? "Sign right here, fully embedded. We'll auto-advance the moment you finish."
+                    : "Open the signing page to review the full agreement, then sign with one click. The document opens in a new tab so you can compare with this page."}
+                </p>
+                <button
+                  onClick={openSigning}
+                  className="mt-6 inline-flex items-center gap-2 rounded-[5px] bg-black px-8 py-3.5 text-sm font-bold text-white transition-all duration-200 hover:opacity-80"
+                >
+                  Review &amp; sign lease <ArrowRight size={14} />
+                </button>
+              </>
+            ) : (
+              <>
+                <div className="flex h-12 w-12 items-center justify-center">
+                  <span className="relative flex h-3 w-3">
+                    {polling && (
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-pink opacity-60" />
+                    )}
+                    <span className="relative inline-flex h-3 w-3 rounded-full bg-pink" />
+                  </span>
+                </div>
+                <p className="mt-2 text-lg font-bold">Waiting for your signature</p>
+                <p className="mx-auto mt-1 max-w-md text-sm text-gray">
+                  Complete the signing in the tab we just opened. This page
+                  updates automatically the moment you&apos;re done.
+                </p>
+                <button
+                  onClick={openSigning}
+                  className="mt-5 inline-flex items-center gap-2 text-sm font-medium text-gray transition-colors hover:text-black"
+                >
+                  Open signing page again <ArrowRight size={12} />
+                </button>
                 <button
                   onClick={() => setSigned(true)}
-                  className="text-xs text-gray underline transition-colors hover:text-black"
+                  className="mt-4 text-xs text-gray underline transition-colors hover:text-black"
                 >
                   I&apos;ve already signed
                 </button>
-              </div>
-            </>
-          )}
-        </div>
+              </>
+            )}
+          </div>
+        )}
 
-        {/* Trust row, replaces the tiny gray line. Upgraded to 3 pillars,
-            same visual weight, so the signature feels backed by serious
-            infra. */}
+        {/* Trust row */}
         <div className="grid grid-cols-3 gap-2 border-t border-[#F0F0F0] bg-[#FAFAFA] px-6 py-4 text-center">
           <TrustBadge icon={<Shield size={14} />} label="eIDAS compliant" sub="EU e-signature law" />
           <TrustBadge icon={<Lock size={14} />} label="Encrypted" sub="TLS + signed hash" />
@@ -202,9 +279,9 @@ export default function StepLease({
         </div>
       </div>
 
-      {/* What happens next, 3-step visual so users know there's no hidden
-          step after signing. The current step pulses pink; completed ones
-          are checkmarked; upcoming ones are dimmed. */}
+      {/* What happens next, 4-step visual so users know there's no
+          hidden step after signing. The current step pulses pink;
+          completed ones are checkmarked; upcoming ones are dimmed. */}
       <div className="mt-10">
         <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.12em] text-gray">
           What happens next
@@ -238,11 +315,9 @@ export default function StepLease({
         </ol>
       </div>
 
-      {/* Support footer, small but visible. Reduces legal-doc anxiety. */}
-      <div className="mt-8 flex flex-col items-start gap-3 rounded-[5px] bg-[#FAFAFA] p-4 text-xs text-gray sm:flex-row sm:items-center sm:justify-between">
-        <p>
-          Questions before you sign? We&apos;re happy to walk you through anything.
-        </p>
+      {/* Support footer */}
+      <div className="mt-6 flex flex-col items-start gap-3 rounded-[5px] bg-[#FAFAFA] p-4 text-xs text-gray sm:flex-row sm:items-center sm:justify-between">
+        <p>Questions before you sign? We&apos;re happy to walk you through anything.</p>
         <div className="flex flex-wrap gap-4">
           <a
             href="mailto:booking@stacey.de"
@@ -258,44 +333,39 @@ export default function StepLease({
           </a>
         </div>
       </div>
+
+      {/* Mobile full-screen iframe modal. Iframes inside scrollable
+          mobile pages are a known UX mess (double-scroll, viewport
+          zoom, can't see the whole document). Industry pattern: take
+          over the viewport while signing. Listens for Yousign
+          postMessage events and the polling effect above; auto-closes
+          when signed. */}
+      {IFRAME_MODE && mobileModalOpen && (
+        <div className="fixed inset-0 z-[100] flex flex-col bg-white lg:hidden">
+          <div className="flex flex-shrink-0 items-center justify-between border-b border-[#E8E6E0] px-4 py-3">
+            <p className="text-sm font-bold">Sign your lease</p>
+            <button
+              type="button"
+              onClick={() => setMobileModalOpen(false)}
+              aria-label="Close"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-black text-white"
+            >
+              <X size={14} />
+            </button>
+          </div>
+          <iframe
+            src={signingUrl}
+            title="Sign lease"
+            className="flex-1 w-full"
+            allow="camera; microphone; clipboard-read; clipboard-write"
+          />
+        </div>
+      )}
     </div>
   );
 }
 
 // ─── Subcomponents ────────────────────────────────────────────
-
-// Progress rail, sits above the headline so the user always knows how
-// many steps are left. We count from the submit point: About you → Sign
-// lease → Pay deposit = 3 steps. The "signed" branch shows step 2 as
-// completed.
-function Header({ step, signed }: { step: number; signed?: boolean }) {
-  const labels = ["Your details", "Sign lease", "Pay booking fee"];
-  return (
-    <div>
-      <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-gray">
-        Step {signed ? step + 1 : step} of 3, {labels[signed ? step : step - 1]}
-      </p>
-      <div className="mt-2 flex gap-1.5">
-        {labels.map((_, i) => {
-          const isDone = i < step - 1 || (signed && i < step);
-          const isCurrent = !signed && i === step - 1;
-          return (
-            <span
-              key={i}
-              className={
-                isDone
-                  ? "h-1 flex-1 rounded-full bg-black"
-                  : isCurrent
-                    ? "h-1 flex-1 rounded-full bg-pink"
-                    : "h-1 flex-1 rounded-full bg-[#E8E6E0]"
-              }
-            />
-          );
-        })}
-      </div>
-    </div>
-  );
-}
 
 function TrustBadge({
   icon,

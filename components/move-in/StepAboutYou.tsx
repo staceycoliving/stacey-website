@@ -2,7 +2,19 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { clsx } from "clsx";
-import { Check, ChevronDown, Search, X } from "lucide-react";
+import {
+  Briefcase,
+  Check,
+  ChevronDown,
+  GraduationCap,
+  Heart,
+  Mail,
+  MapPin,
+  Search,
+  Sparkles,
+  User,
+  X,
+} from "lucide-react";
 import type { StayType } from "@/lib/data";
 
 // ─── Country data ─────────────────────────────────────────────
@@ -241,20 +253,29 @@ function isValidDOB(v: string) {
 
 // ─── Small primitives ─────────────────────────────────────────
 
-// Section header, short uppercase label, sits directly above a group of
-// fields. Subtle but gives the form a clear scan pattern.
+// Section header, short uppercase label + optional icon, sits directly
+// above a group of fields. Icon adds visual rhythm to a long form so
+// users can scan-locate Identity / Contact / Address blocks without
+// reading every label.
 function Section({
   title,
+  icon: Icon,
   children,
   className,
 }: {
   title: string;
+  icon?: React.ComponentType<{ size?: number; className?: string }>;
   children: React.ReactNode;
   className?: string;
 }) {
   return (
     <section className={className}>
-      <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.12em] text-gray">
+      <p className="mb-3 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.12em] text-gray">
+        {Icon && (
+          <span className="flex h-5 w-5 items-center justify-center rounded-[3px] bg-pink/15 text-pink">
+            <Icon size={11} />
+          </span>
+        )}
         {title}
       </p>
       <div className="space-y-3">{children}</div>
@@ -281,6 +302,7 @@ function FloatingField({
   inputMode,
   name,
   max,
+  hint,
 }: {
   label: string;
   value: string;
@@ -293,6 +315,11 @@ function FloatingField({
   inputMode?: "text" | "tel" | "email" | "numeric" | "decimal" | "search" | "url" | "none";
   name?: string;
   max?: string;
+  // Optional helper line below the field, rendered when the field is
+  // not in an error state. Use this for format prompts ("+49 …") or
+  // "why we ask" reassurance — both reduce hesitation at common
+  // sticking points without cluttering the label itself.
+  hint?: string;
 }) {
   const [focused, setFocused] = useState(false);
   const [touched, setTouched] = useState(false);
@@ -355,9 +382,11 @@ function FloatingField({
           />
         )}
       </div>
-      {showError && invalidMessage && (
+      {showError && invalidMessage ? (
         <p className="mt-1 pl-1 text-xs text-[#FF6B6B]">{invalidMessage}</p>
-      )}
+      ) : hint ? (
+        <p className="mt-1 pl-1 text-[11px] text-gray">{hint}</p>
+      ) : null}
     </div>
   );
 }
@@ -484,11 +513,59 @@ function DateOfBirthField({
           invalid={showError}
         />
       </div>
-      {showError && (
+      {showError ? (
         <p className="mt-1 pl-1 text-xs text-[#FF6B6B]">
           You must be at least 16 years old.
         </p>
+      ) : (
+        <p className="mt-1 pl-1 text-[11px] text-gray">
+          We need this for the lease, it&rsquo;s a legal requirement.
+        </p>
       )}
+    </div>
+  );
+}
+
+// Optional "what brings you to STACEY?" chip group. Not required for
+// booking, but the answer helps the community team prep a relevant
+// welcome (career-mover gets local job-tips intro, student gets the
+// uni-area lounge group, etc.) so it's a low-friction signal worth
+// surfacing. Single-select.
+function MoveInReasonChips({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const options = [
+    { id: "job", label: "Job", icon: Briefcase },
+    { id: "studies", label: "Studies", icon: GraduationCap },
+    { id: "lifestyle", label: "Lifestyle", icon: Sparkles },
+    { id: "other", label: "Other", icon: Heart },
+  ];
+  return (
+    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+      {options.map((o) => {
+        const active = value === o.id;
+        return (
+          <button
+            key={o.id}
+            type="button"
+            onClick={() => onChange(active ? "" : o.id)}
+            aria-pressed={active}
+            className={clsx(
+              "flex items-center justify-center gap-2 rounded-[5px] border px-3 py-2.5 text-xs font-semibold transition-all duration-150",
+              active
+                ? "border-black bg-black text-white shadow-sm"
+                : "border-[#E8E6E0] bg-white text-black hover:border-[#C7C7C7]",
+            )}
+          >
+            <o.icon size={13} />
+            {o.label}
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -555,6 +632,27 @@ function CountryCombobox({
   const inputRef = useRef<HTMLInputElement>(null);
 
   const selected = COUNTRIES.find((c) => c.code === value) || null;
+
+  // Auto-detect on first mount when no country is set yet. Browser
+  // `navigator.language` is "de-DE", "en-US", etc. The region after
+  // the dash is an ISO 3166-1 alpha-2 country code, exactly what we
+  // store. Only fires when the parent has not pre-filled the field
+  // (e.g. via querystring or a previous session), so we never
+  // overwrite a real choice.
+  useEffect(() => {
+    if (value) return;
+    if (typeof navigator === "undefined") return;
+    const lang = navigator.language || "";
+    const parts = lang.split(/[-_]/);
+    const region = parts[1]?.toUpperCase();
+    if (region && COUNTRIES.some((c) => c.code === region)) {
+      onChange(region);
+    }
+    // value/onChange omitted intentionally: we want this to fire once
+    // on mount, subsequent value changes are user-driven and shouldn't
+    // re-run the autodetect.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Filter + sort. With empty query: popular first in their defined order,
   // then A-Z. With query: matches across name + code, ranked by prefix hit.
@@ -711,6 +809,8 @@ export default function StepAboutYou({
   setAddressCity,
   country,
   setCountry,
+  moveInReason,
+  setMoveInReason,
 }: {
   stayType: StayType;
   firstName: string;
@@ -731,8 +831,8 @@ export default function StepAboutYou({
   setAddressCity?: (v: string) => void;
   country?: string;
   setCountry?: (v: string) => void;
-  // Accepted for backward compat but not rendered here, reason/message
-  // collection, if we want it, should be its own step.
+  // moveInReason is rendered as the "What brings you here?" chip group,
+  // optional, used by the community team to prep a relevant welcome.
   moveInReason?: string;
   setMoveInReason?: (v: string) => void;
   message?: string;
@@ -753,7 +853,7 @@ export default function StepAboutYou({
 
       <div className="mt-8 space-y-8">
         {/* ── Identity ─────────────────────────────────────── */}
-        <Section title="Identity">
+        <Section title="Identity" icon={User}>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <FloatingField
               label="First name"
@@ -784,7 +884,7 @@ export default function StepAboutYou({
         </Section>
 
         {/* ── Contact ──────────────────────────────────────── */}
-        <Section title="Contact">
+        <Section title="Contact" icon={Mail}>
           <FloatingField
             label="Email"
             type="email"
@@ -808,11 +908,25 @@ export default function StepAboutYou({
             autoComplete="tel"
             inputMode="tel"
             name="phone"
+            hint="International format works best, e.g. +49 30 1234567"
           />
         </Section>
 
+        {/* ── What brings you here? (optional) ─────────────── */}
+        {setMoveInReason && (
+          <Section title="What brings you here? (optional)" icon={Sparkles}>
+            <MoveInReasonChips
+              value={moveInReason || ""}
+              onChange={(v) => setMoveInReason(v)}
+            />
+            <p className="pl-1 text-[11px] text-gray">
+              Helps the community team prep a relevant welcome.
+            </p>
+          </Section>
+        )}
+
         {/* ── Address ──────────────────────────────────────── */}
-        <Section title="Current address">
+        <Section title="Current address" icon={MapPin}>
           <FloatingField
             label="Street & number"
             value={street || ""}
