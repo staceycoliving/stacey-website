@@ -271,7 +271,7 @@ export default function Navbar({
                 onClick={() =>
                   document.getElementById("rooms")?.scrollIntoView({ behavior: "smooth" })
                 }
-                className="group inline-flex items-center gap-1.5 rounded-[4px] bg-pink px-6 py-2.5 text-sm font-bold text-black transition-all duration-300 hover:scale-[1.04] hover:shadow-[0_4px_24px_rgba(252,176,192,0.4)]"
+                className="group inline-flex items-center gap-1.5 rounded-[5px] bg-pink px-6 py-2.5 text-sm font-bold text-black transition-all duration-300 hover:scale-[1.04] hover:shadow-[0_4px_24px_rgba(252,176,192,0.4)]"
               >
                 {ctaLabel}
                 <ArrowRight
@@ -282,7 +282,7 @@ export default function Navbar({
             ) : (
               <Link
                 href="/move-in"
-                className="group inline-flex items-center gap-1.5 rounded-[4px] bg-pink px-6 py-2.5 text-sm font-bold text-black transition-all duration-300 hover:scale-[1.04] hover:shadow-[0_4px_24px_rgba(252,176,192,0.4)]"
+                className="group inline-flex items-center gap-1.5 rounded-[5px] bg-pink px-6 py-2.5 text-sm font-bold text-black transition-all duration-300 hover:scale-[1.04] hover:shadow-[0_4px_24px_rgba(252,176,192,0.4)]"
               >
                 {ctaLabel}
                 <ArrowRight
@@ -333,7 +333,7 @@ export default function Navbar({
               {chromed && !mobileOpen && (
                 <Link
                   href="/move-in"
-                  className="rounded-[4px] bg-pink px-5 py-2.5 text-sm font-bold text-black transition-transform hover:scale-[1.04]"
+                  className="rounded-[5px] bg-pink px-5 py-2.5 text-sm font-bold text-black transition-all duration-300 hover:scale-[1.04] hover:shadow-[0_4px_24px_rgba(252,176,192,0.4)]"
                 >
                   Move in
                 </Link>
@@ -487,7 +487,7 @@ export default function Navbar({
           <Link
             href="/move-in"
             onClick={() => setMobileOpen(false)}
-            className="block w-full rounded-[5px] bg-pink px-8 py-4 text-center text-base font-bold text-black active:opacity-80"
+            className="block w-full rounded-[5px] bg-pink px-8 py-4 text-center text-base font-bold text-black shadow-[0_12px_30px_rgba(252,176,192,0.35)] transition-all duration-200 hover:scale-[1.04] hover:shadow-[0_16px_40px_rgba(252,176,192,0.45)] active:opacity-80"
           >
             {ctaLabel}
           </Link>

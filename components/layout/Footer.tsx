@@ -17,7 +17,7 @@ export default function Footer() {
         <div className="grid grid-cols-2 gap-10 lg:grid-cols-4">
           {/* Hamburg */}
           <div>
-            <h3 className="mb-4 text-xs font-bold uppercase tracking-widest text-white/30">Hamburg</h3>
+            <h3 className="mb-4 text-xs font-bold uppercase tracking-[0.25em] text-white/30">Hamburg</h3>
             <ul className="space-y-1.5">
               {hamburg.map((loc) => (
                 <li key={loc.slug}>
@@ -28,7 +28,7 @@ export default function Footer() {
           </div>
           {/* Berlin & Vallendar */}
           <div>
-            <h3 className="mb-4 text-xs font-bold uppercase tracking-widest text-white/30">Berlin</h3>
+            <h3 className="mb-4 text-xs font-bold uppercase tracking-[0.25em] text-white/30">Berlin</h3>
             <ul className="space-y-1.5">
               {berlin.map((loc) => (
                 <li key={loc.slug}>
@@ -36,7 +36,7 @@ export default function Footer() {
                 </li>
               ))}
             </ul>
-            <h3 className="mb-4 mt-6 text-xs font-bold uppercase tracking-widest text-white/30">Vallendar</h3>
+            <h3 className="mb-4 mt-6 text-xs font-bold uppercase tracking-[0.25em] text-white/30">Vallendar</h3>
             <ul className="space-y-1.5">
               {vallendar.map((loc) => (
                 <li key={loc.slug}>
@@ -47,7 +47,7 @@ export default function Footer() {
           </div>
           {/* Company */}
           <div>
-            <h3 className="mb-4 text-xs font-bold uppercase tracking-widest text-white/30">Company</h3>
+            <h3 className="mb-4 text-xs font-bold uppercase tracking-[0.25em] text-white/30">Company</h3>
             <ul className="space-y-2.5">
               <li><Link href="/faq" className="text-sm text-white/70 transition-colors hover:text-pink">FAQ</Link></li>
               <li><Link href="/partners" className="text-sm text-white/70 transition-colors hover:text-pink">For Partners</Link></li>
@@ -59,7 +59,7 @@ export default function Footer() {
           </div>
           {/* Contact */}
           <div>
-            <h3 className="mb-4 text-xs font-bold uppercase tracking-widest text-white/30">Contact</h3>
+            <h3 className="mb-4 text-xs font-bold uppercase tracking-[0.25em] text-white/30">Contact</h3>
             <ul className="space-y-2.5">
               <li><a href="mailto:booking@stacey.de" className="text-sm text-white/70 transition-colors hover:text-pink">booking@stacey.de</a></li>
               <li><a href="tel:+4940696389600" className="text-sm text-white/70 transition-colors hover:text-pink">+49 40 696389600</a></li>

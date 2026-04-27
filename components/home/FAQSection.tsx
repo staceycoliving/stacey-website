@@ -21,7 +21,7 @@ const QUESTIONS: QA[] = [
     node: (
       <div className="space-y-3">
         <div className="flex items-start gap-3">
-          <span className="mt-0.5 flex-shrink-0 rounded-[5px] bg-black px-3 py-1.5 text-xs font-black uppercase tracking-wider text-white">
+          <span className="mt-0.5 inline-flex w-20 flex-shrink-0 justify-center rounded-[5px] bg-black px-3 py-1.5 text-xs font-black uppercase tracking-wider text-white">
             Short
           </span>
           <p className="text-sm leading-relaxed text-gray sm:text-base">
@@ -29,7 +29,7 @@ const QUESTIONS: QA[] = [
           </p>
         </div>
         <div className="flex items-start gap-3">
-          <span className="mt-0.5 flex-shrink-0 rounded-[5px] bg-pink px-3 py-1.5 text-xs font-black uppercase tracking-wider text-white">
+          <span className="mt-0.5 inline-flex w-20 flex-shrink-0 justify-center rounded-[5px] bg-pink px-3 py-1.5 text-xs font-black uppercase tracking-wider text-white">
             Long
           </span>
           <p className="text-sm leading-relaxed text-gray sm:text-base">
@@ -65,7 +65,7 @@ export default function FAQSection() {
   return (
     <section className="bg-white px-4 py-14 sm:px-6 sm:py-20 lg:px-8">
       <FadeIn>
-        <div className="mx-auto max-w-4xl">
+        <div className="mx-auto max-w-6xl">
           <div className="mx-auto max-w-2xl text-center">
             <p className="inline-block rounded-[5px] bg-pink px-2.5 py-1 text-[11px] font-bold uppercase text-white">
               Five questions
@@ -74,13 +74,13 @@ export default function FAQSection() {
               The things people{" "}
               <span className="italic font-light">actually</span> ask.
             </h2>
-            <p className="mt-3 text-sm text-gray sm:text-base">
+            <p className="mt-3 text-base text-gray sm:text-lg">
               Straight answers, no marketing speak. Read these and you&rsquo;ll
               know enough to decide.
             </p>
           </div>
 
-          <div className="mt-10 divide-y divide-black/10 rounded-[5px] bg-white ring-1 ring-black/8 shadow-[0_8px_28px_rgba(0,0,0,0.06)] sm:mt-12">
+          <div className="mx-auto mt-10 max-w-4xl divide-y divide-black/10 rounded-[5px] bg-white ring-1 ring-black/8 shadow-[0_8px_28px_rgba(0,0,0,0.06)] sm:mt-12">
             {QUESTIONS.map((qa, i) => {
               const isOpen = open === i;
               return (

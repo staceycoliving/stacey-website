@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { clsx } from "clsx";
 import { ArrowRight } from "lucide-react";
@@ -38,6 +39,36 @@ export default function SearchFields({
   const [calendarOpenInternal, setCalendarOpenInternal] = useState(false);
   const calendarOpen = calendarOpenExternal ?? calendarOpenInternal;
   const setCalendarOpen = setCalendarOpenExternal ?? setCalendarOpenInternal;
+
+  // Submit-button feedback after a date selection commits the form.
+  //   LONG: smooth-scroll + auto-focus, because the day-pill grid is
+  //         inline and the button might be off-screen.
+  //   SHORT: auto-focus only (no scroll), because the calendar pops up
+  //         as a panel right above the form and the button is already
+  //         in view when the user closes the calendar.
+  // The shared `prevReadyRef` flag fires the effect once when the form
+  // transitions to "ready", not on every key/state change after that.
+  const submitButtonRef = useRef<HTMLButtonElement | null>(null);
+  const prevReadyRef = useRef(false);
+  useEffect(() => {
+    const ready =
+      (stayType === "SHORT" && !!checkIn && !!checkOut && !tooShort) ||
+      (stayType === "LONG" && !!city && !!moveInDate);
+    if (!ready) {
+      prevReadyRef.current = false;
+      return;
+    }
+    if (prevReadyRef.current) return;
+    prevReadyRef.current = true;
+    const btn = submitButtonRef.current;
+    if (!btn) return;
+    if (stayType === "LONG") {
+      btn.scrollIntoView({ behavior: "smooth", block: "center" });
+      window.setTimeout(() => btn.focus({ preventScroll: true }), 600);
+    } else {
+      window.setTimeout(() => btn.focus({ preventScroll: true }), 200);
+    }
+  }, [stayType, checkIn, checkOut, tooShort, city, moveInDate]);
 
   // Fetch per-date slot availability across all SHORT properties so the
   // calendar can do Airbnb-style dynamic greying, check-in valid iff a
@@ -174,7 +205,9 @@ export default function SearchFields({
                       <div className="mt-3 flex items-center justify-between border-t border-lightgray pt-3">
                         <p className="text-sm font-semibold">{nightCount} nights</p>
                         {tooShort ? (
-                          <p className="text-xs font-medium text-pink">Min 5 nights</p>
+                          <p className="text-xs font-medium text-pink">
+                            Too short{apaleoMinNights ? ` (min ${apaleoMinNights})` : ""}
+                          </p>
                         ) : (
                           <button onClick={() => setCalendarOpen(false)} className="text-xs font-semibold hover:opacity-60">
                             Done
@@ -225,40 +258,57 @@ export default function SearchFields({
           aria-label="Stay type"
           className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center sm:gap-4"
         >
-          <button
-            type="button"
-            role="radio"
-            aria-checked={stayType === "SHORT"}
-            onClick={() => onStayType("SHORT")}
-            className={clsx(
-              "w-full rounded-[5px] px-6 py-3.5 text-sm font-extrabold tracking-wide transition-all duration-200 sm:flex sm:w-auto sm:min-w-[210px] sm:flex-col sm:gap-0.5 sm:px-8 sm:py-4 sm:text-base",
-              stayType === "SHORT"
-                ? "bg-white text-black shadow-lg hover:opacity-80"
-                : "border-2 border-white bg-white/10 text-white backdrop-blur-sm hover:bg-white/20",
-            )}
-          >
-            <span>SHORT</span>
-            <span className="text-xs font-medium sm:text-sm">
-              <span className="sm:hidden">&nbsp;&middot;&nbsp;</span>up to 3 months
-            </span>
-          </button>
-          <button
-            type="button"
-            role="radio"
-            aria-checked={stayType === "LONG"}
-            onClick={() => onStayType("LONG")}
-            className={clsx(
-              "w-full rounded-[5px] px-6 py-3.5 text-sm font-extrabold tracking-wide transition-all duration-200 sm:flex sm:w-auto sm:min-w-[210px] sm:flex-col sm:gap-0.5 sm:px-8 sm:py-4 sm:text-base",
-              stayType === "LONG"
-                ? "bg-white text-black shadow-lg hover:opacity-80"
-                : "border-2 border-white bg-white/10 text-white backdrop-blur-sm hover:bg-white/20",
-            )}
-          >
-            <span>LONG</span>
-            <span className="text-xs font-medium sm:text-sm">
-              <span className="sm:hidden">&nbsp;&middot;&nbsp;</span>stay 3+ months
-            </span>
-          </button>
+          {(["SHORT", "LONG"] as StayType[]).map((t) => {
+            // Visual smart-default: LONG looks pre-selected on first
+            // load (matches the Booking/Airbnb pattern of pre-selecting
+            // the primary path), but the real `stayType` state stays
+            // null until the user explicitly clicks. That keeps the
+            // booking flow from auto-opening on page load.
+            const isCommitted = stayType === t;
+            const isVisualDefault = stayType === null && t === "LONG";
+            const active = isCommitted || isVisualDefault;
+            // Stay-type color identity. Matches the SHORT/LONG badge
+            // convention used everywhere else on the page (Map, Locations
+            // cards, FAQ splits, scope badges): SHORT is black, LONG is
+            // pink. Active state surfaces this colour so the hero teaches
+            // the visual language for the rest of the journey.
+            const isShort = t === "SHORT";
+            const activeStyle = isShort
+              ? "bg-black text-white shadow-[0_4px_18px_rgba(0,0,0,0.35)] hover:scale-[1.02] hover:shadow-[0_8px_24px_rgba(0,0,0,0.45)]"
+              : "bg-pink text-black shadow-[0_4px_18px_rgba(252,176,192,0.35)] hover:scale-[1.02] hover:shadow-[0_8px_24px_rgba(252,176,192,0.50)]";
+            return (
+              <button
+                key={t}
+                type="button"
+                role="radio"
+                aria-checked={isCommitted}
+                onClick={() => onStayType(t)}
+                className={clsx(
+                  // border-2 border-transparent on active matches the
+                  // border-2 on inactive so both buttons keep the exact
+                  // same box geometry (no size pop on selection).
+                  "flex w-full flex-col items-center gap-1 rounded-[5px] border-2 px-6 py-3.5 text-sm font-extrabold tracking-wide transition-all duration-200 sm:flex-1 sm:px-8 sm:py-4 sm:text-base",
+                  active
+                    ? `border-transparent ${activeStyle}`
+                    : "border-white bg-white/10 text-white backdrop-blur-sm hover:scale-[1.02] hover:bg-white/20",
+                )}
+              >
+                <span>{t === "SHORT" ? "Short stay" : "Long stay"}</span>
+                <span
+                  className={clsx(
+                    "text-xs font-medium sm:text-sm",
+                    active
+                      ? isShort
+                        ? "text-white/75"
+                        : "text-black/75"
+                      : "text-white/70",
+                  )}
+                >
+                  {t === "SHORT" ? "Up to 3 months" : "From 3 months"}
+                </span>
+              </button>
+            );
+          })}
         </div>
       </fieldset>
 
@@ -345,9 +395,14 @@ export default function SearchFields({
             <div className="mt-8">
               {stayType === "SHORT" ? (
                 <>
-                  <p className="mb-5 text-base font-semibold text-white sm:text-lg">
-                    {!checkIn ? "Select your check-in date" : !checkOut ? "Now select check-out" : "Your dates"}
-                  </p>
+                  {/* Single dynamic label, hidden once both dates are
+                      committed so the calendar + confirmation row carry
+                      the moment without a redundant header. */}
+                  {(!checkIn || !checkOut) && (
+                    <p className="mb-5 text-base font-semibold text-white sm:text-lg">
+                      {!checkIn ? "Pick your check-in" : "Pick your check-out"}
+                    </p>
+                  )}
 
                   {/* Mobile: a summary button that opens a full-screen
                       bottom-sheet modal. Saves ~400px of scroll for the
@@ -369,70 +424,162 @@ export default function SearchFields({
                     )}
                   </button>
 
-                  {/* Desktop: inline white card, no modal */}
+                  {/* Desktop: inline white card. The Hero form wrapper
+                      grows from max-w-xl to max-w-2xl on lg+, so the
+                      calendar gets Booking-/Airbnb-style breathing room
+                      without needing negative margins (which collided
+                      with the hero section's overflow-hidden clip). */}
                   <div className="hidden rounded-[5px] bg-white p-5 text-left shadow-lg sm:block">
                     <DualCalendar checkIn={checkIn} checkOut={checkOut} onSelect={onCalendarSelect} onClear={onCalendarClear} availableSlotsPerDate={availableSlotsPerDate} minNights={apaleoMinNights} maxNights={apaleoMaxNights} />
                     {availableSlotsPerDate && (
                       <p className="mt-3 text-[11px] text-gray">
                         {checkIn && !checkOut
                           ? "Only check-out dates that keep your room available are selectable."
-                          : "Greyed-out dates can't start a 5-night stay."}
+                          : "Greyed-out dates can't start a valid stay."}
                       </p>
                     )}
                     {checkIn && checkOut && (
-                      <div className="mt-4 flex items-center justify-between border-t border-[#E8E6E0] pt-4">
-                        <p className="text-base font-bold">{nightCount} nights</p>
-                        {tooShort && <p className="text-sm font-semibold text-pink">Minimum 5 nights</p>}
+                      <div className="mt-4 flex items-center justify-between gap-3 border-t border-[#E8E6E0] pt-4">
+                        {tooShort ? (
+                          <>
+                            <p className="text-base font-bold">{nightCount} nights</p>
+                            <p className="text-sm font-semibold text-pink">
+                              Stay is too short
+                              {apaleoMinNights ? ` (min ${apaleoMinNights})` : ""}
+                            </p>
+                          </>
+                        ) : (
+                          <>
+                            <span className="flex items-center gap-2">
+                              <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-pink">
+                                <svg viewBox="0 0 12 12" className="h-3 w-3" aria-hidden>
+                                  <path d="M2.5 6.5L5 9L9.5 3.5" stroke="black" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+                                </svg>
+                              </span>
+                              <p className="text-sm font-bold text-black">
+                                {formatDateShort(checkIn)} <span className="text-pink">&rarr;</span> {formatDateShort(checkOut)}
+                              </p>
+                            </span>
+                            <p className="text-sm font-medium text-gray">{nightCount} nights</p>
+                          </>
+                        )}
                       </div>
                     )}
                   </div>
 
-                  {/* Mobile-only bottom-sheet modal */}
-                  {calendarOpen && (
-                    <div
-                      className="fixed inset-0 z-[100] flex flex-col bg-black/60 backdrop-blur-sm sm:hidden"
-                      onClick={() => setCalendarOpen(false)}
-                    >
-                      <div
-                        className="mt-auto max-h-[90vh] overflow-y-auto rounded-t-[20px] bg-white p-5 pb-8 shadow-2xl"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <div className="mb-4 flex items-center justify-between">
-                          <p className="text-base font-bold">
-                            {!checkIn ? "Pick check-in" : !checkOut ? "Pick check-out" : "Your dates"}
-                          </p>
+                  {/* Mobile-only full-screen modal. Rendered via portal
+                      directly into document.body so it escapes the
+                      hero's z-30 stacking context, otherwise the global
+                      navbar (z-50 at root) would draw over the modal's
+                      sticky header. The whole viewport is the calendar
+                      surface, scrollable list of months in the middle
+                      (Airbnb pattern). Sticky header + footer keep the
+                      title, close badge, and confirmation/CTA visible
+                      while the user scrolls through months. */}
+                  {calendarOpen && typeof document !== "undefined" && createPortal(
+                    <div className="fixed inset-0 z-[100] flex flex-col bg-white sm:hidden">
+                      {/* Sticky header. Clear-badge sits between the
+                          title and the close X so the user can reset
+                          from anywhere in the calendar scroll without
+                          having to scroll back to the top. */}
+                      <div className="flex flex-shrink-0 items-center gap-3 border-b border-[#E8E6E0] px-5 py-4">
+                        <p className="flex-1 truncate text-base font-bold text-black">
+                          {!checkIn
+                            ? "Pick your check-in"
+                            : !checkOut
+                              ? "Pick your check-out"
+                              : `${formatDateShort(checkIn)} → ${formatDateShort(checkOut)}`}
+                        </p>
+                        {onCalendarClear && (checkIn || checkOut) && (
                           <button
                             type="button"
-                            aria-label="Close"
-                            onClick={() => setCalendarOpen(false)}
-                            className="-mr-2 rounded-[5px] px-2 py-1 text-sm font-semibold text-gray hover:bg-[#F5F5F5] hover:text-black"
+                            onClick={onCalendarClear}
+                            aria-label="Clear selected dates"
+                            className="group inline-flex flex-shrink-0 items-center gap-1.5 rounded-[5px] bg-black px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-[0.15em] text-white shadow-sm transition-all duration-200 active:scale-95"
                           >
-                            Close
-                          </button>
-                        </div>
-                        <DualCalendar checkIn={checkIn} checkOut={checkOut} onSelect={onCalendarSelect} onClear={onCalendarClear} availableSlotsPerDate={availableSlotsPerDate} minNights={apaleoMinNights} maxNights={apaleoMaxNights} />
-                        {checkIn && checkOut && (
-                          <div className="mt-4 flex items-center justify-between border-t border-[#E8E6E0] pt-4">
-                            <p className="text-base font-bold">{nightCount} nights</p>
-                            {tooShort && <p className="text-sm font-semibold text-pink">Minimum 5 nights</p>}
-                          </div>
-                        )}
-                        {checkIn && checkOut && !tooShort && (
-                          <button
-                            type="button"
-                            onClick={() => setCalendarOpen(false)}
-                            className="mt-5 block w-full rounded-[5px] bg-black py-3.5 text-center text-sm font-semibold text-white active:opacity-80"
-                          >
-                            Done
+                            <svg viewBox="0 0 12 12" className="h-2.5 w-2.5 transition-transform duration-200 group-active:rotate-90" aria-hidden>
+                              <path d="M3 3 L9 9 M9 3 L3 9" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                            </svg>
+                            Clear
                           </button>
                         )}
+                        <button
+                          type="button"
+                          aria-label="Close"
+                          onClick={() => setCalendarOpen(false)}
+                          className="group inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-black text-white transition-all duration-200 active:scale-95"
+                        >
+                          <svg viewBox="0 0 12 12" className="h-3 w-3 transition-transform duration-200 group-active:rotate-90" aria-hidden>
+                            <path d="M3 3 L9 9 M9 3 L3 9" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                          </svg>
+                        </button>
                       </div>
-                    </div>
+
+                      {/* Scrollable calendar middle. onClear is omitted
+                          here so DualCalendar doesn't render its own
+                          inline Clear-badge, the sticky header above
+                          owns that action. */}
+                      <div className="flex-1 overflow-y-auto px-5 py-5">
+                        <DualCalendar
+                          checkIn={checkIn}
+                          checkOut={checkOut}
+                          onSelect={onCalendarSelect}
+                          availableSlotsPerDate={availableSlotsPerDate}
+                          minNights={apaleoMinNights}
+                          maxNights={apaleoMaxNights}
+                          scrollMonths
+                        />
+                      </div>
+
+                      {/* Sticky footer with confirmation row + Done CTA */}
+                      {checkIn && checkOut && (
+                        <div className="flex-shrink-0 border-t border-[#E8E6E0] bg-white px-5 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+                          <div className="flex items-center justify-between gap-3">
+                            {tooShort ? (
+                              <>
+                                <p className="text-base font-bold">{nightCount} nights</p>
+                                <p className="text-sm font-semibold text-pink">
+                                  Stay is too short
+                                  {apaleoMinNights ? ` (min ${apaleoMinNights})` : ""}
+                                </p>
+                              </>
+                            ) : (
+                              <>
+                                <span className="flex items-center gap-2">
+                                  <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-pink">
+                                    <svg viewBox="0 0 12 12" className="h-3 w-3" aria-hidden>
+                                      <path d="M2.5 6.5L5 9L9.5 3.5" stroke="black" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+                                    </svg>
+                                  </span>
+                                  <p className="text-sm font-bold text-black">
+                                    {formatDateShort(checkIn)} <span className="text-pink">&rarr;</span> {formatDateShort(checkOut)}
+                                  </p>
+                                </span>
+                                <p className="text-sm font-medium text-gray">{nightCount} nights</p>
+                              </>
+                            )}
+                          </div>
+                          {!tooShort && (
+                            <button
+                              type="button"
+                              onClick={() => setCalendarOpen(false)}
+                              className="mt-4 block w-full rounded-[5px] bg-black py-3.5 text-center text-base font-bold text-white shadow-[0_8px_24px_rgba(0,0,0,0.25)] active:opacity-90"
+                            >
+                              Done
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>,
+                    document.body,
                   )}
                 </>
               ) : (
                 <>
-                  <p id="movein-label" className="mb-5 text-base font-semibold text-white sm:text-lg">When do you want to move in?</p>
+                  <p id="movein-label" className="text-base font-semibold text-white sm:text-lg">When do you want to move in?</p>
+                  <p className="mb-5 mt-1 text-xs text-white/65 sm:text-sm">
+                    Long stays don&rsquo;t have a fixed move-out. Just pick your move-in day.
+                  </p>
                   <div className="rounded-[5px] bg-white p-5 text-left shadow-lg">
                     {loadingDates ? (
                       <p className="py-3 text-center text-sm text-gray">Checking availability…</p>
@@ -450,31 +597,48 @@ export default function SearchFields({
                               {group.label}
                             </p>
                             <div className="grid grid-cols-5 gap-1.5 sm:grid-cols-7">
-                              {group.days.map((d) => (
-                                <button
-                                  key={d.value}
-                                  type="button"
-                                  role="radio"
-                                  aria-checked={moveInDate === d.value}
-                                  onClick={() => onMoveInDate(d.value)}
-                                  className={clsx(
-                                    "rounded-[3px] py-2 text-center text-sm font-semibold transition-colors",
-                                    moveInDate === d.value
-                                      ? "bg-black text-white"
-                                      : "bg-[#F5F5F5] text-black hover:bg-[#EDEDED]",
-                                  )}
-                                >
-                                  {d.day}
-                                </button>
-                              ))}
+                              {group.days.map((d) => {
+                                const isSelected = moveInDate === d.value;
+                                // When a date is picked, fade the
+                                // unselected days so the user knows
+                                // they're done picking. Hover restores
+                                // them so a switch is still possible.
+                                const isMuted = moveInDate !== null && !isSelected;
+                                return (
+                                  <button
+                                    key={d.value}
+                                    type="button"
+                                    role="radio"
+                                    aria-checked={isSelected}
+                                    onClick={() => onMoveInDate(d.value)}
+                                    className={clsx(
+                                      "rounded-[3px] py-2 text-center text-sm font-semibold transition-all duration-200",
+                                      isSelected
+                                        ? "bg-black text-white"
+                                        : isMuted
+                                          ? "bg-[#F5F5F5] text-black/30 hover:bg-[#EDEDED] hover:text-black"
+                                          : "bg-[#F5F5F5] text-black hover:bg-[#EDEDED]",
+                                    )}
+                                  >
+                                    {d.day}
+                                  </button>
+                                );
+                              })}
                             </div>
                           </div>
                         ))}
                       </div>
                     )}
                     {moveInDate && (
-                      <div className="mt-4 flex items-center justify-between border-t border-[#E8E6E0] pt-4">
-                        <p className="text-sm text-gray">Moving in on</p>
+                      <div className="mt-4 flex items-center justify-between gap-3 border-t border-[#E8E6E0] pt-4">
+                        <span className="flex items-center gap-2">
+                          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-pink">
+                            <svg viewBox="0 0 12 12" className="h-3 w-3" aria-hidden>
+                              <path d="M2.5 6.5L5 9L9.5 3.5" stroke="black" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+                            </svg>
+                          </span>
+                          <p className="text-sm font-semibold text-black">Move-in set</p>
+                        </span>
                         <p className="text-sm font-bold">
                           {moveInOptions.find((d) => d.value === moveInDate)?.label ?? moveInDate}
                         </p>
@@ -518,18 +682,40 @@ export default function SearchFields({
             })();
             return (
               <>
-                <button
+                <motion.button
+                  ref={submitButtonRef}
                   onClick={onSubmit}
                   disabled={!ready}
-                  className={clsx(
-                    "inline-flex w-full items-center justify-center gap-2 rounded-[5px] px-10 py-4 text-base font-bold transition-all duration-200 sm:text-lg",
+                  // Once ready, run a one-time pop (key change retriggers
+                  // animate) to draw attention as the button lights up,
+                  // followed by an infinite gentle pulse so the user
+                  // notices it across the auto-scroll. Disabled state
+                  // sits still so it doesn't compete with the form fields
+                  // above it.
+                  key={ready ? "ready" : "idle"}
+                  initial={ready ? { scale: 0.96 } : false}
+                  animate={
                     ready
-                      ? "bg-white text-black shadow-lg hover:opacity-80"
+                      ? {
+                          scale: [1, 1.04, 1],
+                          transition: {
+                            duration: 1.4,
+                            repeat: Infinity,
+                            repeatDelay: 1.6,
+                            ease: "easeInOut",
+                          },
+                        }
+                      : { scale: 1 }
+                  }
+                  className={clsx(
+                    "inline-flex w-full items-center justify-center gap-2 rounded-[5px] px-10 py-4 text-base font-bold transition-colors duration-200 sm:text-lg",
+                    ready
+                      ? "bg-black text-white shadow-[0_8px_28px_rgba(0,0,0,0.45)] hover:opacity-90"
                       : "cursor-not-allowed border-2 border-white/40 bg-white/10 text-white/60 backdrop-blur-sm",
                   )}
                 >
                   {ready ? "See available rooms" : "Find my room"} {ready && <ArrowRight size={16} />}
-                </button>
+                </motion.button>
                 {!ready && missingHint && (
                   <p className="mt-3 text-xs text-white/60">{missingHint}</p>
                 )}

@@ -164,7 +164,7 @@ export default function VideoSection() {
         <h2 className="mt-3 text-3xl font-black leading-[1.05] tracking-tight text-white sm:text-4xl lg:text-5xl">
           More than a place to <span className="italic font-light">sleep.</span>
         </h2>
-        <p className="mx-auto mt-3 max-w-md text-sm text-white/60 sm:text-base">
+        <p className="mx-auto mt-3 max-w-md text-base text-white/60 sm:text-lg">
           Ninety seconds. The home, the people, an ordinary Friday.
         </p>
 
@@ -192,23 +192,21 @@ export default function VideoSection() {
       </div>
 
       {/* DESKTOP, split layout: editorial column left, video player right */}
-      <div className="mx-auto hidden max-w-7xl items-center gap-16 lg:grid lg:grid-cols-[1fr_1.15fr]">
+      <div className="mx-auto hidden max-w-6xl items-center gap-16 lg:grid lg:grid-cols-[1fr_1.15fr]">
         <div>
-          {/* Eyebrow with vertical pink line, breaks the pink-chip pattern
-              that repeats elsewhere on the homepage. */}
-          <div className="flex items-center gap-3">
-            <span className="block h-8 w-[3px] rounded-full bg-pink" />
-            <p className="font-mono text-[11px] font-bold uppercase tracking-[0.25em] text-pink">
-              Life at STACEY
-            </p>
-          </div>
+          {/* Pink-chip eyebrow, kept consistent with all other section
+              eyebrows on the page (Map / Features / FAQ / Video Mobile
+              / About Mobile). One eyebrow pattern, one type-system. */}
+          <p className="inline-block rounded-[5px] bg-pink px-2.5 py-1 text-[11px] font-bold uppercase text-white">
+            Life at STACEY
+          </p>
 
           <h2 className="mt-5 text-3xl font-black leading-[1.05] tracking-tight text-white sm:text-4xl lg:text-5xl">
             More than a place to{" "}
             <span className="italic font-light">sleep.</span>
           </h2>
 
-          <p className="mt-4 max-w-md text-base text-white/60">
+          <p className="mt-4 max-w-md text-lg text-white/60">
             Ninety seconds. The home, the people, an ordinary Friday.
           </p>
 
@@ -251,7 +249,7 @@ export default function VideoSection() {
               })}
             </div>
             <div>
-              <p className="text-sm font-bold text-white">{q.name}, {q.age}</p>
+              <p className="text-sm font-bold text-white lg:text-base">{q.name}, {q.age}</p>
               <p className="text-[11px] uppercase tracking-[0.2em] text-white/55">
                 {q.where} · since {q.since}
               </p>

@@ -160,7 +160,7 @@ export default function FeaturesSection() {
           <h2 className="mt-3 text-3xl font-black leading-tight tracking-tight sm:text-4xl lg:text-5xl">
             Almost <span className="italic font-light">everything</span> included.
           </h2>
-          <p className="mt-3 text-sm text-gray sm:text-base">
+          <p className="mt-3 text-base text-gray sm:text-lg">
             From <span className="font-bold text-black">&euro;45/night</span> for short stays,{" "}
             <span className="font-bold text-black">&euro;595/mo</span> for long stays. One bill,
             the suite, the space, the people. You bring clothes.
@@ -176,7 +176,7 @@ export default function FeaturesSection() {
         <div className="mt-12 flex justify-center sm:mt-16">
           <Link
             href="/move-in"
-            className="group inline-flex items-center gap-2 rounded-[5px] bg-black px-8 py-3.5 text-sm font-semibold text-white transition-all duration-200 hover:opacity-80"
+            className="group inline-flex items-center gap-2 rounded-[5px] bg-black px-8 py-3.5 text-sm font-semibold text-white shadow-[0_4px_18px_rgba(0,0,0,0.10)] transition-all duration-200 hover:scale-[1.02] hover:shadow-[0_8px_24px_rgba(0,0,0,0.18)]"
           >
             See what&rsquo;s available
             <ArrowRight

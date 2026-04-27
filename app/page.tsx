@@ -16,7 +16,6 @@ import FeaturesSection from "@/components/home/FeaturesSection";
 import VideoSection from "@/components/home/VideoSection";
 import FAQSection from "@/components/home/FAQSection";
 import AboutSection from "@/components/home/AboutSection";
-import MemberStoriesSection from "@/components/home/MemberStoriesSection";
 import PullQuoteSection from "@/components/home/PullQuoteSection";
 import FinalCtaSection from "@/components/home/FinalCtaSection";
 import MapSection from "@/components/home/MapSection";
@@ -353,7 +352,7 @@ export default function HomePage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.6, delay: 1.55, ease: "easeOut" }}
-            className="mx-auto max-w-md"
+            className="mx-auto max-w-xl lg:max-w-2xl"
           >
             <SearchFields
               stayType={stayType} onStayType={setStayType}
@@ -610,15 +609,10 @@ export default function HomePage() {
            builds on a reader whose objections are already cleared. */}
       <AboutSection />
 
-      {/* MEMBER STORIES, thin transitional band between About and the
-           Final-CTA. Three clickable interview thumbs without an
-           editorial header (deliberately not a peer-section), each
-           thumb's own "Member story" badge carries the context. */}
-      <MemberStoriesSection />
-
       {/* FINAL-CTA, gives the brand claim its own stage on full-bleed
-           black and serves the final conversion handoff to /move-in,
-           right before the functional footer. */}
+           black, with the three member-interview thumbs sitting under
+           the "OUR MEMBERS CALL US HOME" claim as direct visual proof
+           before the Find-your-room handoff. */}
       <FinalCtaSection />
 
       <Footer />

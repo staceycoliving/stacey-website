@@ -89,10 +89,8 @@ export default function MapSection() {
   }, [filtered]);
 
   return (
-    <section className="bg-white py-12 sm:py-16">
-      {/* Editorial header lives inside the constrained container; the map
-          below escapes to full-bleed for cinematic effect. */}
-      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+    <section className="bg-white px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
+      <div className="mx-auto max-w-6xl">
         <div className="text-center">
           <p className="inline-block rounded-[5px] bg-pink px-2.5 py-1 text-[11px] font-bold uppercase text-white">
             8 homes · 3 cities
@@ -104,7 +102,7 @@ export default function MapSection() {
             </span>
             .
           </h2>
-          <p className="mx-auto mt-3 max-w-xl text-sm text-gray sm:text-base">
+          <p className="mx-auto mt-3 max-w-xl text-base text-gray sm:text-lg">
             {city === "all" &&
               "Hover a marker, scroll the list. Click any home to check live availability."}
             {city === "hamburg" &&
@@ -117,10 +115,13 @@ export default function MapSection() {
         </div>
       </div>
 
-      {/* Full-bleed map with floating overlays (desktop rail + mobile
-          bottom carousel + mobile city-tabs pill). overflow-hidden keeps
-          the rail's drop-shadow inside this section. */}
-      <div className="relative mt-8 overflow-hidden">
+      {/* Map sits inside the same max-w-6xl container as every other
+          section, with floating overlays (desktop rail + mobile bottom
+          carousel + mobile city-tabs pill) anchored to the map's
+          rounded edges. overflow-hidden + matching rounded corners
+          keep the rail's shadow neat. */}
+      <div className="mx-auto mt-8 max-w-6xl">
+        <div className="relative overflow-hidden rounded-[5px]">
         <LocationMap
           cityFilter={city}
           activeSlug={active}
@@ -251,6 +252,7 @@ export default function MapSection() {
               );
             })}
           </div>
+        </div>
         </div>
       </div>
     </section>

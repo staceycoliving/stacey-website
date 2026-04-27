@@ -27,6 +27,8 @@ function CalendarMonth({
   year,
   checkIn,
   checkOut,
+  hoveredDate,
+  onHoverDate,
   onSelect,
   isDateDisabled,
   isDateInSelectableRange,
@@ -35,6 +37,10 @@ function CalendarMonth({
   year: number;
   checkIn: string | null;
   checkOut: string | null;
+  /** Date currently hovered while in pick-checkout mode, used to draw
+   *  a Stacey-pink range preview. Null when nothing is hovered. */
+  hoveredDate: string | null;
+  onHoverDate: (date: string | null) => void;
   onSelect: (date: string) => void;
   isDateDisabled: (date: string) => boolean;
   isDateInSelectableRange: (date: string) => boolean;
@@ -59,12 +65,21 @@ function CalendarMonth({
     return dateStr > checkIn && dateStr < checkOut;
   };
 
+  // Preview range while picking check-out: between selected check-in
+  // and currently hovered date. Lights up days in stacey-pink so the
+  // user sees their proposed stay before committing.
+  const isInHoverRange = (dateStr: string) => {
+    if (!checkIn || checkOut || !hoveredDate) return false;
+    if (hoveredDate <= checkIn) return false;
+    return dateStr > checkIn && dateStr <= hoveredDate;
+  };
+
   return (
     <div>
       <p className="mb-2 text-center text-sm font-semibold">{monthName}</p>
-      <div className="grid grid-cols-7 gap-1 text-center text-[11px]">
+      <div className="grid grid-cols-7 gap-1.5 text-center text-xs">
         {["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"].map((d) => (
-          <span key={d} className="py-1 font-medium text-gray">{d}</span>
+          <span key={d} className="py-1 text-[11px] font-medium text-gray">{d}</span>
         ))}
         {Array.from({ length: offset }).map((_, i) => (
           <span key={`e-${i}`} />
@@ -83,24 +98,34 @@ function CalendarMonth({
           const disabled = isPast || (!isSelected && isDateDisabled(dateStr));
           const isSelectable = !isPast && !disabled && isDateInSelectableRange(dateStr);
 
+          const inHoverRange = isInHoverRange(dateStr);
           return (
             <button
               key={day}
               disabled={disabled}
               aria-label={disabled ? `${dateStr}, not available` : dateStr}
               onClick={() => onSelect(dateStr)}
-              className={`rounded-[3px] py-1.5 text-xs transition-colors ${
+              onMouseEnter={() => !disabled && onHoverDate(dateStr)}
+              onMouseLeave={() => onHoverDate(null)}
+              className={`rounded-[3px] py-2.5 text-sm transition-colors ${
                 isPast
                   ? "cursor-not-allowed text-[#D9D9D9]"
-                  : disabled
-                    ? "cursor-not-allowed text-[#D9D9D9] line-through"
-                    : isSelected
-                      ? "bg-black font-bold text-white"
-                      : inRange
-                        ? "bg-pink/30 text-black"
-                        : isSelectable
-                          ? "text-black hover:bg-[#F5F5F5]"
-                          : "text-black/60 hover:bg-[#F5F5F5]"
+                  : isSelected
+                    ? "bg-black font-bold text-white"
+                    : // Range-fills override the disabled grey-out:
+                      // those days are part of the user's stay (they're
+                      // sleeping there), so they need to read as
+                      // "yours" even if the slot itself is sold-out
+                      // for new check-ins.
+                      inRange
+                      ? "bg-pink/30 text-black"
+                      : inHoverRange
+                        ? "bg-pink/20 text-black"
+                        : disabled
+                          ? "cursor-not-allowed text-[#D9D9D9] line-through"
+                          : isSelectable
+                            ? "text-black hover:bg-[#F5F5F5]"
+                            : "text-black/60 hover:bg-[#F5F5F5]"
               }`}
             >
               {day}
@@ -120,6 +145,7 @@ export default function DualCalendar({
   availableSlotsPerDate,
   minNights = 5,
   maxNights,
+  scrollMonths = false,
 }: {
   checkIn: string | null;
   checkOut: string | null;
@@ -139,11 +165,20 @@ export default function DualCalendar({
   /** Maximum stay length in nights, check-outs further away than this
    *  are disabled. Undefined = unlimited. */
   maxNights?: number;
+  /** Mobile-style multi-month scroll mode: renders 6 months stacked
+   *  vertically with no prev/next arrow navigation. The parent container
+   *  handles the scroll. Best inside a full-screen modal. */
+  scrollMonths?: boolean;
 }) {
   const [baseMonth, setBaseMonth] = useState(() => {
     const now = new Date();
     return { month: now.getMonth(), year: now.getFullYear() };
   });
+
+  // Hover state for the range preview while picking check-out. Lives
+  // on the parent so both rendered months share the same tracked
+  // date and a hover from one month previews into the next.
+  const [hoveredDate, setHoveredDate] = useState<string | null>(null);
 
   const next =
     baseMonth.month === 11
@@ -250,19 +285,69 @@ export default function DualCalendar({
     return validCheckInSet?.has(dateStr) ?? true;
   }
 
+  // Reusable Clear-badge so both layouts (paged + scrollMonths) share
+  // the exact same control.
+  const clearBadge = onClear && (checkIn || checkOut) ? (
+    <button
+      type="button"
+      onClick={onClear}
+      aria-label="Clear selected dates"
+      className="group inline-flex items-center gap-1.5 rounded-[5px] bg-black px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.15em] text-white shadow-sm transition-all duration-200 hover:scale-[1.04] hover:bg-black/85 hover:shadow-md"
+    >
+      <svg
+        viewBox="0 0 12 12"
+        className="h-2.5 w-2.5 transition-transform duration-200 group-hover:rotate-90"
+        aria-hidden
+      >
+        <path
+          d="M3 3 L9 9 M9 3 L3 9"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+        />
+      </svg>
+      Clear
+    </button>
+  ) : null;
+
+  // Mobile-style multi-month scroll: render 6 months stacked vertically
+  // with no prev/next nav. Parent controls the overall scroll container.
+  if (scrollMonths) {
+    const months = Array.from({ length: 6 }).map((_, i) => {
+      const m = (baseMonth.month + i) % 12;
+      const y = baseMonth.year + Math.floor((baseMonth.month + i) / 12);
+      return { month: m, year: y };
+    });
+    return (
+      <div>
+        {clearBadge && (
+          <div className="mb-3 flex justify-end">{clearBadge}</div>
+        )}
+        <div className="space-y-8">
+          {months.map(({ month: m, year: y }) => (
+            <CalendarMonth
+              key={`${y}-${m}`}
+              month={m}
+              year={y}
+              checkIn={checkIn}
+              checkOut={checkOut}
+              hoveredDate={hoveredDate}
+              onHoverDate={setHoveredDate}
+              onSelect={onSelect}
+              isDateDisabled={isDateDisabled}
+              isDateInSelectableRange={isDateInSelectableRange}
+            />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div>
       <div className="mb-2 flex items-center justify-between">
         <button onClick={prev} className="p-1 text-gray hover:text-black" aria-label="Previous month">&larr;</button>
-        {onClear && (checkIn || checkOut) && (
-          <button
-            type="button"
-            onClick={onClear}
-            className="rounded-[3px] px-2 py-1 text-[11px] font-semibold text-gray hover:bg-[#F5F5F5] hover:text-black"
-          >
-            Clear
-          </button>
-        )}
+        {clearBadge}
         <button onClick={fwd} className="p-1 text-gray hover:text-black" aria-label="Next month">&rarr;</button>
       </div>
       <div className="grid grid-cols-1 gap-6 min-[420px]:grid-cols-2">
@@ -271,6 +356,8 @@ export default function DualCalendar({
           year={baseMonth.year}
           checkIn={checkIn}
           checkOut={checkOut}
+          hoveredDate={hoveredDate}
+          onHoverDate={setHoveredDate}
           onSelect={onSelect}
           isDateDisabled={isDateDisabled}
           isDateInSelectableRange={isDateInSelectableRange}
@@ -281,6 +368,8 @@ export default function DualCalendar({
             year={next.year}
             checkIn={checkIn}
             checkOut={checkOut}
+            hoveredDate={hoveredDate}
+            onHoverDate={setHoveredDate}
             onSelect={onSelect}
             isDateDisabled={isDateDisabled}
             isDateInSelectableRange={isDateInSelectableRange}

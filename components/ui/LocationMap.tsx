@@ -57,10 +57,20 @@ export default function LocationMap({
       center: cityFallback.hamburg.center,
       zoom: cityFallback.hamburg.zoom,
       attributionControl: false,
+      // Cooperative gestures: scroll wheel passes through to the page,
+      // user has to hold ⌘/Ctrl + scroll to zoom the map. Mobile pinch
+      // still zooms natively. Prevents the "stuck scrolling over the
+      // map" UX trap on long pages.
+      cooperativeGestures: true,
     });
-    // Default Mapbox NavigationControl looks utilitarian and clashes
-    // with the premium pill+map composition. Discovery on the homepage
-    // doesn't need manual zoom, fitBounds + flyTo do the work.
+    // Minimal +/- zoom buttons in the bottom-right as a discoverability
+    // aid for users who don't know about the modifier-key gesture.
+    // Compass is hidden, this isn't a navigation tool, just a discovery
+    // map for our homes.
+    map.current.addControl(
+      new mapboxgl.NavigationControl({ showCompass: false, visualizePitch: false }),
+      "bottom-right",
+    );
 
     locations.forEach((loc) => {
       if (!loc.coords) return;
