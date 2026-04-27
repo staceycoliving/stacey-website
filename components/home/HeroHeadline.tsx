@@ -14,9 +14,13 @@ import { motion, useReducedMotion } from "framer-motion";
 export default function HeroHeadline() {
   const reduce = useReducedMotion();
 
+  // Promote each word to its own GPU compositor layer so the slide-up
+  // is composited on the GPU instead of repainted by the main thread,
+  // which fights with hydration on cold loads and shows up as jitter.
+  const layerPromote = { willChange: "transform" } as const;
   const word = (delay: number) =>
     reduce
-      ? { initial: false as const, animate: { y: "0%" } }
+      ? { initial: false as const, animate: { y: "0%" }, style: layerPromote }
       : {
           initial: { y: "110%" },
           animate: { y: "0%" },
@@ -25,6 +29,7 @@ export default function HeroHeadline() {
             delay,
             ease: [0.16, 1, 0.3, 1] as const, // ease-out-expo
           },
+          style: layerPromote,
         };
 
   return (

@@ -86,14 +86,20 @@ select,
 
 /* Hero background slow zoom-out ("Ken-Burns"). Runs once on mount so the
    hero photo feels alive without looping distraction. Paired with the
-   overflow-hidden section wrapper to mask the scale growth. */
+   overflow-hidden section wrapper to mask the scale growth.
+   will-change + translateZ promote the image to its own GPU compositor
+   layer so the scale animation is composited on the GPU instead of
+   repainted on the main thread every frame. Without this the animation
+   jitters during the first ~200ms of hydration on cold loads. */
 @keyframes hero-ken-burns {
-  from { transform: scale(1.02); }
-  to { transform: scale(1.12); }
+  from { transform: translateZ(0) scale(1.02); }
+  to   { transform: translateZ(0) scale(1.12); }
 }
 .hero-ken-burns {
   animation: hero-ken-burns 22s ease-out both;
   transform-origin: center;
+  will-change: transform;
+  backface-visibility: hidden;
 }
 
 @media (prefers-reduced-motion: reduce) {

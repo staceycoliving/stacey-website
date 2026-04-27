@@ -150,6 +150,21 @@ export default function VideoSection() {
   const [open, setOpen] = useState(false);
   const [idx, setIdx] = useState(3);
   const q = QUOTES[idx];
+  const reducedMotion = usePrefersReducedMotion();
+
+  // Auto-rotate the quote every 6s. The interval also resets every
+  // time idx changes (manual avatar click), so a user-driven switch
+  // gets a full 6s before the next auto-advance — feels intentional,
+  // not like the carousel is fighting them. Skipped under
+  // prefers-reduced-motion so users opted into a calm UI aren't
+  // surprised by movement they didn't trigger.
+  useEffect(() => {
+    if (reducedMotion) return;
+    const t = setInterval(() => {
+      setIdx((current) => (current + 1) % QUOTES.length);
+    }, 6000);
+    return () => clearInterval(t);
+  }, [idx, reducedMotion]);
 
   return (
     <section
@@ -210,18 +225,23 @@ export default function VideoSection() {
             Ninety seconds. The home, the people, an ordinary Friday.
           </p>
 
-          <div
-            key={idx}
-            className="relative mt-10"
-            style={{ animation: "fadeSlide 0.4s ease-out" }}
-          >
+          {/* Quote slot. min-h reserves space for the longest quote
+              (~4 lines at text-xl leading-snug) so auto-rotating between
+              short and long quotes never shifts the section height,
+              which would otherwise look jumpy as the avatar strip and
+              video player below shift around. */}
+          <div className="relative mt-10 min-h-[7.5rem]">
             <span
               aria-hidden
               className="pointer-events-none absolute -left-6 -top-6 font-serif text-8xl leading-none text-pink/60"
             >
               &ldquo;
             </span>
-            <p className="relative max-w-md pl-2 text-xl italic font-light leading-snug text-white/95">
+            <p
+              key={idx}
+              className="relative max-w-md pl-2 text-xl italic font-light leading-snug text-white/95"
+              style={{ animation: "fadeSlide 0.4s ease-out" }}
+            >
               {q.text}
             </p>
           </div>
