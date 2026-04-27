@@ -122,6 +122,30 @@ export default function HomePage() {
     if (urlMoveIn) setMoveInDate(urlMoveIn);
   }, []);
 
+  // Listen for the navbar logo's "stacey:home-reset" event. Tapping the
+  // logo while already on / wipes the booking widget back to first-paint
+  // so a user mid-flow gets a clean slate without a hard reload. Also
+  // strips deep-link query params so a refresh after the reset stays
+  // clean.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const onReset = () => {
+      setStayType(null);
+      setPersons(1);
+      setCity("");
+      setCheckIn(null);
+      setCheckOut(null);
+      setMoveInDate(null);
+      const url = new URL(window.location.href);
+      if (url.search) {
+        url.search = "";
+        window.history.replaceState({}, "", url.pathname);
+      }
+    };
+    window.addEventListener("stacey:home-reset", onReset);
+    return () => window.removeEventListener("stacey:home-reset", onReset);
+  }, []);
+
   // Mirror filter state back into the URL as the user fills fields. Uses
   // history.replaceState directly so there's no Next.js re-render and no
   // flash, just a quiet URL rewrite. Shareable + refresh-safe.

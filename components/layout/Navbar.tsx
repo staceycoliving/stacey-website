@@ -144,13 +144,19 @@ export default function Navbar({
                 : "max-w-7xl bg-transparent shadow-none ring-0",
             )}
           >
-            {/* Logo, smart link (scroll to top on /, navigate elsewhere) */}
+            {/* Logo, smart link (scroll to top + reset hero booking
+                state on /, navigate elsewhere). The custom event lets
+                the homepage clear stayType / persons / city / dates
+                without us doing a hard reload, so the booking widget
+                returns to its first-paint state when a user mid-flow
+                taps the logo. */}
             <Link
               href="/"
               onClick={(e) => {
                 if (pathname === "/") {
                   e.preventDefault();
                   setMobileOpen(false);
+                  window.dispatchEvent(new CustomEvent("stacey:home-reset"));
                   window.scrollTo({ top: 0, behavior: "smooth" });
                 }
               }}
@@ -339,6 +345,7 @@ export default function Navbar({
                 if (pathname === "/") {
                   e.preventDefault();
                   setMobileOpen(false);
+                  window.dispatchEvent(new CustomEvent("stacey:home-reset"));
                   window.scrollTo({ top: 0, behavior: "smooth" });
                 }
               }}

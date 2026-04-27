@@ -440,7 +440,11 @@ export default function SearchFields({
                   // border-2 border-transparent on active matches the
                   // border-2 on inactive so both buttons keep the exact
                   // same box geometry (no size pop on selection).
-                  "flex w-full flex-col items-center gap-1 rounded-[5px] border-2 px-6 py-3.5 text-sm font-extrabold tracking-wide transition-all duration-200 sm:flex-1 sm:px-8 sm:py-4 sm:text-base",
+                  // Mobile: w-full for thumb-friendly tap target.
+                  // Desktop: intrinsic width with a min, so widening the
+                  // hero form wrapper for a roomier calendar doesn't
+                  // stretch these buttons across the whole row.
+                  "flex w-full flex-col items-center gap-1 rounded-[5px] border-2 px-6 py-3 text-sm font-extrabold tracking-wide transition-all duration-200 sm:w-auto sm:min-w-[180px] sm:px-7 sm:py-3.5",
                   active
                     ? `border-transparent ${activeStyle}`
                     : "border-white bg-white/10 text-white backdrop-blur-sm hover:scale-[1.02] hover:bg-white/20",
