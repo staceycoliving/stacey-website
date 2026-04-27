@@ -1,6 +1,15 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Check, Home, ArrowRight, X } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
+
+// Post-payment-setup confirmation page. Reached from Stripe redirect
+// after Setup Intent capture; never indexable.
+export const metadata: Metadata = {
+  title: "Payment method saved",
+  robots: { index: false, follow: false },
+  alternates: { canonical: "/move-in/payment-setup-success" },
+};
 
 export default async function PaymentSetupSuccessPage({
   searchParams,

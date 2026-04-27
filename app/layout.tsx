@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Montserrat } from "next/font/google";
 import { env } from "@/lib/env";
 import ConsentScripts from "@/components/legal/ConsentScripts";
+import { OrganizationSchema } from "@/components/seo/StructuredData";
 import "./globals.css";
 
 const montserrat = Montserrat({
@@ -80,6 +81,10 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col">
         {/* next/script with beforeInteractive self-injects into <head>; do not wrap manually, that clashes with Next.js head management and causes hydration errors. */}
         <ConsentScripts />
+        {/* Site-wide Organization JSON-LD. Loads on every page so
+            search engines reliably pick up the brand entity, contact
+            info, and social profiles for the knowledge panel. */}
+        <OrganizationSchema baseUrl={env.NEXT_PUBLIC_BASE_URL.replace(/\/$/, "")} />
         {children}
       </body>
     </html>

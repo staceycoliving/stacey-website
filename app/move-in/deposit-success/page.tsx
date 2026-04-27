@@ -1,6 +1,16 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Check, ArrowRight, Home } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
+
+// Post-payment confirmation page. Should never appear in search
+// results, only reachable from a Stripe redirect after a successful
+// deposit charge.
+export const metadata: Metadata = {
+  title: "Deposit received",
+  robots: { index: false, follow: false },
+  alternates: { canonical: "/move-in/deposit-success" },
+};
 
 export default function DepositSuccessPage() {
   return (
