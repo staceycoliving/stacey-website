@@ -249,60 +249,83 @@ export default function SearchFields({
                   ? `${formatDateShort(checkIn)} → ${formatDateShort(checkOut)}`
                   : "Pick dates"}
               </button>
-              {/* Fullscreen portal modal. Necessary because the compact
-                  variant lives inside the navbar's slide-down editor
-                  panel, which has overflow-hidden ancestors that would
-                  clip an inline absolute popover. Portal renders into
-                  document.body so the modal escapes both the clipping
-                  and the navbar's stacking context. */}
+              {/* Portal modal. Necessary because the compact variant
+                  lives inside the navbar's slide-down editor panel,
+                  which has overflow-hidden ancestors that would clip an
+                  inline popover. Portal renders into document.body so
+                  the modal escapes both the clipping and the navbar's
+                  stacking context.
+                  Mobile: full-screen with vertical-scroll month list.
+                  Desktop: centered dialog with the standard dual-month
+                  side-by-side layout (no scrollMonths). */}
               {calendarOpen && typeof document !== "undefined" && createPortal(
-                <div className="fixed inset-0 z-[100] flex flex-col bg-white">
-                  <div className="flex flex-shrink-0 items-center gap-3 border-b border-[#E8E6E0] px-5 py-4">
-                    <p className="flex-1 truncate text-base font-bold text-black">
-                      {!checkIn
-                        ? "Pick your check-in"
-                        : !checkOut
-                          ? "Pick your check-out"
-                          : `${formatDateShort(checkIn)} → ${formatDateShort(checkOut)}`}
-                    </p>
-                    {onCalendarClear && (checkIn || checkOut) && (
+                <div
+                  className="fixed inset-0 z-[100] flex bg-black/0 lg:items-center lg:justify-center lg:bg-black/50 lg:backdrop-blur-sm lg:p-6"
+                  onClick={(e) => {
+                    if (e.target === e.currentTarget) setCalendarOpen(false);
+                  }}
+                >
+                  <div className="flex w-full flex-col bg-white lg:max-h-[90vh] lg:w-auto lg:rounded-[8px] lg:shadow-2xl">
+                    <div className="flex flex-shrink-0 items-center gap-3 border-b border-[#E8E6E0] px-5 py-4">
+                      <p className="flex-1 truncate text-base font-bold text-black">
+                        {!checkIn
+                          ? "Pick your check-in"
+                          : !checkOut
+                            ? "Pick your check-out"
+                            : `${formatDateShort(checkIn)} → ${formatDateShort(checkOut)}`}
+                      </p>
+                      {onCalendarClear && (checkIn || checkOut) && (
+                        <button
+                          type="button"
+                          onClick={onCalendarClear}
+                          aria-label="Clear selected dates"
+                          className="group inline-flex flex-shrink-0 items-center gap-1.5 rounded-[5px] bg-black px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-[0.15em] text-white shadow-sm transition-all duration-200 active:scale-95"
+                        >
+                          <svg viewBox="0 0 12 12" className="h-2.5 w-2.5 transition-transform duration-200 group-active:rotate-90" aria-hidden>
+                            <path d="M3 3 L9 9 M9 3 L3 9" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                          </svg>
+                          Clear
+                        </button>
+                      )}
                       <button
                         type="button"
-                        onClick={onCalendarClear}
-                        aria-label="Clear selected dates"
-                        className="group inline-flex flex-shrink-0 items-center gap-1.5 rounded-[5px] bg-black px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-[0.15em] text-white shadow-sm transition-all duration-200 active:scale-95"
+                        aria-label="Close"
+                        onClick={() => setCalendarOpen(false)}
+                        className="group inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-black text-white transition-all duration-200 active:scale-95"
                       >
-                        <svg viewBox="0 0 12 12" className="h-2.5 w-2.5 transition-transform duration-200 group-active:rotate-90" aria-hidden>
+                        <svg viewBox="0 0 12 12" className="h-3 w-3 transition-transform duration-200 group-active:rotate-90" aria-hidden>
                           <path d="M3 3 L9 9 M9 3 L3 9" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
                         </svg>
-                        Clear
                       </button>
-                    )}
-                    <button
-                      type="button"
-                      aria-label="Close"
-                      onClick={() => setCalendarOpen(false)}
-                      className="group inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-black text-white transition-all duration-200 active:scale-95"
-                    >
-                      <svg viewBox="0 0 12 12" className="h-3 w-3 transition-transform duration-200 group-active:rotate-90" aria-hidden>
-                        <path d="M3 3 L9 9 M9 3 L3 9" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-                      </svg>
-                    </button>
-                  </div>
-
-                  <div className="flex-1 overflow-y-auto px-5 py-5">
-                    <div className="mx-auto max-w-md">
-                      <DualCalendar
-                        checkIn={checkIn}
-                        checkOut={checkOut}
-                        onSelect={onCalendarSelect}
-                        availableSlotsPerDate={availableSlotsPerDate}
-                        minNights={apaleoMinNights}
-                        maxNights={apaleoMaxNights}
-                        scrollMonths
-                      />
                     </div>
-                  </div>
+
+                    <div className="flex-1 overflow-y-auto px-5 py-5">
+                      {/* Mobile: vertical-scroll month list */}
+                      <div className="lg:hidden">
+                        <div className="mx-auto max-w-md">
+                          <DualCalendar
+                            checkIn={checkIn}
+                            checkOut={checkOut}
+                            onSelect={onCalendarSelect}
+                            availableSlotsPerDate={availableSlotsPerDate}
+                            minNights={apaleoMinNights}
+                            maxNights={apaleoMaxNights}
+                            scrollMonths
+                          />
+                        </div>
+                      </div>
+                      {/* Desktop: standard dual-month side-by-side */}
+                      <div className="hidden lg:block">
+                        <DualCalendar
+                          checkIn={checkIn}
+                          checkOut={checkOut}
+                          onSelect={onCalendarSelect}
+                          availableSlotsPerDate={availableSlotsPerDate}
+                          minNights={apaleoMinNights}
+                          maxNights={apaleoMaxNights}
+                        />
+                      </div>
+                    </div>
 
                   {checkIn && checkOut && (
                     <div className="flex-shrink-0 border-t border-[#E8E6E0] bg-white px-5 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
@@ -342,6 +365,7 @@ export default function SearchFields({
                       )}
                     </div>
                   )}
+                  </div>
                 </div>,
                 document.body,
               )}
